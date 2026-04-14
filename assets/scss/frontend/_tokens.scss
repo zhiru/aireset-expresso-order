@@ -1,0 +1,58 @@
+$eop-primary: #00034b;
+$eop-primary-strong: #050a76;
+
+@function eop-alpha($color, $alpha) {
+  @return rgba($color, $alpha);
+}
+
+@mixin eop-shell {
+  body {
+    .eop-login-wrap,
+    .eop-pdv,
+    .eop-proposal-wrap {
+      @content;
+    }
+  }
+}
+
+@mixin eop-component($selector) {
+  body {
+    .eop-login-wrap #{$selector},
+    .eop-pdv #{$selector},
+    .eop-proposal-wrap #{$selector} {
+      @content;
+    }
+  }
+}
+
+@mixin eop-interactive-surface($shadow-from, $shadow-to) {
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+  box-shadow: $shadow-from;
+
+  &:hover,
+  &:focus {
+    transform: translateY(-1px);
+    box-shadow: $shadow-to;
+  }
+}
+
+:root {
+  --eop-primary: #00034b;
+  --eop-primary-strong: #050a76;
+  --eop-accent: #3f66ff;
+  --eop-surface: #ffffff;
+  --eop-surface-soft: #f4f6ff;
+  --eop-surface-strong: #e9edff;
+  --eop-border: #dbe2ff;
+  --eop-border-strong: #b8c5ff;
+  --eop-text: #11162f;
+  --eop-text-soft: #55607f;
+  --eop-success: #0f9f6e;
+  --eop-danger: #d6336c;
+  --eop-warning: #f59e0b;
+  --eop-shadow-lg: 0 28px 80px rgba(0, 3, 75, 0.18);
+  --eop-shadow-md: 0 18px 44px rgba(0, 3, 75, 0.12);
+  --eop-radius-xl: 28px;
+  --eop-radius-lg: 22px;
+  --eop-radius-md: 16px;
+}

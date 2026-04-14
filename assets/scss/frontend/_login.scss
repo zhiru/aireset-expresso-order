@@ -1,0 +1,183 @@
+.eop-login-wrap {
+  display: grid;
+  grid-template-columns: minmax(340px, 460px) minmax(320px, 1fr);
+  gap: 28px;
+  max-width: 1180px;
+  margin: 36px auto;
+  padding: 22px 18px 56px;
+}
+
+.eop-login-card,
+.eop-login-aside {
+  border-radius: var(--eop-radius-xl);
+}
+
+.eop-login-card {
+  padding: 40px;
+  background:
+    radial-gradient(circle at top left, rgba(255,255,255,.75), transparent 28%),
+    linear-gradient(180deg, #fffdfb 0%, #fff 100%);
+  border: 1px solid var(--eop-border);
+  box-shadow: var(--eop-shadow-lg);
+}
+
+.eop-login-eyebrow,
+.eop-login-aside__badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.eop-login-eyebrow {
+  margin-bottom: 16px;
+  background: var(--eop-surface-strong);
+  color: var(--eop-primary);
+}
+
+.eop-login-card h2 {
+  margin: 0 0 10px;
+  font-size: clamp(34px, 4vw, 54px);
+  line-height: .96;
+  letter-spacing: -.04em;
+}
+
+.eop-login-intro {
+  margin: 0 0 24px;
+  color: var(--eop-text-soft);
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.eop-login-field {
+  margin-bottom: 16px;
+}
+
+.eop-login-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--eop-text-soft);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.eop-login-field input {
+  width: 100%;
+  min-height: 58px;
+  padding: 14px 18px;
+  border: 1px solid var(--eop-border);
+  border-radius: 18px;
+  background: #fff;
+  color: var(--eop-text);
+  font-size: 16px;
+  outline: none;
+  transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.eop-login-field input:focus {
+  border-color: var(--eop-primary);
+  box-shadow: 0 0 0 5px rgba(0, 3, 75, 0.12);
+  transform: translateY(-1px);
+}
+
+.eop-login-card .eop-btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.eop-login-aside {
+  position: relative;
+  overflow: hidden;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background:
+    radial-gradient(circle at top right, rgba(255,255,255,.18), transparent 30%),
+    linear-gradient(145deg, #000126 0%, #00034b 42%, #050a76 100%);
+  box-shadow: var(--eop-shadow-lg);
+  color: #fff;
+}
+
+.eop-login-aside::before,
+.eop-login-aside::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,.09);
+}
+
+.eop-login-aside::before {
+  width: 240px;
+  height: 240px;
+  top: -80px;
+  right: -60px;
+}
+
+.eop-login-aside::after {
+  width: 140px;
+  height: 140px;
+  bottom: 18px;
+  right: 28px;
+}
+
+.eop-login-aside__badge {
+  width: fit-content;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.18);
+  color: #fff;
+}
+
+.eop-login-aside h3 {
+  position: relative;
+  z-index: 1;
+  margin: 18px 0 12px;
+  font-size: clamp(30px, 3vw, 46px);
+  line-height: .98;
+  letter-spacing: -.04em;
+  color: #fff;
+}
+
+.eop-login-aside p {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 18px;
+  max-width: 32ch;
+  color: rgba(255,255,255,.82);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.eop-login-aside__list {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.eop-login-aside__list li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 15px;
+}
+
+.eop-login-aside__list li::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fdba74;
+}
