@@ -125,6 +125,10 @@
   border-radius: 22px;
   background: linear-gradient(135deg, rgba(0, 3, 75, 0.05), rgba(0, 3, 75, 0.02));
   box-shadow: var(--eop-shadow-sm);
+
+  &[hidden] {
+    display: none !important;
+  }
 }
 
 .eop-editing-banner strong {

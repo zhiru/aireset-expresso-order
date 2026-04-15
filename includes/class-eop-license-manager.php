@@ -85,7 +85,6 @@ class EOP_License_Manager {
 			update_option( $lic_key_name, '' );
 			add_action( 'admin_post_' . self::OPT_PREFIX . '_el_activate_license', array( $this, 'action_activate_license' ) );
 			add_action( 'admin_menu', array( $this, 'inactive_menu' ), 99999 );
-			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_inactive_flyout_config' ) );
 		}
 	}
 
@@ -124,7 +123,7 @@ class EOP_License_Manager {
 	}
 
 	public function active_admin_menu() {
-		eop_ensure_aireset_parent_menu();
+		ensure_aireset_parent_menu();
 
 		remove_submenu_page( $this->slug, $this->license_page_slug );
 
@@ -134,12 +133,12 @@ class EOP_License_Manager {
 			__( 'Licenca', 'aireset-expresso-order' ),
 			'manage_options',
 			$this->license_page_slug,
-			array( $this, 'activated' )
+			array( $this, 'render_active_page' )
 		);
 	}
 
 	public function inactive_menu() {
-		eop_ensure_aireset_parent_menu();
+		ensure_aireset_parent_menu();
 
 		remove_submenu_page( $this->slug, $this->plugin_page_slug );
 		remove_submenu_page( $this->slug, $this->license_page_slug );
@@ -151,65 +150,6 @@ class EOP_License_Manager {
 			'manage_options',
 			$this->plugin_page_slug,
 			array( $this, 'license_form' )
-		);
-
-		add_submenu_page(
-			$this->slug,
-			__( 'Licenca', 'aireset-expresso-order' ),
-			__( 'Licenca', 'aireset-expresso-order' ),
-			'manage_options',
-			$this->license_page_slug,
-			array( $this, 'license_form' )
-		);
-	}
-
-	public function enqueue_inactive_flyout_config() {
-		if ( ! is_admin() ) {
-			return;
-		}
-
-		wp_enqueue_style(
-			'aireset-admin-flyout',
-			plugins_url( 'assets/css/admin-menu-flyout.css', $this->plugin_file ),
-			array(),
-			$this->plugin_version
-		);
-
-		wp_enqueue_script(
-			'aireset-admin-flyout',
-			plugins_url( 'assets/js/admin-menu-flyout.js', $this->plugin_file ),
-			array(),
-			$this->plugin_version,
-			true
-		);
-
-		$current_page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
-
-		$config = array(
-			'currentPage' => $current_page,
-			'anchorPage'  => $this->plugin_page_slug,
-			'menuRoot'    => 'toplevel_page_aireset',
-			'title'       => __( 'Pedido Expresso', 'aireset-expresso-order' ),
-			'items'       => array(
-				array(
-					'key'   => $this->license_page_slug,
-					'label' => __( 'Licenca', 'aireset-expresso-order' ),
-					'icon'  => 'dashicons-admin-network',
-					'url'   => admin_url( 'admin.php?page=' . $this->license_page_slug ),
-				),
-			),
-		);
-
-		wp_add_inline_script(
-			'aireset-admin-flyout',
-			'window.airesetAdminFlyouts=window.airesetAdminFlyouts||[];'
-			. 'window.airesetAdminFlyouts.push(' . wp_json_encode( $config ) . ');',
-			'before'
-		);
-
-		wp_add_inline_style(
-			'aireset-admin-flyout',
-			'#adminmenu .wp-submenu li:has(> a[href*="page=' . esc_attr( $this->license_page_slug ) . '"]) { display: none !important; }'
 		);
 	}
 
@@ -226,7 +166,8 @@ class EOP_License_Manager {
 		update_option( self::OPT_PREFIX . '_lic_email', $license_email );
 		update_option( '_site_transient_update_plugins', '' );
 
-		wp_safe_redirect( admin_url( 'admin.php?page=' . $this->plugin_page_slug ) );
+		$redirect_url = admin_url( 'admin.php?page=' . $this->plugin_page_slug . '&view=license' );
+		wp_safe_redirect( $redirect_url );
 		exit;
 	}
 
@@ -242,64 +183,81 @@ class EOP_License_Manager {
 			update_option( '_site_transient_update_plugins', '' );
 		}
 
-		wp_safe_redirect( admin_url( 'admin.php?page=' . $this->plugin_page_slug ) );
+		$redirect_url = admin_url( 'admin.php?page=' . $this->plugin_page_slug . '&view=license' );
+		wp_safe_redirect( $redirect_url );
 		exit;
+	}
+
+	public function render_active_page() {
+		if ( class_exists( 'EOP_Admin_Page' ) ) {
+			wp_safe_redirect( EOP_Admin_Page::get_view_url( 'license' ) );
+			exit;
+		}
+
+		$this->activated();
 	}
 
 	public function activated() {
 		?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="<?php echo esc_attr( self::OPT_PREFIX . '_el_deactivate_license' ); ?>" />
-			<div class="el-license-container">
-				<h3 class="el-license-title">
-					<i class="dashicons-before dashicons-star-filled"></i>
-					<?php esc_html_e( 'Expresso Order - Informacoes da Licenca', 'aireset-expresso-order' ); ?>
-				</h3>
-				<hr>
-				<ul class="el-license-info">
-					<li><div>
-						<span class="el-license-info-title"><?php esc_html_e( 'Status', 'aireset-expresso-order' ); ?></span>
-						<?php if ( ! empty( $this->response_obj->is_valid ) ) : ?>
-							<span class="el-license-valid"><?php esc_html_e( 'Valida', 'aireset-expresso-order' ); ?></span>
-						<?php else : ?>
-							<span class="el-license-invalid"><?php esc_html_e( 'Invalida', 'aireset-expresso-order' ); ?></span>
-						<?php endif; ?>
-					</div></li>
-					<li><div>
-						<span class="el-license-info-title"><?php esc_html_e( 'Tipo de Licenca', 'aireset-expresso-order' ); ?></span>
-						<?php echo esc_html( $this->response_obj->license_title ?? '' ); ?>
-					</div></li>
-					<li><div>
-						<span class="el-license-info-title"><?php esc_html_e( 'Expira em', 'aireset-expresso-order' ); ?></span>
-						<?php echo esc_html( $this->response_obj->expire_date ?? '' ); ?>
-						<?php if ( ! empty( $this->response_obj->expire_renew_link ) ) : ?>
-							<a target="_blank" class="el-blue-btn" href="<?php echo esc_url( $this->response_obj->expire_renew_link ); ?>">
-								<?php esc_html_e( 'Renovar', 'aireset-expresso-order' ); ?>
-							</a>
-						<?php endif; ?>
-					</div></li>
-					<li><div>
-						<span class="el-license-info-title"><?php esc_html_e( 'Suporte ate', 'aireset-expresso-order' ); ?></span>
-						<?php echo esc_html( $this->response_obj->support_end ?? '' ); ?>
-						<?php if ( ! empty( $this->response_obj->support_renew_link ) ) : ?>
-							<a target="_blank" class="el-blue-btn" href="<?php echo esc_url( $this->response_obj->support_renew_link ); ?>">
-								<?php esc_html_e( 'Renovar', 'aireset-expresso-order' ); ?>
-							</a>
-						<?php endif; ?>
-					</div></li>
-					<li><div>
-						<span class="el-license-info-title"><?php esc_html_e( 'Chave', 'aireset-expresso-order' ); ?></span>
-						<span class="el-license-key">
-							<?php
-							$key = (string) ( $this->response_obj->license_key ?? '' );
-							echo esc_html( substr( $key, 0, 9 ) . 'XXXXXXXX-XXXXXXXX' . substr( $key, -9 ) );
-							?>
-						</span>
-					</div></li>
-				</ul>
-				<div class="el-license-active-btn">
-					<?php wp_nonce_field( 'el-license' ); ?>
-					<?php submit_button( __( 'Desativar Licenca', 'aireset-expresso-order' ) ); ?>
+			<div class="eop-license-layout">
+				<aside class="eop-license-aside">
+					<span class="eop-license-aside__eyebrow"><?php esc_html_e( 'Aireset', 'aireset-expresso-order' ); ?></span>
+					<h2><?php esc_html_e( 'Pedido Expresso', 'aireset-expresso-order' ); ?></h2>
+					<p><?php esc_html_e( 'Sua assinatura esta ativa. Consulte os dados da licenca e gerencie a renovacao sem sair do plugin.', 'aireset-expresso-order' ); ?></p>
+				</aside>
+				<div class="el-license-container">
+					<h3 class="el-license-title">
+						<i class="dashicons-before dashicons-star-filled"></i>
+						<?php esc_html_e( 'Expresso Order - Informacoes da Licenca', 'aireset-expresso-order' ); ?>
+					</h3>
+					<hr>
+					<ul class="el-license-info">
+						<li><div>
+							<span class="el-license-info-title"><?php esc_html_e( 'Status', 'aireset-expresso-order' ); ?></span>
+							<?php if ( ! empty( $this->response_obj->is_valid ) ) : ?>
+								<span class="el-license-valid"><?php esc_html_e( 'Valida', 'aireset-expresso-order' ); ?></span>
+							<?php else : ?>
+								<span class="el-license-invalid"><?php esc_html_e( 'Invalida', 'aireset-expresso-order' ); ?></span>
+							<?php endif; ?>
+						</div></li>
+						<li><div>
+							<span class="el-license-info-title"><?php esc_html_e( 'Tipo de Licenca', 'aireset-expresso-order' ); ?></span>
+							<?php echo esc_html( $this->response_obj->license_title ?? '' ); ?>
+						</div></li>
+						<li><div>
+							<span class="el-license-info-title"><?php esc_html_e( 'Expira em', 'aireset-expresso-order' ); ?></span>
+							<?php echo esc_html( $this->response_obj->expire_date ?? '' ); ?>
+							<?php if ( ! empty( $this->response_obj->expire_renew_link ) ) : ?>
+								<a target="_blank" class="el-blue-btn" href="<?php echo esc_url( $this->response_obj->expire_renew_link ); ?>">
+									<?php esc_html_e( 'Renovar', 'aireset-expresso-order' ); ?>
+								</a>
+							<?php endif; ?>
+						</div></li>
+						<li><div>
+							<span class="el-license-info-title"><?php esc_html_e( 'Suporte ate', 'aireset-expresso-order' ); ?></span>
+							<?php echo esc_html( $this->response_obj->support_end ?? '' ); ?>
+							<?php if ( ! empty( $this->response_obj->support_renew_link ) ) : ?>
+								<a target="_blank" class="el-blue-btn" href="<?php echo esc_url( $this->response_obj->support_renew_link ); ?>">
+									<?php esc_html_e( 'Renovar', 'aireset-expresso-order' ); ?>
+								</a>
+							<?php endif; ?>
+						</div></li>
+						<li><div>
+							<span class="el-license-info-title"><?php esc_html_e( 'Chave', 'aireset-expresso-order' ); ?></span>
+							<span class="el-license-key">
+								<?php
+								$key = (string) ( $this->response_obj->license_key ?? '' );
+								echo esc_html( substr( $key, 0, 9 ) . 'XXXXXXXX-XXXXXXXX' . substr( $key, -9 ) );
+								?>
+							</span>
+						</div></li>
+					</ul>
+					<div class="el-license-active-btn">
+						<?php wp_nonce_field( 'el-license' ); ?>
+						<?php submit_button( __( 'Desativar Licenca', 'aireset-expresso-order' ) ); ?>
+					</div>
 				</div>
 			</div>
 		</form>
@@ -310,29 +268,41 @@ class EOP_License_Manager {
 		?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="<?php echo esc_attr( self::OPT_PREFIX . '_el_activate_license' ); ?>" />
-			<div class="el-license-container">
-				<h3 class="el-license-title">
-					<i class="dashicons-before dashicons-star-filled"></i>
-					<?php esc_html_e( 'Expresso Order - Ativacao de Licenca', 'aireset-expresso-order' ); ?>
-				</h3>
-				<hr>
-				<?php if ( ! empty( $this->show_message ) && ! empty( $this->license_message ) ) : ?>
-					<div class="notice notice-error is-dismissible">
-						<p><?php echo esc_html( $this->license_message ); ?></p>
+			<div class="eop-license-layout">
+				<aside class="eop-license-aside">
+					<span class="eop-license-aside__eyebrow"><?php esc_html_e( 'Aireset', 'aireset-expresso-order' ); ?></span>
+					<h2><?php esc_html_e( 'Pedido Expresso', 'aireset-expresso-order' ); ?></h2>
+					<p><?php esc_html_e( 'Ative sua licenca para liberar o fluxo comercial, o painel SPA e a geracao de pedidos no WooCommerce.', 'aireset-expresso-order' ); ?></p>
+					<ul class="eop-license-aside__list">
+						<li><?php esc_html_e( 'Ativacao simples com chave e e-mail', 'aireset-expresso-order' ); ?></li>
+						<li><?php esc_html_e( 'Atualizacoes e renovacao centralizadas', 'aireset-expresso-order' ); ?></li>
+						<li><?php esc_html_e( 'Mesmo padrao visual do painel do plugin', 'aireset-expresso-order' ); ?></li>
+					</ul>
+				</aside>
+				<div class="el-license-container">
+					<h3 class="el-license-title">
+						<i class="dashicons-before dashicons-star-filled"></i>
+						<?php esc_html_e( 'Expresso Order - Ativacao de Licenca', 'aireset-expresso-order' ); ?>
+					</h3>
+					<hr>
+					<?php if ( ! empty( $this->show_message ) && ! empty( $this->license_message ) ) : ?>
+						<div class="notice notice-error is-dismissible">
+							<p><?php echo esc_html( $this->license_message ); ?></p>
+						</div>
+					<?php endif; ?>
+					<p><?php esc_html_e( 'Insira sua chave de licenca e e-mail para ativar o plugin.', 'aireset-expresso-order' ); ?></p>
+					<div class="el-license-field">
+						<label for="el_license_key"><?php esc_html_e( 'Chave de Licenca', 'aireset-expresso-order' ); ?></label>
+						<input type="text" class="regular-text" name="el_license_key" id="el_license_key" placeholder="<?php esc_attr_e( 'xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx', 'aireset-expresso-order' ); ?>">
 					</div>
-				<?php endif; ?>
-				<p><?php esc_html_e( 'Insira sua chave de licenca e e-mail para ativar o plugin.', 'aireset-expresso-order' ); ?></p>
-				<div class="el-license-field">
-					<label for="el_license_key"><?php esc_html_e( 'Chave de Licenca', 'aireset-expresso-order' ); ?></label>
-					<input type="text" class="regular-text" name="el_license_key" id="el_license_key" placeholder="<?php esc_attr_e( 'xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx', 'aireset-expresso-order' ); ?>">
-				</div>
-				<div class="el-license-field">
-					<label for="el_license_email"><?php esc_html_e( 'E-mail', 'aireset-expresso-order' ); ?></label>
-					<input type="email" class="regular-text" name="el_license_email" id="el_license_email" value="<?php echo esc_attr( get_option( self::OPT_PREFIX . '_lic_email', get_bloginfo( 'admin_email' ) ) ); ?>" placeholder="<?php esc_attr_e( 'seu@email.com', 'aireset-expresso-order' ); ?>">
-				</div>
-				<div class="el-license-active-btn">
-					<?php wp_nonce_field( 'el-license' ); ?>
-					<?php submit_button( __( 'Ativar Licenca', 'aireset-expresso-order' ) ); ?>
+					<div class="el-license-field">
+						<label for="el_license_email"><?php esc_html_e( 'E-mail', 'aireset-expresso-order' ); ?></label>
+						<input type="email" class="regular-text" name="el_license_email" id="el_license_email" value="<?php echo esc_attr( get_option( self::OPT_PREFIX . '_lic_email', get_bloginfo( 'admin_email' ) ) ); ?>" placeholder="<?php esc_attr_e( 'seu@email.com', 'aireset-expresso-order' ); ?>">
+					</div>
+					<div class="el-license-active-btn">
+						<?php wp_nonce_field( 'el-license' ); ?>
+						<?php submit_button( __( 'Ativar Licenca', 'aireset-expresso-order' ) ); ?>
+					</div>
 				</div>
 			</div>
 		</form>

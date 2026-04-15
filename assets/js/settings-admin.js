@@ -74,11 +74,16 @@
             '#wpbody-content > .notice',
             '#wpbody-content > .update-nag',
             '#wpbody-content > .updated',
-            '#wpbody-content > .error'
+            '#wpbody-content > .error',
+            '.eop-admin-spa .notice',
+            '.eop-admin-spa .update-nag',
+            '.eop-admin-spa .updated',
+            '.eop-admin-spa .error',
+            '.eop-admin-spa .fs-notice'
         ].join(', ');
 
         $(selectors).each(function () {
-            if (!$(this).closest('.eop-settings-page').length) {
+            if (!$(this).closest('#eop-notices, .eop-settings-page, .el-license-container').length) {
                 $(this).hide();
             }
         });

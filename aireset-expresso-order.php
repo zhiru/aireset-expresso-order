@@ -20,69 +20,8 @@ define( 'EOP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EOP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'EOP_TEXT_DOMAIN', 'aireset-expresso-order' );
 
-function eop_ensure_aireset_parent_menu() {
-	static $cleanup_hooked = false;
-	global $admin_page_hooks, $menu, $submenu;
-
-	$parent_exists = isset( $admin_page_hooks['aireset'] );
-
-	if ( ! $parent_exists && is_array( $menu ) ) {
-		foreach ( $menu as $menu_item ) {
-			if ( isset( $menu_item[2] ) && 'aireset' === $menu_item[2] ) {
-				$parent_exists = true;
-				break;
-			}
-		}
-	}
-
-	if ( ! $parent_exists ) {
-		add_menu_page(
-			__( 'Aireset', EOP_TEXT_DOMAIN ),
-			__( 'Aireset', EOP_TEXT_DOMAIN ),
-			apply_filters( 'aireset_parent_menu_capability', 'read' ),
-			'aireset',
-			'eop_render_aireset_parent_page',
-			'dashicons-screenoptions',
-			58
-		);
-		$submenu['aireset'] = isset( $submenu['aireset'] ) ? $submenu['aireset'] : array();
-	}
-
-	if ( ! $cleanup_hooked ) {
-		$cleanup_hooked = true;
-		add_action(
-			'admin_menu',
-			function () {
-				remove_submenu_page( 'aireset', 'aireset' );
-			},
-			99999
-		);
-	}
-
-	return $parent_exists;
-}
-
-function eop_render_aireset_parent_page() {
-	global $submenu;
-
-	if ( empty( $submenu['aireset'] ) || ! is_array( $submenu['aireset'] ) ) {
-		wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
-	}
-
-	foreach ( $submenu['aireset'] as $item ) {
-		$page_slug  = isset( $item[2] ) ? (string) $item[2] : '';
-		$capability = isset( $item[1] ) ? (string) $item[1] : 'read';
-
-		if ( '' === $page_slug || 'aireset' === $page_slug || ! current_user_can( $capability ) ) {
-			continue;
-		}
-
-		wp_safe_redirect( admin_url( 'admin.php?page=' . $page_slug ) );
-		exit;
-	}
-
-	wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
-}
+require_once EOP_PLUGIN_DIR . 'includes/trait-eop-license-guard.php';
+require_once EOP_PLUGIN_DIR . 'includes/class-admin-page.php';
 
 /* License gate */
 require_once EOP_PLUGIN_DIR . 'includes/class-eop-license-manager.php';
@@ -102,9 +41,7 @@ if ( ! EOP_License_Manager::is_valid() ) {
 }
 /* /License gate */
 
-require_once EOP_PLUGIN_DIR . 'includes/trait-eop-license-guard.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-role.php';
-require_once EOP_PLUGIN_DIR . 'includes/class-admin-page.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-ajax-handlers.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-order-creator.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-settings.php';

@@ -34,7 +34,7 @@ $order_statuses = function_exists( 'wc_get_order_statuses' ) ? wc_get_order_stat
             </div>
         </div>
 
-        <span class="eop-pdv-user"><?php echo esc_html( wp_get_current_user()->display_name ); ?></span>
+        <!-- <span class="eop-pdv-user"><?php echo esc_html( wp_get_current_user()->display_name ); ?></span> -->
     </div>
 
     <div id="eop-notices"></div>

@@ -1,71 +1,310 @@
-.el-license-container {
-    margin: 20px;
-    padding: 35px;
-    background: #fff;
-    border-radius: 4px;
+body.wp-admin.toplevel_page_aireset_page_eop-pedido-expresso,
+body.wp-admin.aireset_page_eop-pedido-expresso {
+    background: linear-gradient(180deg, #f3f6ff 0%, #eef2ff 100%);
 }
-.el-license-container .el-license-field {
-    display: block;
-    margin-bottom: 15px;
+
+body.wp-admin.toplevel_page_aireset_page_eop-pedido-expresso #wpcontent,
+body.wp-admin.toplevel_page_aireset_page_eop-pedido-expresso #wpbody-content,
+body.wp-admin.aireset_page_eop-pedido-expresso #wpcontent,
+body.wp-admin.aireset_page_eop-pedido-expresso #wpbody-content {
+    background: transparent;
 }
-.el-license-container .el-license-field input {
-    font-size: 200%;
-    padding: 8px 10px 10px;
+
+.eop-license-layout {
+    max-width: 1220px;
+    margin: 24px 20px 24px 2px;
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
 }
-.el-license-container .notice-error,
-.el-license-container div.error {
-    background: rgba(220, 50, 50, 0.11);
+
+.eop-license-aside {
+    min-height: 640px;
+    padding: 28px 26px;
+    border-radius: 30px;
+    background: radial-gradient(circle at top left, rgba(255,255,255,.22), transparent 34%), linear-gradient(160deg, #020437 0%, #050a76 100%);
+    color: #fff;
+    box-shadow: 0 24px 54px rgba(5, 10, 118, 0.22);
+}
+
+.eop-license-aside__eyebrow {
+    display: inline-block;
+    margin-bottom: 18px;
+    color: rgba(255,255,255,.72);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.eop-license-aside h2 {
+    margin: 0 0 16px;
+    color: #fff;
+    font-size: 32px;
+    line-height: 1.02;
+    font-weight: 300;
+    letter-spacing: -.03em;
+}
+
+.eop-license-aside p {
     margin: 0;
+    color: rgba(255,255,255,.84);
+    font-size: 15px;
+    line-height: 1.7;
 }
-.el-license-container .el-license-title {
-    margin-top: 0;
-    font-size: 30px;
+
+.eop-license-aside__list {
+    margin: 22px 0 0;
+    padding-left: 18px;
+    color: rgba(255,255,255,.8);
 }
-.el-license-container .el-license-info li {
-    list-style: none;
+
+.eop-license-aside__list li {
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+.el-license-container {
+    margin: 0;
+    padding: 30px 32px;
+    border: 1px solid rgba(0, 3, 75, 0.08);
+    border-radius: 26px;
+    background: radial-gradient(circle at top right, rgba(63, 102, 255, 0.08), transparent 26%), linear-gradient(180deg, #fff 0%, #f8faff 100%);
+    box-shadow: 0 24px 60px rgba(0, 3, 75, 0.1);
+}
+
+.el-license-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    color: #11162f;
+    font-size: 34px;
+    line-height: 1.04;
+}
+
+.el-license-title .dashicons-before::before {
+    color: #00034b;
+}
+
+.el-license-container hr {
+    margin: 18px 0 24px;
+    border: 0;
+    border-top: 1px solid #dfe6ff;
+}
+
+.el-license-container > p {
+    margin: 0 0 24px;
+    color: #55607f;
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+.el-license-container .notice-error,
+.el-license-container div.error,
+.el-license-container .notice {
+    margin: 0 0 20px;
+    padding: 14px 16px;
+    border: 0;
+    border-radius: 18px;
+    background: #fff1f6;
+    box-shadow: none;
+}
+
+.el-license-container .notice-error p,
+.el-license-container div.error p,
+.el-license-container .notice p {
+    margin: 0;
+    color: #9f1239;
+}
+
+.el-license-info {
+    display: grid;
+    gap: 14px;
+    margin: 0;
     padding: 0;
 }
-.el-license-container .el-license-info-title {
-    width: 150px;
+
+.el-license-info li {
+    margin: 0;
+    list-style: none;
+}
+
+.el-license-info li > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 14px;
+    padding: 16px 18px;
+    border: 1px solid #e4eaff;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 18px 44px rgba(0, 3, 75, 0.08);
+}
+
+.el-license-info-title {
+    min-width: 138px;
+    padding: 0;
+    color: #455270;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     display: inline-block;
-    position: relative;
-    padding-right: 5px;
 }
-.el-license-container .el-license-info-title:after {
-    content: ":";
-    position: absolute;
-    right: 2px;
+
+.el-license-info-title::after {
+    display: none;
 }
-.el-license-container .el-license-valid,
-.el-license-container .el-license-invalid {
-    padding: 0 5px 2px;
-    color: #fff;
-    background-color: #8fcc77;
-    border-radius: 3px;
+
+.el-license-valid,
+.el-license-invalid {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
-.el-license-container .el-license-invalid {
-    background-color: #f44336;
+
+.el-license-valid {
+    color: #166534;
+    background: #ecfdf5;
 }
-.el-license-container .el-license-key {
+
+.el-license-invalid {
+    color: #9f1239;
+    background: #fff1f6;
+}
+
+.el-license-key {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 0 14px;
+    border: 1px dashed #c7d4ff;
+    border-radius: 14px;
+    background: #f8faff;
+    color: #1b2559;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
     font-weight: 700;
-    opacity: 0.8;
+    opacity: 1;
 }
-.el-license-container .el-blue-btn {
-    padding: 0 5px 2px;
-    color: #fff;
-    background-color: #20b1d2;
-    border-radius: 3px;
+
+.el-blue-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 14px 1px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #00034b 0%, #2850dd 100%);
+    color: #fff !important;
+    font-size: 12px;
+    font-weight: 700;
     text-decoration: none;
-    box-shadow: 0 0 3px -1px rgba(0, 0, 0, 0.38);
+    box-shadow: 0 12px 24px rgba(0, 3, 75, 0.14);
 }
-.el-license-container .el-blue-btn:hover {
-    color: #fff;
-    background-color: #219dbf;
+
+.el-blue-btn:hover,
+.el-blue-btn:focus {
+    color: #fff !important;
+    background: linear-gradient(135deg, #00034b 0%, #2850dd 100%);
+    transform: translateY(-1px);
 }
-.el-license-container .el-license-field label {
+
+.el-license-field {
+    margin-bottom: 18px;
+}
+
+.el-license-field label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    color: #455270;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
-.el-license-container .el-license-active-btn {
-    margin-top: 25px;
+
+.el-license-field input {
+    width: 100%;
+    min-height: 56px;
+    padding: 14px 18px;
+    border: 1px solid #d6defd;
+    border-radius: 18px;
+    background: #fff;
+    color: #11162f;
+    font-size: 18px;
+    box-shadow: none;
+}
+
+.el-license-field input:focus {
+    border-color: #00034b;
+    box-shadow: 0 0 0 4px rgba(0, 3, 75, 0.08);
+    outline: none;
+}
+
+.el-license-active-btn {
+    margin-top: 26px;
+}
+
+.el-license-active-btn .button-primary,
+.el-license-active-btn .button {
+    min-height: 52px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #00034b 0%, #050a76 100%);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    box-shadow: 0 18px 34px rgba(0, 3, 75, 0.2);
+}
+
+.el-license-active-btn .button-primary:hover,
+.el-license-active-btn .button-primary:focus,
+.el-license-active-btn .button:hover,
+.el-license-active-btn .button:focus {
+    background: linear-gradient(135deg, #00034b 0%, #050a76 100%);
+    color: #fff;
+}
+
+@media (max-width: 1180px) {
+    .eop-license-layout {
+        grid-template-columns: 1fr;
+        margin-right: 12px;
+        margin-left: 0;
+    }
+
+    .eop-license-aside {
+        min-height: auto;
+    }
+}
+
+@media (max-width: 782px) {
+    .eop-license-layout {
+        gap: 20px;
+    }
+
+    .el-license-container {
+        padding: 22px 20px;
+    }
+
+    .el-license-title {
+        font-size: 26px;
+    }
+
+    .el-license-info-title {
+        min-width: 100%;
+    }
+
+    .el-license-info li > div {
+        align-items: flex-start;
+    }
 }

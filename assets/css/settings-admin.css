@@ -2,6 +2,66 @@
   max-width: 1280px;
   margin: 24px 0 0;
 }
+.eop-settings-page,
+.eop-settings-page * {
+  box-sizing: border-box;
+}
+.eop-settings-page .button-primary {
+  min-height: 46px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #00034b 0%, #050a76 100%);
+  box-shadow: 0 16px 28px rgba(0, 3, 75, 0.18);
+}
+.eop-settings-page .button-primary:hover, .eop-settings-page .button-primary:focus {
+  background: linear-gradient(135deg, #00034b 0%, #050a76 100%);
+}
+.eop-settings-page .notice,
+.eop-settings-page div.updated,
+.eop-settings-page div.error {
+  border-radius: 16px;
+}
+.eop-settings-page .wp-picker-container,
+.eop-settings-page .wp-picker-input-wrap,
+.eop-settings-page .wp-picker-holder {
+  width: 100%;
+}
+.eop-settings-page .wp-picker-container .wp-color-result.button {
+  width: 100%;
+  min-height: 46px;
+  margin: 0;
+  border: 1px solid #d6defd;
+  border-radius: 14px;
+  box-shadow: none;
+}
+.eop-settings-page .wp-picker-container .wp-color-result-text {
+  line-height: 44px;
+  border-radius: 0 13px 13px 0;
+}
+.eop-settings-page .wp-picker-input-wrap {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.eop-settings-page .font-select {
+  width: 100%;
+}
+.eop-settings-page .font-select > span {
+  min-height: 46px;
+  padding: 12px 14px;
+  border: 1px solid #d6defd;
+  border-radius: 14px;
+  line-height: 1.35;
+}
+.eop-settings-page .font-select .fs-drop {
+  border: 1px solid #d6defd;
+  border-top: 0;
+  border-radius: 0 0 14px 14px;
+}
+.eop-settings-page .font-select .fs-search input {
+  min-height: 40px;
+}
 
 body.eop-settings-screen .notice,
 body.eop-settings-screen div.notice,
@@ -13,38 +73,11 @@ body.eop-settings-screen .error {
   display: none !important;
 }
 
-.eop-settings-page,
-.eop-settings-page * {
-  box-sizing: border-box;
-}
-
-.eop-settings-page .button-primary {
-  min-height: 46px;
-  padding: 0 18px;
-  border: none;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #00034b 0%, #050a76 100%);
-  box-shadow: 0 16px 28px rgba(0, 3, 75, 0.18);
-}
-
-.eop-settings-page .button-primary:hover,
-.eop-settings-page .button-primary:focus {
-  background: linear-gradient(135deg, #00034b 0%, #050a76 100%);
-}
-
 .eop-settings-shell {
   display: grid;
   grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
-}
-
-.eop-settings-panel,
-.eop-settings-form {
-  background: #fff;
-  border: 1px solid #dbe2ff;
-  border-radius: 24px;
-  box-shadow: 0 18px 40px rgba(0, 3, 75, 0.08);
 }
 
 .eop-settings-panel {
@@ -54,33 +87,20 @@ body.eop-settings-screen .error {
   background: linear-gradient(145deg, #000126 0%, #00034b 60%, #050a76 100%);
   color: #fff;
 }
-
 .eop-settings-panel h1 {
   margin: 0 0 12px;
   color: #fff;
   font-size: 34px;
   line-height: 0.98;
 }
-
 .eop-settings-panel p {
   color: rgba(255, 255, 255, 0.84);
   font-size: 15px;
   line-height: 1.7;
 }
-
 .eop-settings-panel ul {
   margin: 18px 0 0;
   padding-left: 18px;
-}
-
-.eop-settings-page .notice,
-.eop-settings-page div.updated,
-.eop-settings-page div.error {
-  border-radius: 16px;
-}
-
-.eop-settings-form {
-  padding: 24px 28px;
 }
 
 .eop-settings-feedback {
@@ -90,7 +110,6 @@ body.eop-settings-screen .error {
   font-size: 14px;
   font-weight: 700;
 }
-
 .eop-settings-feedback--success {
   color: #166534;
   background: #ecfdf5;
@@ -108,13 +127,11 @@ body.eop-settings-screen .error {
   padding: 22px;
   background: linear-gradient(180deg, #fff 0%, #f8faff 100%);
 }
-
 .eop-settings-card h2 {
   margin: 0 0 6px;
   font-size: 20px;
   color: #11162f;
 }
-
 .eop-settings-card p {
   margin: 0 0 18px;
   color: #5b6784;
@@ -136,7 +153,6 @@ body.eop-settings-screen .error {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-
 .eop-settings-field input[type=text],
 .eop-settings-field input[type=url],
 .eop-settings-field input[type=number],
@@ -150,11 +166,6 @@ body.eop-settings-screen .error {
   background: #fff;
   box-shadow: none;
 }
-
-.eop-settings-field textarea {
-  min-height: 104px;
-}
-
 .eop-settings-field input[type=text]:focus,
 .eop-settings-field input[type=url]:focus,
 .eop-settings-field input[type=number]:focus,
@@ -164,7 +175,9 @@ body.eop-settings-screen .error {
   box-shadow: 0 0 0 4px rgba(0, 3, 75, 0.08);
   outline: none;
 }
-
+.eop-settings-field textarea {
+  min-height: 104px;
+}
 .eop-settings-field.is-full {
   grid-column: 1/-1;
 }
@@ -267,20 +280,26 @@ body.eop-settings-screen .error {
   cursor: pointer;
   transition: background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
 }
-
+.eop-settings-switcher:hover, .eop-settings-switcher:focus, .eop-settings-switcher:active {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+}
 .eop-settings-switcher.is-enabled {
   background: #0f766e;
   border-color: #0f766e;
   color: rgba(255, 255, 255, 0.78);
 }
-
-.eop-settings-switcher:hover,
-.eop-settings-switcher:focus,
-.eop-settings-switcher:active {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+.eop-settings-switcher.is-enabled .eop-settings-switcher__label--off {
+  opacity: 0.45;
+  color: rgba(255, 255, 255, 0.72);
 }
-
+.eop-settings-switcher.is-enabled .eop-settings-switcher__label--on {
+  opacity: 1;
+  color: #ffffff;
+}
+.eop-settings-switcher.is-enabled .eop-settings-switcher__thumb {
+  transform: translateX(48px);
+}
 .eop-settings-switcher__label {
   position: relative;
   z-index: 1;
@@ -290,26 +309,13 @@ body.eop-settings-screen .error {
   text-transform: uppercase;
   transition: opacity 0.2s ease, color 0.2s ease;
 }
-
 .eop-settings-switcher__label--off {
   color: #0f172a;
 }
-
 .eop-settings-switcher__label--on {
   opacity: 0.45;
   color: rgba(255, 255, 255, 0.88);
 }
-
-.eop-settings-switcher.is-enabled .eop-settings-switcher__label--off {
-  opacity: 0.45;
-  color: rgba(255, 255, 255, 0.72);
-}
-
-.eop-settings-switcher.is-enabled .eop-settings-switcher__label--on {
-  opacity: 1;
-  color: #ffffff;
-}
-
 .eop-settings-switcher__thumb {
   position: absolute;
   top: 4px;
@@ -321,63 +327,10 @@ body.eop-settings-screen .error {
   box-shadow: 0 8px 16px rgba(0, 3, 75, 0.16);
   transition: transform 0.22s ease;
 }
-
-.eop-settings-switcher.is-enabled .eop-settings-switcher__thumb {
-  transform: translateX(48px);
-}
-
 .eop-settings-switcher__status {
   font-size: 12px;
   font-weight: 700;
   color: #6a7695;
-}
-
-.eop-settings-page .wp-picker-container,
-.eop-settings-page .wp-picker-input-wrap,
-.eop-settings-page .wp-picker-holder {
-  width: 100%;
-}
-
-.eop-settings-page .wp-picker-container .wp-color-result.button {
-  width: 100%;
-  min-height: 46px;
-  margin: 0;
-  border: 1px solid #d6defd;
-  border-radius: 14px;
-  box-shadow: none;
-}
-
-.eop-settings-page .wp-picker-container .wp-color-result-text {
-  line-height: 44px;
-  border-radius: 0 13px 13px 0;
-}
-
-.eop-settings-page .wp-picker-input-wrap {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.eop-settings-page .font-select {
-  width: 100%;
-}
-
-.eop-settings-page .font-select > span {
-  min-height: 46px;
-  padding: 12px 14px;
-  border: 1px solid #d6defd;
-  border-radius: 14px;
-  line-height: 1.35;
-}
-
-.eop-settings-page .font-select .fs-drop {
-  border: 1px solid #d6defd;
-  border-top: 0;
-  border-radius: 0 0 14px 14px;
-}
-
-.eop-settings-page .font-select .fs-search input {
-  min-height: 40px;
 }
 
 .eop-settings-submit {

@@ -1,0 +1,342 @@
+/* Expresso Order PDF - Admin CSS */
+.eop-wrap {
+  max-width: 900px;
+  margin: 20px auto;
+}
+
+.eop-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.eop-card {
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  border-radius: 6px;
+  padding: 20px 24px;
+
+  h2 {
+    margin: 0 0 16px;
+    padding: 0 0 10px;
+    font-size: 15px;
+    font-weight: 600;
+    border-bottom: 1px solid #eee;
+  }
+}
+
+.eop-field {
+  margin-bottom: 14px;
+
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  select {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+.eop-input-group {
+  display: flex;
+  gap: 8px;
+
+  input {
+    flex: 1;
+  }
+}
+
+.eop-field-row {
+  display: flex;
+  gap: 16px;
+
+  .eop-field {
+    flex: 1;
+  }
+}
+
+.eop-status {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-style: italic;
+
+  &.found {
+    color: #46b450;
+  }
+
+  &.not-found {
+    color: #dc3232;
+  }
+
+  &.searching {
+    color: #0073aa;
+  }
+}
+
+.eop-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.eop-items-empty {
+  text-align: center;
+  color: #999;
+  padding: 20px;
+  font-style: italic;
+}
+
+.eop-item-card {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid #ccd0d4;
+  border-radius: 6px;
+  background: #fff;
+
+  .eop-remove-item {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    color: #a00;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 18px;
+    line-height: 1;
+
+    &:hover {
+      color: #dc3232;
+    }
+  }
+
+  &__left {
+    flex: 0 0 60px;
+  }
+
+  &__img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    display: block;
+  }
+
+  &__right {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 8px;
+    padding-right: 20px;
+    word-break: break-word;
+  }
+
+  &__fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__label {
+    font-size: 11px;
+    color: #666;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  &__value {
+    font-size: 13px;
+    line-height: 28px;
+  }
+
+  &__subtotal {
+    font-weight: 700;
+    color: #0073aa;
+  }
+}
+
+.eop-qty-stepper {
+  display: flex;
+  align-items: center;
+  border: 1px solid #8c8f94;
+  border-radius: 4px;
+  overflow: hidden;
+
+  .eop-qty {
+    width: 40px;
+    text-align: center;
+    border: none;
+    border-left: 1px solid #8c8f94;
+    border-right: 1px solid #8c8f94;
+    border-radius: 0;
+    box-shadow: none;
+    height: 28px;
+    padding: 0 2px;
+    font-size: 13px;
+    -moz-appearance: textfield;
+
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
+}
+
+.eop-qty-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  background: #f6f7f7;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: #1d2327;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+
+  &:hover {
+    background: #dcdcde;
+  }
+
+  &:active {
+    background: #c3c4c7;
+  }
+}
+
+.eop-item-discount-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+  }
+}
+
+.eop-item-discount-suffix {
+  font-weight: 600;
+  color: #50575e;
+  flex-shrink: 0;
+}
+
+.eop-discount-text-input {
+  width: 100%;
+  text-align: right;
+}
+
+.eop-totals {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.eop-total-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 14px;
+}
+
+.eop-total-grand {
+  font-weight: 700;
+  font-size: 16px;
+  border-top: 2px solid #0073aa;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.eop-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+
+  .eop-field {
+    flex: 0 0 200px;
+    margin-bottom: 0;
+  }
+
+  .button-hero {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+.eop-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eop-modal-content {
+  background: #fff;
+  border-radius: 8px;
+  padding: 30px 40px;
+  max-width: 460px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+
+  h2 {
+    color: #46b450;
+    margin-bottom: 10px;
+  }
+}
+
+.eop-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+  .eop-field-row {
+    flex-direction: column;
+  }
+
+  .eop-actions {
+    flex-direction: column;
+
+    .eop-field {
+      flex: auto;
+      width: 100%;
+    }
+  }
+}

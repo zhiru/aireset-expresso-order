@@ -9,10 +9,11 @@
     var shippingAddress = {};
     var postcodeLookupCache = {};
     var postcodeLookupBusy = false;
-    var currentView = 'new-order';
+    var currentView = eop_vars.initial_view || 'new-order';
     var ordersLoaded = false;
     var ordersPage = 1;
     var currentEditingOrderId = 0;
+    var editLoadToken = 0;
 
     function getShippingPanelElements() {
         return {
@@ -135,6 +136,10 @@
     function exitEditMode() {
         currentEditingOrderId = 0;
         updateEditingState();
+
+        if (currentView) {
+            syncBrowserView(currentView, true);
+        }
     }
 
     function parseDiscountInput(rawValue) {
@@ -161,8 +166,71 @@
         };
     }
 
-    function setAppView(viewName) {
-        var targetView = viewName === 'orders' ? 'orders' : 'new-order';
+    function getAllowedViews() {
+        var views = ['new-order', 'orders'];
+
+        if ($('[data-eop-view="settings"]').length) {
+            views.push('settings');
+        }
+
+        if ($('[data-eop-view="license"]').length) {
+            views.push('license');
+        }
+
+        return views;
+    }
+
+    function normalizeView(viewName) {
+        var targetView = String(viewName || '');
+        var allowedViews = getAllowedViews();
+
+        if (allowedViews.indexOf(targetView) !== -1) {
+            return targetView;
+        }
+
+        return allowedViews[0] || 'new-order';
+    }
+
+    function buildViewUrl(viewName) {
+        var base = String(eop_vars.view_url_base || '');
+        var url;
+
+        if (!base) {
+            return '';
+        }
+
+        url = new URL(base, window.location.origin);
+        url.searchParams.set('view', normalizeView(viewName));
+
+        if (currentEditingOrderId > 0) {
+            url.searchParams.set('action', 'edit');
+            url.searchParams.set('order_id', String(currentEditingOrderId));
+        } else {
+            url.searchParams.delete('action');
+            url.searchParams.delete('order_id');
+        }
+
+        return url.toString();
+    }
+
+    function syncBrowserView(viewName, replaceState) {
+        var nextUrl = buildViewUrl(viewName);
+
+        if (!nextUrl || !window.history || !window.history.pushState) {
+            return;
+        }
+
+        if (replaceState) {
+            window.history.replaceState({ eopView: viewName }, '', nextUrl);
+            return;
+        }
+
+        window.history.pushState({ eopView: viewName }, '', nextUrl);
+    }
+
+    function setAppView(viewName, options) {
+        var settings = options || {};
+        var targetView = normalizeView(viewName);
 
         currentView = targetView;
 
@@ -178,6 +246,10 @@
 
         if (targetView === 'orders' && !ordersLoaded) {
             loadOrdersList(1);
+        }
+
+        if (!settings.skipHistory) {
+            syncBrowserView(targetView, Boolean(settings.replaceState));
         }
     }
 
@@ -291,6 +363,10 @@
     }
 
     function loadOrderForEditing(orderId) {
+        var requestToken = editLoadToken + 1;
+
+        editLoadToken = requestToken;
+
         $.post(eop_vars.ajax_url, {
             action: 'eop_load_order',
             nonce: eop_vars.nonce,
@@ -298,6 +374,10 @@
         }, function (res) {
             var d;
             var addr;
+
+            if (requestToken !== editLoadToken) {
+                return;
+            }
 
             if (!res.success) {
                 showNotice((res.data && res.data.message) || i18n.edit_error || 'Nao foi possivel abrir este pedido para edicao.', 'error');
@@ -355,6 +435,10 @@
             recalcTotals();
             showNotice(i18n.edit_loaded || 'Pedido carregado no painel para edicao.', 'success');
         }).fail(function () {
+            if (requestToken !== editLoadToken) {
+                return;
+            }
+
             showNotice(i18n.edit_error || 'Nao foi possivel abrir este pedido para edicao.', 'error');
         });
     }
@@ -502,6 +586,7 @@
     }
 
     function resetForm() {
+        editLoadToken += 1;
         items = [];
         renderItems();
 
@@ -995,6 +1080,7 @@
 
         if (targetView === 'new-order') {
             resetForm();
+            setAppView('new-order');
             return;
         }
 
@@ -1046,6 +1132,26 @@
 
         if ($icon.length) {
             $icon.text(isOpen ? '+' : '-');
+        }
+    });
+
+    $(window).on('popstate', function () {
+        var params = new URLSearchParams(window.location.search);
+        var view = params.get('view') || eop_vars.initial_view || 'new-order';
+
+        setAppView(view, { replaceState: true, skipHistory: true });
+    });
+
+    $(function () {
+        var params = new URLSearchParams(window.location.search);
+        var bootstrapView = params.get('view') || currentView;
+        var bootstrapAction = params.get('action') || '';
+        var bootstrapOrderId = parseInt(params.get('order_id') || '0', 10) || 0;
+
+        setAppView(bootstrapView, { replaceState: true });
+
+        if (bootstrapAction === 'edit' && bootstrapOrderId > 0) {
+            loadOrderForEditing(bootstrapOrderId);
         }
     });
 })(jQuery);

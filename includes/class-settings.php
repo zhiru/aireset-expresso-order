@@ -225,6 +225,19 @@ class EOP_Settings {
     }
 
     public static function render_page() {
+        if ( class_exists( 'EOP_Admin_Page' ) ) {
+            wp_safe_redirect( EOP_Admin_Page::get_view_url( 'settings' ) );
+            exit;
+        }
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
+        }
+
+        self::render_standalone_page();
+    }
+
+    public static function render_embedded_page() {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
         }
@@ -232,26 +245,15 @@ class EOP_Settings {
         $settings = self::get_all();
         $pages    = get_pages();
         ?>
-        <div class="wrap eop-settings-page">
-            <div class="eop-settings-shell">
-                <aside class="eop-settings-panel">
-                    <h1><?php esc_html_e( 'Pedido Expresso', EOP_TEXT_DOMAIN ); ?></h1>
-                    <p><?php esc_html_e( 'Controle o comportamento do fluxo comercial, a proposta publica e a identidade visual sem depender do tema ativo.', EOP_TEXT_DOMAIN ); ?></p>
-                    <ul>
-                        <li><?php esc_html_e( 'Escolha entre proposta publica ou pedido direto', EOP_TEXT_DOMAIN ); ?></li>
-                        <li><?php esc_html_e( 'Ligue checkout somente quando fizer sentido', EOP_TEXT_DOMAIN ); ?></li>
-                        <li><?php esc_html_e( 'Ajuste logo, cor, fonte, radius e textos', EOP_TEXT_DOMAIN ); ?></li>
-                    </ul>
-                </aside>
-
-                <form method="post" action="options.php" class="eop-settings-form">
-                    <?php settings_fields( 'eop_settings_group' ); ?>
-                    <?php if ( isset( $_GET['settings-updated'] ) && 'true' === wp_unslash( $_GET['settings-updated'] ) ) : ?>
-                        <div class="eop-settings-feedback eop-settings-feedback--success">
-                            <?php esc_html_e( 'Configuracoes salvas com sucesso.', EOP_TEXT_DOMAIN ); ?>
-                        </div>
-                    <?php endif; ?>
-                    <div class="eop-settings-sections">
+        <div class="eop-settings-page eop-settings-page--embedded">
+            <form method="post" action="options.php" class="eop-settings-form">
+                <?php settings_fields( 'eop_settings_group' ); ?>
+                <?php if ( isset( $_GET['settings-updated'] ) && 'true' === wp_unslash( $_GET['settings-updated'] ) ) : ?>
+                    <div class="eop-settings-feedback eop-settings-feedback--success">
+                        <?php esc_html_e( 'Configuracoes salvas com sucesso.', EOP_TEXT_DOMAIN ); ?>
+                    </div>
+                <?php endif; ?>
+                <div class="eop-settings-sections">
                         <section class="eop-settings-card">
                             <h2><?php esc_html_e( 'Fluxo', EOP_TEXT_DOMAIN ); ?></h2>
                             <p><?php esc_html_e( 'Defina como a equipe comercial trabalha hoje e como o cliente recebe a proposta.', EOP_TEXT_DOMAIN ); ?></p>
@@ -414,11 +416,33 @@ class EOP_Settings {
                                 </div>
                             </div>
                         </section>
-                    </div>
-                    <div class="eop-settings-submit">
-                        <?php submit_button( __( 'Salvar alteracoes', EOP_TEXT_DOMAIN ), 'primary large', 'submit', false ); ?>
-                    </div>
-                </form>
+                </div>
+                <div class="eop-settings-submit">
+                    <?php submit_button( __( 'Salvar alteracoes', EOP_TEXT_DOMAIN ), 'primary large', 'submit', false ); ?>
+                </div>
+            </form>
+        </div>
+        <?php
+    }
+
+    public static function render_standalone_page() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
+        }
+        ?>
+        <div class="wrap eop-settings-page">
+            <div class="eop-settings-shell">
+                <aside class="eop-settings-panel">
+                    <h1><?php esc_html_e( 'Pedido Expresso', EOP_TEXT_DOMAIN ); ?></h1>
+                    <p><?php esc_html_e( 'Controle o comportamento do fluxo comercial, a proposta publica e a identidade visual sem depender do tema ativo.', EOP_TEXT_DOMAIN ); ?></p>
+                    <ul>
+                        <li><?php esc_html_e( 'Escolha entre proposta publica ou pedido direto', EOP_TEXT_DOMAIN ); ?></li>
+                        <li><?php esc_html_e( 'Ligue checkout somente quando fizer sentido', EOP_TEXT_DOMAIN ); ?></li>
+                        <li><?php esc_html_e( 'Ajuste logo, cor, fonte, radius e textos', EOP_TEXT_DOMAIN ); ?></li>
+                    </ul>
+                </aside>
+
+                <?php self::render_embedded_page(); ?>
             </div>
         </div>
         <?php

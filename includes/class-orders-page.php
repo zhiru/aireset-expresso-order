@@ -77,6 +77,21 @@ class EOP_Orders_Page {
     }
 
     public static function render_page() {
+        if ( class_exists( 'EOP_Admin_Page' ) ) {
+            $args = array();
+
+            if ( isset( $_GET['order_id'] ) ) {
+                $args['order_id'] = absint( $_GET['order_id'] );
+            }
+
+            if ( isset( $_GET['action'] ) && 'edit' === sanitize_key( wp_unslash( $_GET['action'] ) ) ) {
+                $args['action'] = 'edit';
+            }
+
+            wp_safe_redirect( EOP_Admin_Page::get_view_url( 'orders', $args ) );
+            exit;
+        }
+
         if ( ! current_user_can( 'edit_shop_orders' ) ) {
             wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
         }

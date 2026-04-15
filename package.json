@@ -3,7 +3,7 @@
   "version": "1.1.24",
   "private": true,
   "scripts": {
-    "build:css": "sass.cmd assets/scss/frontend/style.scss assets/css/frontend.css --style=expanded --no-source-map && sass.cmd assets/scss/admin/settings.scss assets/css/settings-admin.css --style=expanded --no-source-map",
-    "watch:css": "sass.cmd --watch assets/scss/frontend/style.scss:assets/css/frontend.css assets/scss/admin/settings.scss:assets/css/settings-admin.css --style=expanded --no-source-map"
+    "build:css": "sass.cmd assets/scss/frontend/style.scss assets/css/frontend.css --style=expanded --no-source-map && sass.cmd assets/scss/admin/style.scss assets/css/admin.css --style=expanded --no-source-map && sass.cmd assets/scss/admin/settings.scss assets/css/settings-admin.css --style=expanded --no-source-map",
+    "watch:css": "sass.cmd --watch assets/scss/frontend/style.scss:assets/css/frontend.css assets/scss/admin/style.scss:assets/css/admin.css assets/scss/admin/settings.scss:assets/css/settings-admin.css --style=expanded --no-source-map"
   }
 }
