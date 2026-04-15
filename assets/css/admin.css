@@ -446,9 +446,19 @@ body.eop-admin-spa-screen #wpbody-content > .fs-notice {
 }
 
 .eop-admin-license-shell {
-  max-width: 760px;
+  max-width: 980px;
+}
+.eop-admin-license-shell .eop-license-layout {
+  max-width: none;
+  margin: 0;
+  display: block;
+}
+.eop-admin-license-shell .eop-license-aside {
+  display: none;
 }
 .eop-admin-license-shell .el-license-container {
+  width: 100%;
+  box-sizing: border-box;
   max-width: none;
   margin: 0;
   padding: 30px 32px;

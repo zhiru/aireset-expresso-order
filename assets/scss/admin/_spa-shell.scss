@@ -177,7 +177,17 @@ body.eop-admin-spa-screen {
 }
 
 .eop-admin-license-shell {
-  max-width: 760px;
+  max-width: 980px;
+
+  .eop-license-layout {
+    max-width: none;
+    margin: 0;
+    display: block;
+  }
+
+  .eop-license-aside {
+    display: none;
+  }
 
   .el-license-container {
     width: 100%;
