@@ -1,0 +1,44 @@
+name: Release Plugin Zip
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release-zip:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare distributable plugin folder
+        run: |
+          mkdir -p dist/aireset-expresso-order
+          rsync -a ./ dist/aireset-expresso-order/ \
+            --exclude ".git" \
+            --exclude ".github" \
+            --exclude "node_modules" \
+            --exclude "dist"
+
+      - name: Create plugin zip
+        run: |
+          cd dist
+          zip -r ../aireset-expresso-order.zip aireset-expresso-order
+
+      - name: Upload zip to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: aireset-expresso-order.zip
+
+      - name: Upload zip as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aireset-expresso-order
+          path: aireset-expresso-order.zip
