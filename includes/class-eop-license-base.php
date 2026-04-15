@@ -14,6 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once __DIR__ . '/class-eop-telemetry.php';
+require_once __DIR__ . '/class-eop-integrity.php';
+
 if ( ! class_exists( 'EOP_License_Core' ) ) {
 
 	/**
@@ -34,6 +37,8 @@ if ( ! class_exists( 'EOP_License_Core' ) ) {
 		private $plugin_file;
 		private $version          = '';
 		private $email_address    = '';
+		private $telemetry_core   = null;
+		private $integrity_core   = null;
 		private static $selfobj   = null;
 		private static $_on_delete_license = [];
 
@@ -53,6 +58,8 @@ if ( ! class_exists( 'EOP_License_Core' ) ) {
 			if ( empty( $this->version ) ) {
 				$this->version = $this->get_current_version();
 			}
+
+			$this->boot_auxiliary_cores();
 
 			if ( $this->has_check_update && function_exists( 'add_action' ) ) {
 				add_action( 'admin_post_' . $this->product_base . '_fupc', function () {
@@ -78,6 +85,26 @@ if ( ! class_exists( 'EOP_License_Core' ) ) {
 					}, 10, 2 );
 				}
 			}
+		}
+
+		private function boot_auxiliary_cores() {
+			$this->telemetry_core = new EOP_Telemetry_Core(
+				array(
+					'server_host'  => $this->server_host,
+					'product_id'   => $this->product_id,
+					'product_base' => $this->product_base,
+					'version'      => $this->version,
+					'domain'       => $this->get_domain(),
+					'encoder'      => array( $this, 'encode_transport_payload' ),
+				)
+			);
+
+			$this->integrity_core = new EOP_Integrity_Core(
+				array(
+					'plugin_dir'            => dirname( $this->plugin_file ),
+					'min_license_base_size' => 8000,
+				)
+			);
 		}
 
 		/* ══════════════════════════════════════════════
@@ -125,6 +152,14 @@ if ( ! class_exists( 'EOP_License_Core' ) ) {
 		 */
 		public static function get_integrity_token() {
 			return hash( 'sha256', __FILE__ . self::$_fp_salt . 'EOP_License_Core' );
+		}
+
+		public function get_telemetry_core() {
+			return $this->telemetry_core;
+		}
+
+		public function get_integrity_core() {
+			return $this->integrity_core;
 		}
 
 		/* ══════════════════════════════════════════════
@@ -282,33 +317,20 @@ if ( ! class_exists( 'EOP_License_Core' ) ) {
 		 *  Phone-home: reporta uso sem licença ao servidor
 		 * ══════════════════════════════════════════════ */
 		private function _dispatch_status_report( $reason = 'unknown', $attempted_key = '' ) {
-			$transient_key = 'eop_sr_' . hash( 'crc32b', $reason );
-			if ( get_transient( $transient_key ) ) {
-				return; // já reportou recentemente, rate-limit de 12h
+			if ( ! $this->telemetry_core instanceof EOP_Telemetry_Core ) {
+				return;
 			}
 
-			$payload = [
-				'domain'        => $this->get_domain(),
-				'product_id'    => $this->product_id,
-				'product_base'  => $this->product_base,
-				'reason'        => $reason,
-				'attempted_key' => substr( $attempted_key, 0, 12 ),
-				'version'       => $this->version,
-				'ts'            => time(),
-				'wp_version'    => get_bloginfo( 'version' ),
-			];
-
-			$url  = rtrim( $this->server_host, '/' ) . '/product/status-report/' . $this->product_id;
-			$body = $this->encrypt( wp_json_encode( $payload ) );
-
-			wp_remote_post( $url, [
-				'body'      => $body,
-				'timeout'   => 5,
-				'blocking'  => false,
-				'sslverify' => true,
-			] );
-
-			set_transient( $transient_key, 1, 12 * HOUR_IN_SECONDS );
+			$this->telemetry_core->report_event(
+				'license_status',
+				array(
+					'reason'        => sanitize_key( (string) $reason ),
+					'attempted_key' => substr( (string) $attempted_key, 0, 12 ),
+				),
+				array(
+					'rate_limit' => 12 * HOUR_IN_SECONDS,
+				)
+			);
 		}
 
 		/**
@@ -334,18 +356,16 @@ if ( ! class_exists( 'EOP_License_Core' ) ) {
 		 * @return bool
 		 */
 		public function verify_class_integrity() {
-			if ( ! method_exists( $this, '_check_wp_plugin' ) ) {
-				$this->_dispatch_status_report( 'integrity_method' );
+			if ( ! $this->integrity_core instanceof EOP_Integrity_Core ) {
 				return false;
 			}
-			if ( ! method_exists( $this, '_dispatch_status_report' ) ) {
+
+			$is_valid = $this->integrity_core->verify_sdk_core( $this );
+			if ( ! $is_valid ) {
+				$this->_dispatch_status_report( 'integrity_' . $this->integrity_core->get_last_issue() );
 				return false;
 			}
-			$ref = new \ReflectionClass( $this );
-			if ( $ref->getMethod( '_check_wp_plugin' )->class !== 'EOP_License_Core' ) {
-				$this->_dispatch_status_report( 'integrity_override' );
-				return false;
-			}
+
 			return true;
 		}
 
@@ -430,6 +450,10 @@ if ( ! class_exists( 'EOP_License_Core' ) ) {
 		 * ══════════════════════════════════════════════ */
 		public function set_email_address( $email_address ) {
 			$this->email_address = sanitize_email( $email_address );
+		}
+
+		public function encode_transport_payload( $payload ) {
+			return $this->encrypt( (string) $payload );
 		}
 
 		public function get_current_version() {

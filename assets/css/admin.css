@@ -143,6 +143,9 @@
   flex-direction: column;
   gap: 2px;
 }
+.eop-item-card__field:last-child {
+  align-self: stretch;
+}
 .eop-item-card__label {
   font-size: 11px;
   color: #666;
@@ -156,26 +159,39 @@
 .eop-item-card__subtotal {
   font-weight: 700;
   color: #0073aa;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #d7e2ff;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff 0%, #f7f9ff 100%);
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 20px;
 }
 
 .eop-qty-stepper {
-  display: flex;
-  align-items: center;
-  border: 1px solid #8c8f94;
-  border-radius: 4px;
+  display: grid;
+  grid-template-columns: 36px minmax(64px, 84px) 36px;
+  align-items: stretch;
+  width: fit-content;
+  border: 1px solid #ccd8ff;
+  border-radius: 14px;
   overflow: hidden;
+  background: #fff;
 }
 .eop-qty-stepper .eop-qty {
-  width: 40px;
+  width: 100%;
+  min-width: 0;
   text-align: center;
   border: none;
-  border-left: 1px solid #8c8f94;
-  border-right: 1px solid #8c8f94;
+  border-left: 1px solid #ccd8ff;
+  border-right: 1px solid #ccd8ff;
   border-radius: 0;
   box-shadow: none;
-  height: 28px;
+  height: 44px;
   padding: 0 2px;
-  font-size: 13px;
+  font-size: 18px;
+  font-weight: 700;
   -moz-appearance: textfield;
 }
 .eop-qty-stepper .eop-qty::-webkit-inner-spin-button, .eop-qty-stepper .eop-qty::-webkit-outer-spin-button {
@@ -185,14 +201,14 @@
 
 .eop-qty-btn {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  background: #f6f7f7;
+  width: 36px;
+  height: 44px;
+  background: linear-gradient(180deg, #fff 0%, #f7f9ff 100%);
   border: none;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 24px;
   line-height: 1;
-  color: #1d2327;
+  color: #2850dd;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -201,26 +217,42 @@
   -webkit-tap-highlight-color: transparent;
 }
 .eop-qty-btn:hover {
-  background: #dcdcde;
+  background: #eef3ff;
 }
 .eop-qty-btn:active {
-  background: #c3c4c7;
+  background: #e2eaff;
 }
 
 .eop-item-discount-group {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 4px;
+  border: 1px solid #ccd8ff;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
 }
 .eop-item-discount-group input[type=text] {
   flex: 1;
   min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
   text-align: right;
+  box-shadow: none;
 }
 
 .eop-item-discount-suffix {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-left: 1px solid #ccd8ff;
+  background: linear-gradient(180deg, #fff 0%, #f7f9ff 100%);
   font-weight: 600;
-  color: #50575e;
+  color: #2850dd;
   flex-shrink: 0;
 }
 

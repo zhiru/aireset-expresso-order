@@ -2,6 +2,14 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.25 - 2026-04-15
+
+- separacao do sistema em `license core`, `integrity core` e `telemetry core`
+- integridade da distribuicao agora valida a presenca dos arquivos essenciais e pode exibir aviso no admin
+- telemetria passou a usar modulo proprio e fluxo explicito de eventos
+- refinado o visual de quantidade, desconto e subtotal nos cards de item do painel
+- pipeline de release atualizado para gerar pacote distribuivel com hardening basico dos arquivos sensiveis
+
 ## 1.1.24 - 2026-04-15
 
 - corrigido o acesso aos submenus `Pedidos` e `Licenca` do Pedido Expresso no admin
