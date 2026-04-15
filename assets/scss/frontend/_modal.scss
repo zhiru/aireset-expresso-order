@@ -1,0 +1,40 @@
+.eop-pdv .eop-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0, 3, 75, 0.42);
+  backdrop-filter: blur(6px);
+}
+
+.eop-pdv .eop-modal-content {
+  width: 100%;
+  max-width: 540px;
+  padding: 34px;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at top right, rgba(255,255,255,.56), transparent 34%),
+    linear-gradient(180deg, #fffefb 0%, #fff 100%);
+  border: 1px solid var(--eop-border);
+  box-shadow: var(--eop-shadow-lg);
+  text-align: center;
+}
+
+.eop-pdv .eop-modal-content h2 {
+  margin: 0 0 12px;
+  color: #11162f;
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -.04em;
+}
+
+.eop-pdv .eop-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}

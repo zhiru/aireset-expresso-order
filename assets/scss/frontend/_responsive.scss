@@ -1,0 +1,69 @@
+@media (max-width: 1080px) {
+  .eop-login-wrap,
+  .eop-pdv-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .eop-pdv-sidebar {
+    position: static;
+  }
+
+  .eop-orders-browser__filters,
+  .eop-order-card__meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .eop-login-wrap,
+  .eop-pdv {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .eop-login-card,
+  .eop-login-aside,
+  .eop-pdv-header,
+  .eop-pdv .eop-card,
+  .eop-pdv .eop-modal-content {
+    padding: 22px;
+    border-radius: 22px;
+  }
+
+  .eop-pdv-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .eop-pdv-nav,
+  .eop-editing-banner,
+  .eop-orders-browser__top,
+  .eop-orders-summary__card,
+  .eop-order-card__header,
+  .eop-orders-browser__pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .eop-pdv .eop-input-group,
+  .eop-pdv .eop-field-row,
+  .eop-pdv .eop-item-card__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .eop-pdv .eop-item-card {
+    grid-template-columns: 1fr;
+  }
+
+  .eop-pdv .eop-item-card__left {
+    justify-content: flex-start;
+  }
+
+  .eop-pdv .eop-total-grand {
+    font-size: 28px;
+  }
+
+  .eop-order-card__actions {
+    flex-direction: column;
+  }
+}

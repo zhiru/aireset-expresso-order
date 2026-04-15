@@ -1,0 +1,82 @@
+/* Orders list & edit styles */
+
+/* Filters */
+.eop-orders-filters {
+    margin: 16px 0;
+}
+.eop-orders-filters__row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.eop-orders-filters__row select {
+    min-width: 180px;
+}
+.eop-orders-filters__row input[type="search"] {
+    min-width: 240px;
+}
+
+/* Table */
+.eop-orders-table {
+    margin-top: 12px;
+}
+.eop-orders-col-id {
+    width: 120px;
+}
+.eop-orders-col-total {
+    width: 120px;
+    text-align: right;
+}
+.eop-orders-col-actions {
+    width: 140px;
+    text-align: right;
+}
+.eop-orders-order-link {
+    text-decoration: none;
+}
+.eop-orders-order-link strong {
+    font-size: 14px;
+}
+.eop-orders-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+.eop-orders-badge--proposal {
+    background: #fff3cd;
+    color: #856404;
+}
+.eop-orders-customer-name {
+    font-weight: 500;
+}
+.eop-orders-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #666;
+}
+
+/* Edit page */
+.eop-edit-wrap .eop-back-link {
+    text-decoration: none;
+    font-size: 20px;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+.eop-edit-links {
+    margin-top: 12px;
+    text-align: center;
+    font-size: 13px;
+}
+.eop-edit-links a {
+    text-decoration: none;
+}
+
+/* Pagination */
+.eop-orders-wrap .tablenav-pages {
+    margin-top: 12px;
+}
