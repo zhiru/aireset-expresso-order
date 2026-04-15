@@ -173,7 +173,7 @@ $order_statuses = function_exists( 'wc_get_order_statuses' ) ? wc_get_order_stat
 
                             <div class="eop-field">
                                 <label for="eop-discount"><?php esc_html_e( 'Desconto geral', EOP_TEXT_DOMAIN ); ?></label>
-                                <input type="text" id="eop-discount" class="eop-discount-text-input" value="" placeholder="10% ou 10" />
+                                <input type="text" id="eop-discount" class="eop-discount-text-input" value="" placeholder="10% ou 10" inputmode="decimal" />
                             </div>
 
                             <div class="eop-totals">

@@ -135,7 +135,7 @@ $font_css = method_exists( 'EOP_Settings', 'get_font_css_family' ) ? EOP_Setting
 
             <div class="eop-field">
                 <label for="eop-discount"><?php esc_html_e( 'Desconto geral', EOP_TEXT_DOMAIN ); ?></label>
-                <input type="text" id="eop-discount" class="eop-discount-text-input" value="" placeholder="10% ou 10" />
+                <input type="text" id="eop-discount" class="eop-discount-text-input" value="" placeholder="10% ou 10" inputmode="decimal" />
             </div>
 
             <div class="eop-totals">

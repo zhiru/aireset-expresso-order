@@ -4,6 +4,7 @@
 
     var items = [];
     var i18n = eop_vars.i18n || {};
+    var discountMode = eop_vars.discount_mode || 'both';
     var selectedShippingRate = null;
     var shippingAddress = {};
     var postcodeLookupCache = {};
@@ -142,11 +143,20 @@
         var numeric = parseFloat(raw.replace(/[^0-9.\-]/g, ''));
 
         if (isNaN(numeric) || numeric <= 0) {
-            return { type: 'fixed', value: 0 };
+            return { type: discountMode === 'percent' ? 'percent' : 'fixed', value: 0 };
+        }
+
+        var type;
+        if (discountMode === 'percent') {
+            type = 'percent';
+        } else if (discountMode === 'fixed') {
+            type = 'fixed';
+        } else {
+            type = hasPercent ? 'percent' : 'fixed';
         }
 
         return {
-            type: hasPercent ? 'percent' : 'fixed',
+            type: type,
             value: Math.max(0, numeric)
         };
     }
@@ -313,7 +323,7 @@
                     price: parseFloat(item.price) || 0,
                     image: item.image || '',
                     quantity: parseInt(item.quantity, 10) || 1,
-                    discount_type: item.discount_type || 'fixed',
+                    discount_type: item.discount_type || (discountMode === 'fixed' ? 'fixed' : 'percent'),
                     discount_value: parseFloat(item.discount_value) || 0
                 };
             });
@@ -371,7 +381,7 @@
             return Math.min(lineTotal, lineTotal * discVal / 100);
         }
 
-        return Math.min(lineTotal, discVal);
+        return Math.min(lineTotal, discVal * item.quantity);
     }
 
     function recalcTotals() {
@@ -436,6 +446,20 @@
             var imgSrc = item.image || '';
             var nameHtml = $('<span>').text(item.name + (item.sku ? ' [' + item.sku + ']' : '')).html();
 
+            var discSuffix = '';
+            var discPlaceholder = '0';
+
+            if (discountMode === 'percent') {
+                discSuffix = '<span class="eop-item-discount-suffix">%</span>';
+                discPlaceholder = '0';
+            } else if (discountMode === 'fixed') {
+                discSuffix = '<span class="eop-item-discount-suffix">R$</span>';
+                discPlaceholder = '0,00';
+            } else {
+                discSuffix = '';
+                discPlaceholder = '10 ou 10%';
+            }
+
             var card = '<div class="eop-item-card" data-idx="' + idx + '">' +
                 '<a href="#" class="eop-remove-item" title="Remover">&times;</a>' +
                 '<div class="eop-item-card__left">' +
@@ -450,12 +474,17 @@
                         '</div>' +
                         '<div class="eop-item-card__field">' +
                             '<span class="eop-item-card__label">Qtd</span>' +
-                            '<input type="number" class="eop-qty" min="1" value="' + item.quantity + '" />' +
+                            '<div class="eop-qty-stepper">' +
+                                '<button type="button" class="eop-qty-btn eop-qty-dec" aria-label="Diminuir">&#8722;</button>' +
+                                '<input type="number" class="eop-qty" min="1" value="' + item.quantity + '" inputmode="numeric" />' +
+                                '<button type="button" class="eop-qty-btn eop-qty-inc" aria-label="Aumentar">+</button>' +
+                            '</div>' +
                         '</div>' +
                         '<div class="eop-item-card__field">' +
                             '<span class="eop-item-card__label">Desconto</span>' +
                             '<div class="eop-item-discount-group">' +
-                                '<input type="text" class="eop-item-discount" value="' + $('<span>').text(formatDiscountInput(discType, discVal)).html() + '" placeholder="10% ou 10" />' +
+                                '<input type="text" class="eop-item-discount" value="' + (discVal > 0 ? formatDiscountInput(discType, discVal) : '') + '" placeholder="' + discPlaceholder + '" inputmode="decimal" />' +
+                                discSuffix +
                             '</div>' +
                         '</div>' +
                         '<div class="eop-item-card__field">' +
@@ -699,7 +728,7 @@
                 price: selected.price,
                 image: selected.image || '',
                 quantity: 1,
-                discount_type: 'fixed',
+                discount_type: discountMode === 'fixed' ? 'fixed' : 'percent',
                 discount_value: 0
             });
         }
@@ -722,6 +751,30 @@
         recalcTotals();
     });
 
+    $(document).on('click', '.eop-qty-dec', function () {
+        var $card = $(this).closest('.eop-item-card');
+        var idx = $card.data('idx');
+        var current = parseInt(items[idx].quantity, 10) || 1;
+        var next = Math.max(1, current - 1);
+
+        items[idx].quantity = next;
+        $card.find('.eop-qty').val(next);
+        updateCardSubtotal($card, idx);
+        recalcTotals();
+    });
+
+    $(document).on('click', '.eop-qty-inc', function () {
+        var $card = $(this).closest('.eop-item-card');
+        var idx = $card.data('idx');
+        var current = parseInt(items[idx].quantity, 10) || 1;
+        var next = current + 1;
+
+        items[idx].quantity = next;
+        $card.find('.eop-qty').val(next);
+        updateCardSubtotal($card, idx);
+        recalcTotals();
+    });
+
     $(document).on('click', '.eop-remove-item', function (e) {
         var idx;
 
@@ -737,7 +790,7 @@
     $(document).on('change input', '.eop-item-discount', function () {
         var $card = $(this).closest('.eop-item-card');
         var idx = $card.data('idx');
-        var parsed = parseDiscountInput($card.find('.eop-item-discount').val());
+        var parsed = parseDiscountInput($(this).val());
 
         items[idx].discount_type = parsed.type;
         items[idx].discount_value = parsed.value;
@@ -869,7 +922,7 @@
                 return {
                     product_id: item.product_id,
                     quantity: item.quantity,
-                    discount_type: item.discount_type || 'fixed',
+                    discount_type: item.discount_type || 'percent',
                     discount_value: parseFloat(item.discount_value) || 0
                 };
             }),

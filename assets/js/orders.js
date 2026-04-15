@@ -153,7 +153,7 @@
                         '<div class="eop-item-card__field">' +
                             '<span class="eop-item-card__label">Desconto</span>' +
                             '<div class="eop-item-discount-group">' +
-                                '<input type="text" class="eop-item-discount" value="' + $('<span>').text(formatDiscountInput(discType, discVal)).html() + '" placeholder="10% ou 10" />' +
+                                '<input type="text" class="eop-item-discount" value="' + $('<span>').text(formatDiscountInput(discType, discVal)).html() + '" placeholder="10%" />' +
                             '</div>' +
                         '</div>' +
                         '<div class="eop-item-card__field">' +

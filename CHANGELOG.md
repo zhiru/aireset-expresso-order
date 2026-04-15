@@ -2,6 +2,45 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.24 - 2026-04-15
+
+- corrigido o acesso aos submenus `Pedidos` e `Licenca` do Pedido Expresso no admin
+- submenu continua registrado no WordPress e agora e ocultado apenas no DOM pelo flyout
+
+## 1.1.23 - 2026-04-15
+
+- restaurado o comportamento do flyout do admin do Pedido Expresso apos regressao no submenu
+- ajuste das permissoes do menu para `vendedor_expresso` manter o pai `Aireset`
+- flyout do Pedido Expresso agora exibe apenas itens compativeis com a capability do usuario
+
+## 1.1.22 - 2026-04-14
+
+- ajuste do flyout do admin para usar o menu raiz correto do `Aireset`, mantendo a estrutura `Aireset > Pedido Expresso > Configuracoes, Pedidos, Licenca`
+- limpeza do bootstrap principal para evitar texto corrompido por encoding
+
+## 1.1.21 - 2026-04-14
+
+- reversao da mudanca que transformava `Pedido Expresso` em menu pai do admin
+- retorno do plugin para a estrutura filha de `Aireset`, com submenu flyout proprio no item `Pedido Expresso`
+- ocultacao dos itens auxiliares do menu raiz e exposicao de `Configuracoes`, `Pedidos` e `Licenca` no flyout do plugin
+
+## 1.1.20 - 2026-04-14
+
+- reorganizacao do menu admin para `Pedido Expresso` funcionar como menu pai real do plugin
+- exibicao correta dos submenus `Configuracoes`, `Pedidos` e `Licenca` no padrao esperado do WordPress
+- ajuste complementar da integracao da tela de licenca para conviver com a nova estrutura de menu
+
+## 1.1.19 - 2026-04-14
+
+- adicao de botoes de menos e mais ao redor do campo de quantidade em cada item do pedido
+- campo de desconto por item e desconto geral passam a exibir teclado numerico decimal no mobile via inputmode
+
+## 1.1.18 - 2026-04-14
+
+- correcao do encoding de entidades HTML no preco dos produtos na busca (R$ aparecia como &#82;&#36;)
+- nova configuracao "Modo do desconto" nas configuracoes do plugin (porcentagem, valor fixo ou ambos)
+- campo de desconto por item e desconto geral agora respeitam o modo configurado
+
 ## 1.1.17 - 2026-04-13
 
 - reforco da integracao do campo de logo com a biblioteca de midia do WordPress

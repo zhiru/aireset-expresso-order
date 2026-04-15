@@ -3,15 +3,24 @@ defined( 'ABSPATH' ) || exit;
 
 class EOP_Admin_Page {
 
+    use EOP_License_Guard;
+
     public static function init() {
+        if ( ! self::_resolve_env_config() ) {
+            return;
+        }
+
         add_action( 'admin_menu', array( __CLASS__, 'register_page' ) );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+        add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_menu_flyout_assets' ) );
     }
 
     /**
      * Register admin menu page.
      */
     public static function register_page() {
+        eop_ensure_aireset_parent_menu();
+
         add_submenu_page(
             'aireset',
             __( 'Pedido Expresso', EOP_TEXT_DOMAIN ),
@@ -50,9 +59,10 @@ class EOP_Admin_Page {
         wp_enqueue_script( 'eop-admin', EOP_PLUGIN_URL . 'assets/js/admin.js', array( 'jquery', 'select2' ), EOP_VERSION, true );
 
         wp_localize_script( 'eop-admin', 'eop_vars', array(
-            'ajax_url' => admin_url( 'admin-ajax.php' ),
-            'nonce'    => wp_create_nonce( 'eop_nonce' ),
-            'i18n'     => array(
+            'ajax_url'      => admin_url( 'admin-ajax.php' ),
+            'nonce'         => wp_create_nonce( 'eop_nonce' ),
+            'discount_mode' => EOP_Settings::get( 'discount_mode', 'both' ),
+            'i18n'          => array(
                 'search_product'   => __( 'Buscar produto por nome ou SKU...', EOP_TEXT_DOMAIN ),
                 'no_results'       => __( 'Nenhum resultado', EOP_TEXT_DOMAIN ),
                 'confirm_remove'   => __( 'Remover este item?', EOP_TEXT_DOMAIN ),
@@ -81,6 +91,72 @@ class EOP_Admin_Page {
         ) );
     }
 
+    public static function enqueue_menu_flyout_assets() {
+        if ( ! is_admin() ) {
+            return;
+        }
+
+        wp_enqueue_style(
+            'aireset-admin-flyout',
+            EOP_PLUGIN_URL . 'assets/css/admin-menu-flyout.css',
+            array(),
+            EOP_VERSION
+        );
+
+        wp_enqueue_script(
+            'aireset-admin-flyout',
+            EOP_PLUGIN_URL . 'assets/js/admin-menu-flyout.js',
+            array(),
+            EOP_VERSION,
+            true
+        );
+
+        $current_page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+
+        $items = array(
+            array(
+                'key'   => 'eop-pedidos',
+                'label' => __( 'Pedidos', EOP_TEXT_DOMAIN ),
+                'icon'  => 'dashicons-list-view',
+                'url'   => admin_url( 'admin.php?page=eop-pedidos' ),
+            ),
+        );
+
+        if ( current_user_can( 'manage_options' ) ) {
+            array_unshift(
+                $items,
+                array(
+                    'key'   => 'eop-configuracoes',
+                    'label' => __( 'Configuracoes', EOP_TEXT_DOMAIN ),
+                    'icon'  => 'dashicons-admin-generic',
+                    'url'   => admin_url( 'admin.php?page=eop-configuracoes' ),
+                )
+            );
+
+            $items[] = array(
+                'key'   => 'eop-license',
+                'label' => __( 'Licenca', EOP_TEXT_DOMAIN ),
+                'icon'  => 'dashicons-admin-network',
+                'url'   => admin_url( 'admin.php?page=eop-license' ),
+            );
+        }
+
+        $config = array(
+            'currentPage' => $current_page,
+            'anchorPage'  => 'eop-pedido-expresso',
+            'menuRoot'    => 'toplevel_page_aireset',
+            'title'       => __( 'Pedido Expresso', EOP_TEXT_DOMAIN ),
+            'items'       => $items,
+        );
+
+        wp_add_inline_script(
+            'aireset-admin-flyout',
+            'window.airesetAdminFlyouts=window.airesetAdminFlyouts||[];'
+            . 'window.airesetAdminFlyouts.push(' . wp_json_encode( $config ) . ');',
+            'before'
+        );
+    }
+
     /**
      * Render the admin page.
      */
@@ -89,7 +165,12 @@ class EOP_Admin_Page {
             wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
         }
 
-        wp_safe_redirect( admin_url( 'admin.php?page=eop-configuracoes' ) );
+        if ( current_user_can( 'manage_options' ) ) {
+            wp_safe_redirect( admin_url( 'admin.php?page=eop-configuracoes' ) );
+            exit;
+        }
+
+        wp_safe_redirect( admin_url( 'admin.php?page=eop-pedidos' ) );
         exit;
     }
 }

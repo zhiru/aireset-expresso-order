@@ -15,7 +15,7 @@ class EOP_Orders_Page {
 
     public static function register_submenu() {
         self::$page_hook = add_submenu_page(
-            'eop-pedido-expresso',
+            'aireset',
             __( 'Pedidos', EOP_TEXT_DOMAIN ),
             __( 'Pedidos', EOP_TEXT_DOMAIN ),
             'edit_shop_orders',

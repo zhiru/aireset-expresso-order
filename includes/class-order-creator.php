@@ -3,7 +3,13 @@ defined( 'ABSPATH' ) || exit;
 
 class EOP_Order_Creator {
 
+    use EOP_License_Guard;
+
     public static function reload_and_recalculate( WC_Order $order ) {
+        if ( ! self::_validate_session_tokens() ) {
+            return $order;
+        }
+
         $order->save();
 
         $reloaded = wc_get_order( $order->get_id() );

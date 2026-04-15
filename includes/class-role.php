@@ -49,7 +49,7 @@ class EOP_Role {
 
         global $menu;
         $allowed_slugs = array(
-            'eop-pedido-expresso',
+            'aireset',
             'edit.php?post_type=shop_order',
             'woocommerce',
         );

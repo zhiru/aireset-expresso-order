@@ -16,6 +16,7 @@ class EOP_Settings {
     public static function get_defaults() {
         return array(
             'flow_mode'                   => 'proposal',
+            'discount_mode'               => 'both',
             'enable_checkout_confirmation' => 'no',
             'proposal_page_id'            => 0,
             'brand_logo_url'              => '',
@@ -30,7 +31,7 @@ class EOP_Settings {
             'font_family'                 => 'Montserrat:400,700',
             'panel_title'                 => 'Pedido Expresso',
             'panel_subtitle'              => 'Monte o pedido, gere a proposta e compartilhe com o cliente.',
-            'proposal_title'              => 'Sua proposta está pronta',
+            'proposal_title'              => 'Sua proposta esta pronta',
             'proposal_description'        => 'Revise os itens e confirme para continuar.',
             'proposal_button_label'       => 'Confirmar proposta',
             'proposal_pay_button_label'   => 'Ir para pagamento',
@@ -69,6 +70,7 @@ class EOP_Settings {
 
         return array(
             'flow_mode'                    => in_array( $input['flow_mode'] ?? '', array( 'direct_order', 'proposal' ), true ) ? $input['flow_mode'] : $defaults['flow_mode'],
+            'discount_mode'                => in_array( $input['discount_mode'] ?? '', array( 'percent', 'fixed', 'both' ), true ) ? $input['discount_mode'] : $defaults['discount_mode'],
             'enable_checkout_confirmation' => 'yes' === ( $input['enable_checkout_confirmation'] ?? 'no' ) ? 'yes' : 'no',
             'proposal_page_id'             => absint( $input['proposal_page_id'] ?? 0 ),
             'brand_logo_url'               => esc_url_raw( $input['brand_logo_url'] ?? '' ),
@@ -133,7 +135,7 @@ class EOP_Settings {
 
     public static function register_submenu() {
         self::$page_hook = add_submenu_page(
-            'eop-pedido-expresso',
+            'aireset',
             __( 'Configuracoes', EOP_TEXT_DOMAIN ),
             __( 'Configuracoes', EOP_TEXT_DOMAIN ),
             'manage_options',
@@ -260,6 +262,15 @@ class EOP_Settings {
                                         <option value="proposal" <?php selected( $settings['flow_mode'], 'proposal' ); ?>><?php esc_html_e( 'Proposta publica', EOP_TEXT_DOMAIN ); ?></option>
                                         <option value="direct_order" <?php selected( $settings['flow_mode'], 'direct_order' ); ?>><?php esc_html_e( 'Pedido direto', EOP_TEXT_DOMAIN ); ?></option>
                                     </select>
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_discount_mode"><?php esc_html_e( 'Modo do desconto', EOP_TEXT_DOMAIN ); ?></label>
+                                    <select id="eop_discount_mode" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[discount_mode]">
+                                        <option value="both" <?php selected( $settings['discount_mode'], 'both' ); ?>><?php esc_html_e( 'Porcentagem e valor fixo', EOP_TEXT_DOMAIN ); ?></option>
+                                        <option value="percent" <?php selected( $settings['discount_mode'], 'percent' ); ?>><?php esc_html_e( 'Somente porcentagem (%)', EOP_TEXT_DOMAIN ); ?></option>
+                                        <option value="fixed" <?php selected( $settings['discount_mode'], 'fixed' ); ?>><?php esc_html_e( 'Somente valor fixo (R$)', EOP_TEXT_DOMAIN ); ?></option>
+                                    </select>
+                                    <small class="eop-settings-help"><?php esc_html_e( 'Define se o campo de desconto aceita porcentagem, valor fixo ou ambos.', EOP_TEXT_DOMAIN ); ?></small>
                                 </div>
                                 <div class="eop-settings-field">
                                     <span><?php esc_html_e( 'Liberar pagamento apos confirmacao', EOP_TEXT_DOMAIN ); ?></span>

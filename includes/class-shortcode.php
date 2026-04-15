@@ -40,9 +40,10 @@ class EOP_Shortcode {
         wp_enqueue_script( 'eop-frontend', EOP_PLUGIN_URL . 'assets/js/admin.js', array( 'jquery', 'select2' ), EOP_VERSION, true );
 
         wp_localize_script( 'eop-frontend', 'eop_vars', array(
-            'ajax_url' => admin_url( 'admin-ajax.php' ),
-            'nonce'    => wp_create_nonce( 'eop_nonce' ),
-            'i18n'     => array(
+            'ajax_url'      => admin_url( 'admin-ajax.php' ),
+            'nonce'         => wp_create_nonce( 'eop_nonce' ),
+            'discount_mode' => EOP_Settings::get( 'discount_mode', 'both' ),
+            'i18n'          => array(
                 'search_product'   => __( 'Buscar produto por nome ou SKU...', EOP_TEXT_DOMAIN ),
                 'no_results'       => __( 'Nenhum resultado', EOP_TEXT_DOMAIN ),
                 'confirm_remove'   => __( 'Remover este item?', EOP_TEXT_DOMAIN ),

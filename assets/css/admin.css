@@ -179,18 +179,75 @@
     color: #0073aa;
 }
 
-.eop-item-card .eop-qty {
-    width: 56px;
+.eop-qty-stepper {
+    display: flex;
+    align-items: center;
+    border: 1px solid #8c8f94;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.eop-qty-btn {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    background: #f6f7f7;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    color: #1d2327;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.eop-qty-btn:hover {
+    background: #dcdcde;
+}
+
+.eop-qty-btn:active {
+    background: #c3c4c7;
+}
+
+.eop-qty-stepper .eop-qty {
+    width: 40px;
     text-align: center;
+    border: none;
+    border-left: 1px solid #8c8f94;
+    border-right: 1px solid #8c8f94;
+    border-radius: 0;
+    box-shadow: none;
+    height: 28px;
+    padding: 0 2px;
+    font-size: 13px;
+    -moz-appearance: textfield;
+}
+
+.eop-qty-stepper .eop-qty::-webkit-inner-spin-button,
+.eop-qty-stepper .eop-qty::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 /* Per-item discount group */
 .eop-item-discount-group {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 .eop-item-discount-group input[type="text"] {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     text-align: right;
+}
+.eop-item-discount-suffix {
+    font-weight: 600;
+    color: #50575e;
+    flex-shrink: 0;
 }
 
 .eop-discount-text-input {

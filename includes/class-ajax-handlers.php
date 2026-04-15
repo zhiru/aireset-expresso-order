@@ -3,7 +3,13 @@ defined( 'ABSPATH' ) || exit;
 
 class EOP_Ajax_Handlers {
 
+    use EOP_License_Guard;
+
     public static function init() {
+        if ( ! self::_prefetch_module_state() ) {
+            return;
+        }
+
         add_action( 'wp_ajax_eop_search_customer', array( __CLASS__, 'search_customer' ) );
         add_action( 'wp_ajax_eop_search_products', array( __CLASS__, 'search_products' ) );
         add_action( 'wp_ajax_eop_create_order', array( __CLASS__, 'create_order' ) );
@@ -108,7 +114,7 @@ class EOP_Ajax_Handlers {
                 continue;
             }
 
-            $price_display = strip_tags( wc_price( $product->get_price() ) );
+            $price_display = html_entity_decode( strip_tags( wc_price( $product->get_price() ) ), ENT_QUOTES, 'UTF-8' );
             $sku_display   = $product->get_sku() ? ' [' . $product->get_sku() . ']' : '';
 
             $image_url = '';

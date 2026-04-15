@@ -1,0 +1,230 @@
+/**
+ * Aireset Expresso Order – Admin Menu Flyout
+ *
+ * Multi-level submenu adapted from Elementor's editor-one admin-menu technique.
+ * CSS variables follow WP admin color scheme for seamless integration.
+ */
+
+/* ---- Variables ---- */
+
+#adminmenu .wp-submenu li.eop-flyout-hidden {
+    display: none !important;
+}
+
+#adminmenu {
+    --eop-flyout-bg: #2c3338;
+    --eop-flyout-bg-hover: #32373c;
+    --eop-flyout-text: #c3c4c7;
+    --eop-flyout-text-hover: #72aee6;
+    --eop-flyout-text-active: #fff;
+    --eop-flyout-active-bg: rgba(37, 99, 235, 0.22);
+    --eop-flyout-border: #3c434a;
+    --eop-flyout-arrow-size: 4px;
+    --eop-flyout-arrow-right: 10px;
+    --eop-flyout-min-width: 200px;
+    --eop-flyout-padding-y: 6px;
+    --eop-flyout-padding-x: 12px;
+    --eop-flyout-font-size: 13px;
+    --eop-flyout-line-height: 1.4;
+    --eop-flyout-radius: 4px;
+    --eop-flyout-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+    --eop-flyout-transition: 0.15s ease;
+    --eop-flyout-z: 100001;
+    --eop-flyout-max-h: 80vh;
+    --eop-flyout-icon-size: 16px;
+    --eop-flyout-icon-gap: 8px;
+}
+
+/* WP 7.x dark theme overrides */
+[class*="branch-7"] #adminmenu {
+    --eop-flyout-bg: rgb(12, 12, 12);
+    --eop-flyout-bg-hover: rgb(24, 24, 24);
+    --eop-flyout-text-hover: rgb(123, 144, 255);
+}
+
+/* ---- Hidden by default ---- */
+#adminmenu .eop-has-flyout .eop-submenu-flyout {
+    display: none;
+}
+
+/* ---- Desktop (>782 px) ---- */
+@media screen and (min-width: 783px) {
+
+    /* Parent <li> positioning context */
+    #adminmenu .eop-has-flyout {
+        position: relative;
+    }
+
+    /* Arrow indicator on anchor link */
+    #adminmenu .eop-has-flyout > a {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    #adminmenu .eop-has-flyout > a::after {
+        content: "";
+        display: inline-block;
+        width: 0;
+        height: 0;
+        margin-left: 8px;
+        border-top: var(--eop-flyout-arrow-size) solid transparent;
+        border-bottom: var(--eop-flyout-arrow-size) solid transparent;
+        border-left: var(--eop-flyout-arrow-size) solid currentColor;
+        opacity: 0.7;
+        transition: opacity var(--eop-flyout-transition);
+    }
+
+    #adminmenu .eop-has-flyout:hover > a::after,
+    #adminmenu .eop-has-flyout.eop-flyout-parent-current > a::after {
+        opacity: 1;
+    }
+
+    /* Flyout panel */
+    #adminmenu .eop-submenu-flyout {
+        position: absolute;
+        left: 100%;
+        top: calc(var(--eop-flyout-padding-y) * -1 - 2px);
+        display: none;
+        min-width: var(--eop-flyout-min-width);
+        max-height: var(--eop-flyout-max-h);
+        overflow-y: auto;
+        margin: 0;
+        padding: var(--eop-flyout-padding-y) 0;
+        list-style: none;
+        background: var(--eop-flyout-bg);
+        box-shadow: var(--eop-flyout-shadow);
+        border-radius: 0 var(--eop-flyout-radius) var(--eop-flyout-radius) 0;
+        z-index: var(--eop-flyout-z);
+    }
+
+    .rtl #adminmenu .eop-submenu-flyout {
+        left: auto;
+        right: 100%;
+        border-radius: var(--eop-flyout-radius) 0 0 var(--eop-flyout-radius);
+    }
+
+    /* Visible state */
+    #adminmenu .eop-submenu-flyout.eop-submenu-flyout-visible,
+    #adminmenu .eop-has-flyout.eop-flyout-open > .eop-submenu-flyout {
+        display: block;
+    }
+
+    /* Flyout items */
+    #adminmenu .eop-submenu-flyout li {
+        margin: 0;
+        padding: 0;
+        position: relative;
+        display: block !important;
+    }
+
+    #adminmenu .eop-submenu-flyout li a {
+        display: flex;
+        align-items: center;
+        gap: var(--eop-flyout-icon-gap);
+        padding: 8px var(--eop-flyout-padding-x);
+        color: var(--eop-flyout-text);
+        text-decoration: none;
+        font-size: var(--eop-flyout-font-size);
+        line-height: var(--eop-flyout-line-height);
+        white-space: nowrap;
+        transition: background-color var(--eop-flyout-transition),
+                    color var(--eop-flyout-transition),
+                    transform var(--eop-flyout-transition);
+    }
+
+    #adminmenu .eop-submenu-flyout li a:hover,
+    #adminmenu .eop-submenu-flyout li a:focus {
+        background: var(--eop-flyout-bg-hover);
+        color: var(--eop-flyout-text-hover);
+        outline: none;
+        /* transform: translateX(2px); */
+    }
+
+    /* Active / current page */
+    #adminmenu .eop-submenu-flyout li.eop-flyout-current a {
+        color: var(--eop-flyout-text-active);
+        background: var(--eop-flyout-active-bg);
+    }
+
+    /* Icon sizing */
+    #adminmenu .eop-submenu-flyout .eop-flyout-icon {
+        width: var(--eop-flyout-icon-size);
+        height: var(--eop-flyout-icon-size);
+        font-size: var(--eop-flyout-icon-size);
+        line-height: 1;
+        flex-shrink: 0;
+    }
+
+    /* Scrollbar */
+    #adminmenu .eop-submenu-flyout::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #adminmenu .eop-submenu-flyout::-webkit-scrollbar-track {
+        background: var(--eop-flyout-bg);
+    }
+
+    #adminmenu .eop-submenu-flyout::-webkit-scrollbar-thumb {
+        background: var(--eop-flyout-border);
+        border-radius: 3px;
+    }
+
+    #adminmenu .eop-submenu-flyout::-webkit-scrollbar-thumb:hover {
+        background: #50575e;
+    }
+}
+
+/* ---- Mobile (<783 px) ---- */
+@media screen and (max-width: 782px) {
+
+    #adminmenu .eop-has-flyout.eop-flyout-open > .eop-submenu-flyout {
+        display: block;
+        position: static;
+        min-width: 0;
+        margin: 0;
+        padding: 4px 0 4px 16px;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    #adminmenu .eop-submenu-flyout li a {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        color: var(--eop-flyout-text, #c3c4c7);
+        text-decoration: none;
+        font-size: 13px;
+    }
+
+    #adminmenu .eop-submenu-flyout li a:hover {
+        color: #fff;
+    }
+
+    #adminmenu .eop-submenu-flyout li.eop-flyout-current a {
+        color: #fff;
+        font-weight: 600;
+    }
+
+    #adminmenu .eop-submenu-flyout .eop-flyout-icon {
+        width: 16px;
+        height: 16px;
+        font-size: 16px;
+    }
+
+    /* Hide arrow on mobile */
+    #adminmenu .eop-has-flyout > a::after {
+        display: none;
+    }
+}
+
+/* ---- Collapsed sidebar (folded) ---- */
+.folded #adminmenu .eop-submenu-flyout {
+    left: 36px;
+}
+
+.rtl.folded #adminmenu .eop-submenu-flyout {
+    left: auto;
+    right: 36px;
+}
