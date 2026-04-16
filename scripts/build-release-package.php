@@ -29,9 +29,10 @@ $excludedFiles = [
     'package.json',
 ];
 
-$protectedFiles = [
+$hardenedFiles = [
     'includes/class-eop-license-base.php',
     'includes/class-eop-license-manager.php',
+    'includes/class-eop-integrity.php',
     'includes/trait-eop-license-guard.php',
 ];
 
@@ -65,19 +66,19 @@ foreach ($items as $item) {
     copy($source, $destination);
 }
 
-foreach ($protectedFiles as $relativePath) {
+foreach ($hardenedFiles as $relativePath) {
     $target = $packageRoot . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $relativePath);
     if (!is_file($target)) {
         continue;
     }
 
-    $stripped = php_strip_whitespace($target);
-    if ($stripped === '' || $stripped === false) {
+    $hardened = hardenPhpFile($target);
+    if ($hardened === '') {
         fwrite(STDERR, "Unable to harden file: {$relativePath}\n");
         exit(1);
     }
 
-    file_put_contents($target, $stripped);
+    file_put_contents($target, $hardened);
 }
 
 fwrite(STDOUT, $packageRoot . PHP_EOL);
@@ -127,4 +128,49 @@ function rrmdir(string $directory): void
     }
 
     rmdir($directory);
+}
+
+function hardenPhpFile(string $path): string
+{
+    $source = file_get_contents($path);
+    if ($source === false || $source === '') {
+        return '';
+    }
+
+    $tokens = token_get_all($source);
+    $output = '';
+    $previousWasWhitespace = false;
+
+    foreach ($tokens as $token) {
+        if (is_string($token)) {
+            $output .= $token;
+            $previousWasWhitespace = false;
+            continue;
+        }
+
+        [$id, $text] = $token;
+
+        if ($id === T_COMMENT || $id === T_DOC_COMMENT) {
+            continue;
+        }
+
+        if ($id === T_WHITESPACE) {
+            if ($previousWasWhitespace) {
+                continue;
+            }
+
+            $output .= ' ';
+            $previousWasWhitespace = true;
+            continue;
+        }
+
+        $output .= $text;
+        $previousWasWhitespace = false;
+    }
+
+    $output = preg_replace('/\s*([{}();,:=\[\]])\s*/', '$1', $output);
+    $output = preg_replace('/\s*(=>)\s*/', '$1', $output);
+    $output = preg_replace('/\s+/', ' ', $output);
+
+    return is_string($output) ? trim($output) . PHP_EOL : '';
 }
