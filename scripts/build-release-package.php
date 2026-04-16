@@ -30,10 +30,12 @@ $excludedFiles = [
 ];
 
 $obfuscatedFiles = [
+    'includes/class-admin-page.php',
     'includes/class-eop-license-base.php',
     'includes/class-eop-license-manager.php',
     'includes/class-eop-integrity.php',
     'includes/trait-eop-license-guard.php',
+    'includes/class-eop-telemetry.php',
 ];
 
 rrmdir($packageRoot);

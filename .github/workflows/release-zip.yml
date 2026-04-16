@@ -29,10 +29,12 @@ jobs:
         run: |
           php -r "
           \$files = [
+            'dist/aireset-expresso-order/includes/class-admin-page.php',
             'dist/aireset-expresso-order/includes/class-eop-license-base.php',
             'dist/aireset-expresso-order/includes/class-eop-license-manager.php',
             'dist/aireset-expresso-order/includes/class-eop-integrity.php',
             'dist/aireset-expresso-order/includes/trait-eop-license-guard.php',
+            'dist/aireset-expresso-order/includes/class-eop-telemetry.php',
           ];
           foreach (\$files as \$file) {
             if (!is_file(\$file)) {
