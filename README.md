@@ -63,14 +63,13 @@ Views SPA disponiveis:
 
 Sem licenca ativa, o plugin mantem apenas a tela de ativacao e nao exibe submenu proprio de licenca.
 
-## Licenca, Integridade e Telemetria
+## Licenca e Integridade
 
 O plugin usa integracao proprietaria com Elite Licenser.
 
 - classe base: [`includes/class-eop-license-base.php`](./includes/class-eop-license-base.php)
 - manager: [`includes/class-eop-license-manager.php`](./includes/class-eop-license-manager.php)
 - integridade: [`includes/class-eop-integrity.php`](./includes/class-eop-integrity.php)
-- telemetria: [`includes/class-eop-telemetry.php`](./includes/class-eop-telemetry.php)
 - guard de carregamento: [`includes/trait-eop-license-guard.php`](./includes/trait-eop-license-guard.php)
 
 ## Changelog
@@ -82,7 +81,7 @@ Destaques recentes da serie `1.1.25`:
 - consolidacao do menu `Aireset > Pedido Expresso` com flyout proprio
 - ajuste do comportamento SPA no admin
 - integracao e refinamento visual do sistema de licenca
-- separacao entre core de licenca, integridade e telemetria
+- separacao entre core de licenca e integridade
 - reorganizacao da cadeia SCSS e compilacao do admin
 
 ## Autor

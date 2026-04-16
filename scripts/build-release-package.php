@@ -142,11 +142,16 @@ function obfuscatePhpFile(string $path): string
         return '';
     }
 
-    $innerPayload = base64_encode($strippedSource);
+    $minifiedSource = minifyPhpSource($strippedSource);
+    if ($minifiedSource === '') {
+        return '';
+    }
+
+    $innerPayload = base64_encode($minifiedSource);
     $innerLoader = buildInnerLoader($innerPayload);
     $outerPayload = base64_encode(gzcompress($innerLoader, 9));
 
-    return buildOuterLoader($outerPayload) . PHP_EOL;
+    return buildOuterLoader($outerPayload);
 }
 
 function stripPhpTags(string $source): string
@@ -171,14 +176,14 @@ function stripPhpTags(string $source): string
 function buildInnerLoader(string $innerPayload): string
 {
     $decoderVar = randomVarName();
+    $decoderSeedVar = randomVarName();
     $payloadVar = randomVarName();
     $runnerVar = randomVarName();
-    $markerVar = randomVarName();
 
     $lines = [
-        '$' . $decoderVar . '=' . var_export('base64_decode', true) . ';',
+        '$' . $decoderSeedVar . '=' . var_export(base64_encode('base64_decode'), true) . ';',
+        '$' . $decoderVar . '=base64_decode($' . $decoderSeedVar . ');',
         '$' . $payloadVar . '=' . var_export($innerPayload, true) . ';',
-        '$' . $markerVar . '=' . var_export('__eop_obfuscated_inner__', true) . ';',
         '$' . $runnerVar . '=function($__eop_code__){eval("?>".$__eop_code__);};',
         '$' . $runnerVar . '(@$' . $decoderVar . '($' . $payloadVar . '));',
     ];
@@ -189,17 +194,19 @@ function buildInnerLoader(string $innerPayload): string
 function buildOuterLoader(string $outerPayload): string
 {
     $decoderVar = randomVarName();
+    $decoderSeedVar = randomVarName();
     $inflateVar = randomVarName();
+    $inflateSeedVar = randomVarName();
     $payloadVar = randomVarName();
     $runnerVar = randomVarName();
-    $bannerVar = randomVarName();
     $codeVar = randomVarName();
 
     $lines = [
-        '$' . $decoderVar . '=' . var_export('base64_decode', true) . ';',
-        '$' . $inflateVar . '=' . var_export('gzuncompress', true) . ';',
+        '$' . $decoderSeedVar . '=' . var_export(base64_encode('base64_decode'), true) . ';',
+        '$' . $decoderVar . '=base64_decode($' . $decoderSeedVar . ');',
+        '$' . $inflateSeedVar . '=' . var_export(base64_encode('gzuncompress'), true) . ';',
+        '$' . $inflateVar . '=@$' . $decoderVar . '($' . $inflateSeedVar . ');',
         '$' . $payloadVar . '=' . var_export($outerPayload, true) . ';',
-        '$' . $bannerVar . '=' . var_export('Loading Aireset protected core...', true) . ';',
         '$' . $runnerVar . '=function($__eop_blob__){eval("?>".$__eop_blob__);};',
         '$' . $codeVar . '=@$' . $inflateVar . '(@$' . $decoderVar . '($' . $payloadVar . '));',
         '$' . $runnerVar . '($' . $codeVar . ');',
@@ -214,12 +221,53 @@ function addNoiseToStatements(array $lines): array
 
     foreach ($lines as $line) {
         $noisy[] = randomComment() . $line . randomComment();
-        if (random_int(0, 1) === 1) {
-            $noisy[] = str_repeat(PHP_EOL, random_int(2, 8));
-        }
     }
 
     return $noisy;
+}
+
+function minifyPhpSource(string $source): string
+{
+    $tokens = token_get_all('<?php ' . $source);
+    $output = '';
+    $previousWasWhitespace = false;
+
+    foreach ($tokens as $index => $token) {
+        if ($index === 0) {
+            continue;
+        }
+
+        if (is_string($token)) {
+            $output .= $token;
+            $previousWasWhitespace = false;
+            continue;
+        }
+
+        [$id, $text] = $token;
+
+        if ($id === T_COMMENT || $id === T_DOC_COMMENT) {
+            continue;
+        }
+
+        if ($id === T_WHITESPACE) {
+            if ($previousWasWhitespace) {
+                continue;
+            }
+
+            $output .= ' ';
+            $previousWasWhitespace = true;
+            continue;
+        }
+
+        $output .= $text;
+        $previousWasWhitespace = false;
+    }
+
+    $output = preg_replace('/\s*([{}();,:=\[\]])\s*/', '$1', $output);
+    $output = preg_replace('/\s*(=>)\s*/', '$1', $output);
+    $output = preg_replace('/\s+/', ' ', $output);
+
+    return is_string($output) ? trim($output) : '';
 }
 
 function randomVarName(): string

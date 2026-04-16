@@ -45,7 +45,7 @@ jobs:
               strpos(\$contents, 'gzuncompress') === false ||
               strpos(\$contents, 'base64_decode') === false ||
               strpos(\$contents, 'eval("?>".') === false ||
-              strpos(\$contents, '__eop_obfuscated_inner__') === false
+              preg_match('/\R/', \$contents) === 1
             ) {
               fwrite(STDERR, 'Release file does not look obfuscated: ' . \$file . PHP_EOL);
               exit(1);

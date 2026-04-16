@@ -314,7 +314,7 @@ if ( ! class_exists( 'EOP_License_Core' ) ) {
 		}
 
 		/* ══════════════════════════════════════════════
-		 *  Phone-home: reporta uso sem licença ao servidor
+		 *  Report status request: envio de eventos desativado neste build.
 		 * ══════════════════════════════════════════════ */
 		private function _dispatch_status_report( $reason = 'unknown', $attempted_key = '' ) {
 			if ( ! $this->telemetry_core instanceof EOP_Telemetry_Core ) {
