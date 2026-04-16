@@ -1,0 +1,172 @@
+=== Aireset — Expresso Order ===
+Contributors: aireset
+Tags: woocommerce, pedido expresso, vendas, proposta, administrativo
+Requires at least: 6.0
+Tested up to: 6.7
+Stable tag: 1.1.27
+
+Pedido expresso para vendedores do WooCommerce: busca e selecao rapida de cliente e produto, geracao de pedido e proposta publica com navegação SPA no admin.
+
+== Description ==
+
+O Aireset - Expresso Order habilita um fluxo comercial rapido dentro do painel WordPress para criar pedidos, gerar propostas e acompanhar vendas sem sair do admin.
+
+== Installation ==
+
+1. Upload the plugin folder to the `/wp-content/plugins/` directory.
+2. Activate the plugin through the 'Plugins' menu in WordPress.
+3. Access `Aireset > Pedido Expresso` to configure and use.
+
+== Frequently Asked Questions ==
+
+= O plugin funciona com qualquer tema? =
+Sim, ele foi desenvolvido para rodar sobre o WooCommerce ativo e usa o painel administrativo do WordPress.
+
+= Preciso configurar algo especial no WooCommerce? =
+Basta ter o WooCommerce ativo e o plugin instalado; as configuracoes de pedido e frete seguem o fluxo do WooCommerce.
+
+== Screenshots ==
+
+1. Tela principal do Pedido Expresso no admin.
+2. Formulario de criacao rapida de pedido.
+3. Proposta publica gerada para compartilhamento com o cliente.
+
+== Upgrade Notice ==
+
+= 1.1.27 =
+* Ajuste na montagem do pacote de release para garantir instalacao limpa no WordPress.
+
+== Changelog ==
+
+= 1.1.27 =
+* atualizacao do fluxo de build para gerar zip de release padrao e evitar empacotamentos quebrados
+* agora o pacote inclui readme.txt na raiz e exclui arquivos de documentacao interna
+* arquivos com transicao PHP/HTML sao pulados da ofuscacao para evitar erros na ativacao
+
+= 1.1.26 =
+* workflow de release valida a integridade do pacote antes de anexar o zip ao GitHub Release
+* `class-admin-page.php` passou a entrar no pacote final junto com os arquivos essenciais do plugin
+
+= 1.1.25 =
+* separacao do sistema em `verification core` e `integrity core`
+* integridade da distribuicao agora valida a presenca dos arquivos essenciais e pode exibir aviso no admin
+* refinado o visual de quantidade, desconto e subtotal nos cards de item do painel
+* pipeline de release atualizado para gerar pacote distribuivel mais consistente
+
+= 1.1.24 =
+* corrigido o acesso aos submenus `Pedidos` e `Ativacao` do Pedido Expresso no admin
+* submenu continua registrado no WordPress e agora e ocultado apenas no DOM pelo flyout
+
+= 1.1.23 =
+* restaurado o comportamento do flyout do admin do Pedido Expresso apos regressao no submenu
+* ajuste das permissoes do menu para `vendedor_expresso` manter o pai `Aireset`
+* flyout do Pedido Expresso agora exibe apenas itens compativeis com a capability do usuario
+
+= 1.1.22 =
+* ajuste do flyout do admin para usar o menu raiz correto do `Aireset`, mantendo a estrutura `Aireset > Pedido Expresso > Configuracoes, Pedidos, Ativacao`
+* limpeza do bootstrap principal para evitar texto corrompido por encoding
+
+= 1.1.21 =
+* reversao da mudanca que transformava `Pedido Expresso` em menu pai do admin
+* retorno do plugin para a estrutura filha de `Aireset`, com submenu flyout proprio no item `Pedido Expresso`
+* ocultacao dos itens auxiliares do menu raiz e exposicao de `Configuracoes`, `Pedidos` e `Ativacao` no flyout do plugin
+
+= 1.1.20 =
+* reorganizacao do menu admin para `Pedido Expresso` funcionar como menu pai real do plugin
+* exibicao correta dos submenus `Configuracoes`, `Pedidos` e `Ativacao` no padrao esperado do WordPress
+* ajuste complementar da integracao da tela de ativacao para conviver com a nova estrutura de menu
+
+= 1.1.19 =
+* adicao de botoes de menos e mais ao redor do campo de quantidade em cada item do pedido
+* campo de desconto por item e desconto geral passam a exibir teclado numerico decimal no mobile via inputmode
+
+= 1.1.18 =
+* correcao do encoding de entidades HTML no preco dos produtos na busca (R$ aparecia como &#82;&#36;)
+* nova configuracao "Modo do desconto" nas configuracoes do plugin (porcentagem, valor fixo ou ambos)
+* campo de desconto por item e desconto geral agora respeitam o modo configurado
+
+= 1.1.17 =
+* reforco da integracao do campo de logo com a biblioteca de midia do WordPress
+* ajuste das dependencias do uploader e do binding JavaScript para seguir o padrao funcional usado pelo plugin de PDF invoices
+
+= 1.1.16 =
+* substituicao do campo manual de logo por um uploader com biblioteca de midia do WordPress
+* adicao de preview, troca e remocao da logo direto na tela de configuracoes
+* melhoria do visual do bloco de logo para ficar coerente com o restante do admin do plugin
+
+= 1.1.15 =
+* conversao da listagem de itens da proposta publica para cards visuais de produto
+* exibicao de imagem, quantidade, SKU e subtotal por item para deixar a proposta mais bonita e facil de revisar
+
+= 1.1.14 =
+* refatoracao da base do frontend para um SCSS mais correto, com mixins utilitarios, funcao de alpha e nesting real nos componentes principais
+* melhoria do escopo dos seletores compilados para evitar combinacoes globais indevidas e manter prioridade sem perder previsibilidade
+
+= 1.1.13 =
+* reforco da cadeia SCSS do frontend para deixar explicito que `frontend.css` e gerado a partir de `assets/scss/frontend`
+* aumento da especificidade dos estilos base de botao, notice e wrappers para reduzir conflitos com o CSS do tema
+
+= 1.1.12 =
+* correcao da navegacao SPA para limpar a sessao de edicao e resetar o formulario ao clicar em `Novo pedido`
+* garantia de que o vendedor sempre inicia um pedido novo com estado limpo ao sair de uma edicao
+
+= 1.1.11 =
+* correcao do fluxo de salvar pedidos para persistir, recarregar e executar o recalculo real do WooCommerce a cada criacao e edicao
+* sincronizacao dos totais do pedido e da proposta publica com os descontos por item e descontos gerais ja aplicados
+
+= 1.1.10 =
+* substituicao do switch de pagamento apos confirmacao por um componente visual funcional baseado no padrao do `checkout-aireset`
+* ajuste do HTML, CSS e JavaScript da tela de configuracoes para refletir claramente os estados `Ativado` e `Desativado`
+
+= 1.1.9 =
+* refinamento da comunicacao no admin para deixar a opcao de pagamento apos confirmacao mais clara e menos tecnica
+* ajuste do titulo e da descricao do switch para refletir o comportamento real da proposta confirmada
+
+= 1.1.8 =
+* limpeza do admin para manter a operacao de criar e editar pedidos somente no SPA
+* menu do plugin no admin simplificado para foco em `Configuracoes` e `Pedidos`
+* nova personalizacao visual dedicada para a pagina publica do cliente
+* proposta confirmada agora pode exibir botao de pagamento em vez de redirecionamento automatico
+
+= 1.1.7 =
+* correcao do link de PDF no fluxo SPA para remover entidades HTML da URL antes do envio ao navegador
+* ajuste de compatibilidade com o endpoint `generate_wpo_wcpdf` do plugin `PDF Invoices & Packing Slips for WooCommerce`
+
+= 1.1.6 =
+* edicao de pedidos agora pode ser aberta e salva diretamente dentro do SPA do shortcode
+* novo estado visual de edicao no painel com banner e cancelamento rapido
+* ajuste da integracao com `PDF Invoices & Packing Slips for WooCommerce` para usar o endpoint oficial do plugin ao gerar links de PDF
+* reforco de permissao para vendedores acessarem e editarem apenas os pedidos expresso que pertencem a eles
+
+= 1.1.5 =
+* transformacao do shortcode em experiencia de painel com navegacao SPA entre `Novo pedido` e `Pedidos`
+* nova listagem frontend de pedidos com atualizacao por AJAX, filtros por status e busca textual
+* administradores agora visualizam todos os pedidos do plugin e vendedores visualizam apenas os pedidos criados por eles
+* persistencia do vendedor criador no pedido para suportar rastreio e filtragem por responsavel
+
+= 1.1.4 =
+* correcao da regressao visual no frontend apos a simplificacao do desconto
+* restauracao da estrutura visual dos cards de item e dos accordions no shortcode
+* ajuste do comportamento dos icones de abrir e fechar nos accordions
+
+= 1.1.3 =
+* simplificacao do desconto em todas as telas do pedido para um unico campo textual
+* agora `10%` aplica desconto percentual e `10` aplica desconto fixo em reais
+* ajuste dos cards de item, tela de criacao e tela de edicao para manter o mesmo comportamento de desconto
+
+= 1.1.2 =
+* troca do login customizado do shortcode para o fluxo nativo do `wp-login.php`, com `redirect_to` de volta para a pagina do pedido
+* ajuste no `login_redirect` para respeitar redirecionamento solicitado quando o acesso vier do frontend
+* melhora de compatibilidade para sessao persistente em ambientes locais e instalacoes com comportamento diferente de cookie
+
+= 1.1.1 =
+* reforco no login do shortcode com `wp_set_current_user()`, `wp_set_auth_cookie()` e hook `wp_login` para persistir melhor a sessao
+* blindagem de compatibilidade nas telas do plugin para nao quebrar caso o servidor esteja com deploy parcial das funcoes de fonte
+* alinhamento de versao no bootstrap do plugin e no `package.json`
+
+= 1.1.0 =
+* suporte a desconto por produto em `R$` ou `%`
+* suporte a desconto geral em `R$` ou `%`
+* nova experiencia do shortcode com cards de item, accordions e fluxo de frete mais guiado
+* seletor de fontes, color picker e switch na tela de configuracoes
+*** End Patch

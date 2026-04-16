@@ -13,8 +13,16 @@ if ($root === false) {
 }
 
 $packageName = 'aireset-expresso-order';
+$pluginFile = $root . DIRECTORY_SEPARATOR . $packageName . '.php';
+$pluginVersion = resolvePluginVersion($pluginFile);
 $distRoot = $root . DIRECTORY_SEPARATOR . 'dist';
 $packageRoot = $distRoot . DIRECTORY_SEPARATOR . $packageName;
+$zipPath = $root . DIRECTORY_SEPARATOR . $packageName . '.zip';
+
+if ($pluginVersion === '') {
+    fwrite(STDERR, "Unable to resolve plugin version.\n");
+    exit(1);
+}
 
 $excludedTopLevel = [
     '.git',
@@ -25,8 +33,12 @@ $excludedTopLevel = [
 ];
 
 $excludedFiles = [
+    '.gitignore',
     'AGENT.md',
+    'aireset-expresso-order.zip',
+    'CHANGELOG.md',
     'package.json',
+    'README.md',
 ];
 
 $obfuscatedFiles = [
@@ -53,6 +65,10 @@ foreach ($items as $item) {
         continue;
     }
 
+    if (is_file($root . DIRECTORY_SEPARATOR . $item) && 'zip' === strtolower((string) pathinfo($item, PATHINFO_EXTENSION))) {
+        continue;
+    }
+
     if (in_array($item, $excludedTopLevel, true) || in_array($item, $excludedFiles, true)) {
         continue;
     }
@@ -74,6 +90,10 @@ foreach ($obfuscatedFiles as $relativePath) {
         continue;
     }
 
+    if (containsInternalPhpTransitions($target)) {
+        continue;
+    }
+
     $obfuscated = obfuscatePhpFile($target);
     if ($obfuscated === '') {
         fwrite(STDERR, "Unable to obfuscate file: {$relativePath}\n");
@@ -83,7 +103,93 @@ foreach ($obfuscatedFiles as $relativePath) {
     file_put_contents($target, $obfuscated);
 }
 
+buildReleaseArchive($packageRoot, $zipPath, $packageName);
+
 fwrite(STDOUT, $packageRoot . PHP_EOL);
+fwrite(STDOUT, $zipPath . PHP_EOL);
+
+function resolvePluginVersion(string $pluginFile): string
+{
+    $contents = file_get_contents($pluginFile);
+    if ($contents === false || $contents === '') {
+        return '';
+    }
+
+    if (!preg_match('/^[ \t]*\*[ \t]*Version:\s*(.+)$/mi', $contents, $matches)) {
+        return '';
+    }
+
+    return trim((string) $matches[1]);
+}
+
+function buildReleaseArchive(string $packageRoot, string $zipPath, string $packageName): void
+{
+    if (is_file($zipPath) && !unlink($zipPath)) {
+        throw new RuntimeException("Unable to replace existing zip: {$zipPath}");
+    }
+
+    if ('Windows' === PHP_OS_FAMILY) {
+        $powerShellCommand = <<<'PS'
+$ErrorActionPreference = 'Stop'
+$source = '__SOURCE__'
+$zip = '__ZIP__'
+Compress-Archive -Path $source -DestinationPath $zip -Force
+PS;
+
+        $powerShellCommand = str_replace(
+            ['__SOURCE__', '__ZIP__'],
+            [escapePowerShellLiteral($packageRoot), escapePowerShellLiteral($zipPath)],
+            $powerShellCommand
+        );
+
+        $encodedCommand = base64_encode(mb_convert_encoding($powerShellCommand, 'UTF-16LE', 'UTF-8'));
+        $command = 'powershell.exe -NoProfile -EncodedCommand ' . escapeshellarg($encodedCommand);
+        exec($command, $output, $exitCode);
+
+        if ($exitCode !== 0 || !is_file($zipPath)) {
+            throw new RuntimeException('Unable to create zip archive with PowerShell Compress-Archive.');
+        }
+
+        return;
+    }
+
+    if (class_exists('ZipArchive')) {
+        $archive = new ZipArchive();
+        if ($archive->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            throw new RuntimeException("Unable to create zip archive: {$zipPath}");
+        }
+
+        $archive->addEmptyDir($packageName);
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($packageRoot, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $item) {
+            $pathName = $item->getPathname();
+            $relativePath = ltrim(str_replace($packageRoot, '', $pathName), DIRECTORY_SEPARATOR);
+            $localPath = $packageName . '/' . str_replace(DIRECTORY_SEPARATOR, '/', $relativePath);
+
+            if ($item->isDir()) {
+                $archive->addEmptyDir($localPath);
+                continue;
+            }
+
+            $archive->addFile($pathName, $localPath);
+        }
+
+        $archive->close();
+        return;
+    }
+
+    throw new RuntimeException('ZipArchive extension is required to build the release zip on this environment.');
+}
+
+function escapePowerShellLiteral(string $value): string
+{
+    return str_replace("'", "''", $value);
+}
 
 function copyDirectory(string $source, string $destination): void
 {
@@ -156,6 +262,21 @@ function obfuscatePhpFile(string $path): string
     return buildOuterLoader($outerPayload);
 }
 
+function containsInternalPhpTransitions(string $path): bool
+{
+    $source = file_get_contents($path);
+    if ($source === false || $source === '') {
+        return false;
+    }
+
+    $strippedSource = stripPhpTags($source);
+    if ($strippedSource === '') {
+        return false;
+    }
+
+    return str_contains($strippedSource, '?>') || preg_match('/<\?(php|=)?/i', $strippedSource) === 1;
+}
+
 function stripPhpTags(string $source): string
 {
     $source = trim($source);
@@ -186,7 +307,7 @@ function buildInnerLoader(string $innerPayload): string
         '$' . $decoderSeedVar . '=' . var_export(base64_encode('base64_decode'), true) . ';',
         '$' . $decoderVar . '=base64_decode($' . $decoderSeedVar . ');',
         '$' . $payloadVar . '=' . var_export($innerPayload, true) . ';',
-        '$' . $runnerVar . '=function($__eop_code__){eval("?>".$__eop_code__);};',
+        '$' . $runnerVar . '=function($__eop_code__){eval($__eop_code__);};',
         '$' . $runnerVar . '(@$' . $decoderVar . '($' . $payloadVar . '));',
     ];
 
@@ -209,7 +330,7 @@ function buildOuterLoader(string $outerPayload): string
         '$' . $inflateSeedVar . '=' . var_export(base64_encode('gzuncompress'), true) . ';',
         '$' . $inflateVar . '=@$' . $decoderVar . '($' . $inflateSeedVar . ');',
         '$' . $payloadVar . '=' . var_export($outerPayload, true) . ';',
-        '$' . $runnerVar . '=function($__eop_blob__){eval("?>".$__eop_blob__);};',
+        '$' . $runnerVar . '=function($__eop_blob__){eval($__eop_blob__);};',
         '$' . $codeVar . '=@$' . $inflateVar . '(@$' . $decoderVar . '($' . $payloadVar . '));',
         '$' . $runnerVar . '($' . $codeVar . ');',
     ];

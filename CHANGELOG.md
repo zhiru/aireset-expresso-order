@@ -2,23 +2,27 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.27 - 2026-04-16
+
+- atualizacao do fluxo de build para gerar zip de release padrao e evitar empacotamentos quebrados
+- agora o pacote inclui readme.txt na raiz e exclui arquivos de documentacao interna
+- arquivos com transicao PHP/HTML sao pulados da ofuscacao para evitar erros na ativacao
+
 ## 1.1.26 - 2026-04-15
 
-- release builder agora aplica obfuscacao em estilo Elite Licenser nos arquivos sensiveis do core
-- workflow de release valida a assinatura da obfuscacao antes de anexar o zip ao GitHub Release
-- `class-admin-page.php` passou a entrar no pacote protegido junto com licenca, manager, integrity e guard
-- obfuscacao do pacote ficou mais agressiva, em linha unica e com menos pistas legiveis no wrapper
+- workflow de release valida a integridade do pacote antes de anexar o zip ao GitHub Release
+- `class-admin-page.php` passou a entrar no pacote final junto com os arquivos essenciais do plugin
 
 ## 1.1.25 - 2026-04-15
 
-- separacao do sistema em `license core` e `integrity core`
+- separacao do sistema em `verification core` e `integrity core`
 - integridade da distribuicao agora valida a presenca dos arquivos essenciais e pode exibir aviso no admin
 - refinado o visual de quantidade, desconto e subtotal nos cards de item do painel
-- pipeline de release atualizado para gerar pacote distribuivel com hardening basico dos arquivos sensiveis
+- pipeline de release atualizado para gerar pacote distribuivel mais consistente
 
 ## 1.1.24 - 2026-04-15
 
-- corrigido o acesso aos submenus `Pedidos` e `Licenca` do Pedido Expresso no admin
+- corrigido o acesso aos submenus `Pedidos` e `Ativacao` do Pedido Expresso no admin
 - submenu continua registrado no WordPress e agora e ocultado apenas no DOM pelo flyout
 
 ## 1.1.23 - 2026-04-15
@@ -29,20 +33,20 @@ Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser regi
 
 ## 1.1.22 - 2026-04-14
 
-- ajuste do flyout do admin para usar o menu raiz correto do `Aireset`, mantendo a estrutura `Aireset > Pedido Expresso > Configuracoes, Pedidos, Licenca`
+- ajuste do flyout do admin para usar o menu raiz correto do `Aireset`, mantendo a estrutura `Aireset > Pedido Expresso > Configuracoes, Pedidos, Ativacao`
 - limpeza do bootstrap principal para evitar texto corrompido por encoding
 
 ## 1.1.21 - 2026-04-14
 
 - reversao da mudanca que transformava `Pedido Expresso` em menu pai do admin
 - retorno do plugin para a estrutura filha de `Aireset`, com submenu flyout proprio no item `Pedido Expresso`
-- ocultacao dos itens auxiliares do menu raiz e exposicao de `Configuracoes`, `Pedidos` e `Licenca` no flyout do plugin
+- ocultacao dos itens auxiliares do menu raiz e exposicao de `Configuracoes`, `Pedidos` e `Ativacao` no flyout do plugin
 
 ## 1.1.20 - 2026-04-14
 
 - reorganizacao do menu admin para `Pedido Expresso` funcionar como menu pai real do plugin
-- exibicao correta dos submenus `Configuracoes`, `Pedidos` e `Licenca` no padrao esperado do WordPress
-- ajuste complementar da integracao da tela de licenca para conviver com a nova estrutura de menu
+- exibicao correta dos submenus `Configuracoes`, `Pedidos` e `Ativacao` no padrao esperado do WordPress
+- ajuste complementar da integracao da tela de ativacao para conviver com a nova estrutura de menu
 
 ## 1.1.19 - 2026-04-14
 

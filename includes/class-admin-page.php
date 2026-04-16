@@ -24,10 +24,16 @@ if ( ! function_exists( 'ensure_aireset_parent_menu' ) ) {
                 apply_filters( 'aireset_parent_menu_capability', 'read' ),
                 'aireset',
                 'render_aireset_parent_page',
-                'dashicons-screenoptions',
-                58
+                'https://aireset.com.br/wp-content/logo_para_clientes/icone-preto.png',
+                3
             );
             $submenu['aireset'] = isset( $submenu['aireset'] ) ? $submenu['aireset'] : array();
+
+            add_action( 'admin_head', 'aireset_parent_menu_icon_css' );
+            function aireset_parent_menu_icon_css() {
+                echo '<style>#toplevel_page_aireset .wp-menu-image img{width:24px!important;height:auto!important;padding:6px 0 0!important;}</style>';
+            }
+            unset( $menu[4] );
         }
 
         if ( ! $cleanup_hooked ) {
