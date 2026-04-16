@@ -2,6 +2,13 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.26 - 2026-04-15
+
+- release builder agora aplica obfuscacao em estilo Elite Licenser nos arquivos sensiveis do core
+- workflow de release valida a assinatura da obfuscacao antes de anexar o zip ao GitHub Release
+- `class-admin-page.php` passou a entrar no pacote protegido junto com licenca, manager, integrity e guard
+- obfuscacao do pacote ficou mais agressiva, em linha unica e com menos pistas legiveis no wrapper
+
 ## 1.1.25 - 2026-04-15
 
 - separacao do sistema em `license core` e `integrity core`
