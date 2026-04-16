@@ -25,6 +25,34 @@ jobs:
       - name: Prepare distributable plugin folder
         run: php scripts/build-release-package.php
 
+      - name: Verify obfuscated release files
+        run: |
+          php -r "
+          \$files = [
+            'dist/aireset-expresso-order/includes/class-eop-license-base.php',
+            'dist/aireset-expresso-order/includes/class-eop-license-manager.php',
+            'dist/aireset-expresso-order/includes/class-eop-integrity.php',
+            'dist/aireset-expresso-order/includes/trait-eop-license-guard.php',
+          ];
+          foreach (\$files as \$file) {
+            if (!is_file(\$file)) {
+              fwrite(STDERR, 'Missing expected obfuscated file: ' . \$file . PHP_EOL);
+              exit(1);
+            }
+            \$contents = file_get_contents(\$file);
+            if (
+              \$contents === false ||
+              strpos(\$contents, 'gzuncompress') === false ||
+              strpos(\$contents, 'base64_decode') === false ||
+              strpos(\$contents, 'eval("?>".') === false ||
+              strpos(\$contents, '__eop_obfuscated_inner__') === false
+            ) {
+              fwrite(STDERR, 'Release file does not look obfuscated: ' . \$file . PHP_EOL);
+              exit(1);
+            }
+          }
+          "
+
       - name: Create plugin zip
         run: |
           cd dist

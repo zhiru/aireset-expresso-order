@@ -29,7 +29,7 @@ $excludedFiles = [
     'package.json',
 ];
 
-$hardenedFiles = [
+$obfuscatedFiles = [
     'includes/class-eop-license-base.php',
     'includes/class-eop-license-manager.php',
     'includes/class-eop-integrity.php',
@@ -66,19 +66,19 @@ foreach ($items as $item) {
     copy($source, $destination);
 }
 
-foreach ($hardenedFiles as $relativePath) {
+foreach ($obfuscatedFiles as $relativePath) {
     $target = $packageRoot . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $relativePath);
     if (!is_file($target)) {
         continue;
     }
 
-    $hardened = hardenPhpFile($target);
-    if ($hardened === '') {
-        fwrite(STDERR, "Unable to harden file: {$relativePath}\n");
+    $obfuscated = obfuscatePhpFile($target);
+    if ($obfuscated === '') {
+        fwrite(STDERR, "Unable to obfuscate file: {$relativePath}\n");
         exit(1);
     }
 
-    file_put_contents($target, $hardened);
+    file_put_contents($target, $obfuscated);
 }
 
 fwrite(STDOUT, $packageRoot . PHP_EOL);
@@ -130,47 +130,120 @@ function rrmdir(string $directory): void
     rmdir($directory);
 }
 
-function hardenPhpFile(string $path): string
+function obfuscatePhpFile(string $path): string
 {
     $source = file_get_contents($path);
     if ($source === false || $source === '') {
         return '';
     }
 
-    $tokens = token_get_all($source);
-    $output = '';
-    $previousWasWhitespace = false;
-
-    foreach ($tokens as $token) {
-        if (is_string($token)) {
-            $output .= $token;
-            $previousWasWhitespace = false;
-            continue;
-        }
-
-        [$id, $text] = $token;
-
-        if ($id === T_COMMENT || $id === T_DOC_COMMENT) {
-            continue;
-        }
-
-        if ($id === T_WHITESPACE) {
-            if ($previousWasWhitespace) {
-                continue;
-            }
-
-            $output .= ' ';
-            $previousWasWhitespace = true;
-            continue;
-        }
-
-        $output .= $text;
-        $previousWasWhitespace = false;
+    $strippedSource = stripPhpTags($source);
+    if ($strippedSource === '') {
+        return '';
     }
 
-    $output = preg_replace('/\s*([{}();,:=\[\]])\s*/', '$1', $output);
-    $output = preg_replace('/\s*(=>)\s*/', '$1', $output);
-    $output = preg_replace('/\s+/', ' ', $output);
+    $innerPayload = base64_encode($strippedSource);
+    $innerLoader = buildInnerLoader($innerPayload);
+    $outerPayload = base64_encode(gzcompress($innerLoader, 9));
 
-    return is_string($output) ? trim($output) . PHP_EOL : '';
+    return buildOuterLoader($outerPayload) . PHP_EOL;
+}
+
+function stripPhpTags(string $source): string
+{
+    $source = trim($source);
+
+    if (str_starts_with(strtolower($source), '<?php')) {
+        $source = substr($source, 5);
+    } elseif (str_starts_with($source, '<?')) {
+        $source = substr($source, 2);
+    }
+
+    $source = trim($source);
+
+    if (str_ends_with($source, '?>')) {
+        $source = substr($source, 0, -2);
+    }
+
+    return trim($source);
+}
+
+function buildInnerLoader(string $innerPayload): string
+{
+    $decoderVar = randomVarName();
+    $payloadVar = randomVarName();
+    $runnerVar = randomVarName();
+    $markerVar = randomVarName();
+
+    $lines = [
+        '$' . $decoderVar . '=' . var_export('base64_decode', true) . ';',
+        '$' . $payloadVar . '=' . var_export($innerPayload, true) . ';',
+        '$' . $markerVar . '=' . var_export('__eop_obfuscated_inner__', true) . ';',
+        '$' . $runnerVar . '=function($__eop_code__){eval("?>".$__eop_code__);};',
+        '$' . $runnerVar . '(@$' . $decoderVar . '($' . $payloadVar . '));',
+    ];
+
+    return implode('', addNoiseToStatements($lines));
+}
+
+function buildOuterLoader(string $outerPayload): string
+{
+    $decoderVar = randomVarName();
+    $inflateVar = randomVarName();
+    $payloadVar = randomVarName();
+    $runnerVar = randomVarName();
+    $bannerVar = randomVarName();
+    $codeVar = randomVarName();
+
+    $lines = [
+        '$' . $decoderVar . '=' . var_export('base64_decode', true) . ';',
+        '$' . $inflateVar . '=' . var_export('gzuncompress', true) . ';',
+        '$' . $payloadVar . '=' . var_export($outerPayload, true) . ';',
+        '$' . $bannerVar . '=' . var_export('Loading Aireset protected core...', true) . ';',
+        '$' . $runnerVar . '=function($__eop_blob__){eval("?>".$__eop_blob__);};',
+        '$' . $codeVar . '=@$' . $inflateVar . '(@$' . $decoderVar . '($' . $payloadVar . '));',
+        '$' . $runnerVar . '($' . $codeVar . ');',
+    ];
+
+    return '<?php ' . implode('', addNoiseToStatements($lines));
+}
+
+function addNoiseToStatements(array $lines): array
+{
+    $noisy = [];
+
+    foreach ($lines as $line) {
+        $noisy[] = randomComment() . $line . randomComment();
+        if (random_int(0, 1) === 1) {
+            $noisy[] = str_repeat(PHP_EOL, random_int(2, 8));
+        }
+    }
+
+    return $noisy;
+}
+
+function randomVarName(): string
+{
+    $alphabet = 'abcdefghijklmnopqrstuvwxyz';
+    $length = random_int(8, 18);
+    $buffer = '';
+
+    for ($i = 0; $i < $length; $i++) {
+        $buffer .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+    }
+
+    return '_' . $buffer;
+}
+
+function randomComment(): string
+{
+    $alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    $length = random_int(4, 14);
+    $buffer = '';
+
+    for ($i = 0; $i < $length; $i++) {
+        $buffer .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+    }
+
+    return '/*' . $buffer . '*/';
 }
