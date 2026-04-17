@@ -5,7 +5,8 @@
  * Uses safe-zone triangle detection, smart positioning, and keyboard navigation.
  *
  * Supports multiple flyouts via window.airesetAdminFlyouts array.
- * Each entry: { menuRoot, anchorPage, currentPage, title, items[] }
+ * Each entry: { menuRoot, anchorPage, currentPage, title, items[] }.
+ * Items may also include children[] and query{} to enable nested menus.
  */
 (function () {
     'use strict';
@@ -54,44 +55,14 @@
             anchorLi.classList.add('eop-has-flyout');
 
             var currentPage = String(cfg.currentPage || '');
-            if (currentPage === String(cfg.anchorPage || '') || this.itemIsActive(cfg.items, currentPage)) {
+            var currentState = this.getCurrentState();
+
+            if (currentPage === String(cfg.anchorPage || '') || this.itemIsActive(cfg.items, currentPage, currentState)) {
                 anchorLi.classList.add('eop-flyout-parent-current');
             }
 
-            var ul = document.createElement('ul');
-            ul.className = 'eop-submenu-flyout';
-            ul.setAttribute('role', 'menu');
-            ul.setAttribute('aria-label', cfg.title || '');
-
-            cfg.items.forEach(function (item) {
-                if (!item || !item.url) { return; }
-
-                var li = document.createElement('li');
-                li.setAttribute('role', 'none');
-
-                var a = document.createElement('a');
-                a.href = item.url;
-                a.setAttribute('role', 'menuitem');
-                a.setAttribute('tabindex', '-1');
-
-                if (item.icon) {
-                    var icon = document.createElement('span');
-                    icon.className = 'eop-flyout-icon dashicons ' + String(item.icon);
-                    a.appendChild(icon);
-                }
-
-                var label = document.createElement('span');
-                label.className = 'eop-flyout-label';
-                label.textContent = String(item.label || '');
-                a.appendChild(label);
-
-                if (String(item.key || '') === currentPage) {
-                    li.classList.add('eop-flyout-current');
-                }
-
-                li.appendChild(a);
-                ul.appendChild(li);
-            });
+            var ul = this.buildMenuTree(cfg.items, currentPage, currentState, cfg.title || '');
+            if (!ul) { return false; }
 
             anchorLi.appendChild(ul);
 
@@ -100,16 +71,82 @@
             return true;
         },
 
+        buildMenuTree: function (items, currentPage, currentState, label) {
+            if (!Array.isArray(items) || !items.length) { return null; }
+
+            var self = this;
+            var ul = document.createElement('ul');
+            ul.className = 'eop-submenu-flyout';
+            ul.setAttribute('role', 'menu');
+            ul.setAttribute('aria-label', label || '');
+
+            items.forEach(function (item) {
+                if (!item || (!item.url && !Array.isArray(item.children))) { return; }
+
+                var hasChildren = Array.isArray(item.children) && item.children.length > 0;
+                var isSelfCurrent = self.selfMatchesCurrent(item, currentPage, currentState);
+                var hasCurrentChild = hasChildren && self.itemIsActive(item.children, currentPage, currentState);
+                var li = document.createElement('li');
+                li.setAttribute('role', 'none');
+
+                if (hasChildren) {
+                    li.classList.add('eop-has-flyout');
+                }
+
+                if (isSelfCurrent) {
+                    li.classList.add('eop-flyout-current');
+                } else if (hasCurrentChild) {
+                    li.classList.add('eop-flyout-current-branch');
+                }
+
+                var a = document.createElement('a');
+                a.href = item.url || '#';
+                a.setAttribute('role', 'menuitem');
+                a.setAttribute('tabindex', '-1');
+
+                if (hasChildren) {
+                    a.setAttribute('aria-haspopup', 'true');
+                    a.setAttribute('aria-expanded', 'false');
+                }
+
+                if (item.icon) {
+                    var icon = document.createElement('span');
+                    icon.className = 'eop-flyout-icon dashicons ' + String(item.icon);
+                    a.appendChild(icon);
+                }
+
+                var itemLabel = document.createElement('span');
+                itemLabel.className = 'eop-flyout-label';
+                itemLabel.textContent = String(item.label || '');
+                a.appendChild(itemLabel);
+
+                li.appendChild(a);
+
+                if (hasChildren) {
+                    var childMenu = self.buildMenuTree(item.children, currentPage, currentState, String(item.label || ''));
+                    if (childMenu) {
+                        li.appendChild(childMenu);
+                    }
+                }
+
+                ul.appendChild(li);
+            });
+
+            return ul.children.length ? ul : null;
+        },
+
         hideOriginalItems: function (anchorLi, items) {
             var wpSubmenu = anchorLi.closest('.wp-submenu');
             if (!wpSubmenu) { return; }
 
-            items.forEach(function (item) {
-                if (!item || !item.key) { return; }
+            var itemKeys = this.collectItemKeys(items, []);
+            var links = wpSubmenu.querySelectorAll(':scope > li > a[href]');
 
-                var links = wpSubmenu.querySelectorAll(':scope > li > a[href]');
+            itemKeys.forEach(function (itemKey) {
+                if (!itemKey) { return; }
+
                 for (var i = 0; i < links.length; i++) {
-                    if ((links[i].getAttribute('href') || '').indexOf('page=' + item.key) !== -1) {
+                    if ((links[i].getAttribute('href') || '').indexOf('page=' + itemKey) !== -1) {
                         var li = links[i].closest('li');
                         if (li && li !== anchorLi) {
                             li.classList.add('eop-flyout-hidden');
@@ -137,9 +174,59 @@
             return null;
         },
 
-        itemIsActive: function (items, currentPage) {
+        collectItemKeys: function (items, keys) {
+            if (!Array.isArray(items)) { return keys; }
+
+            items.forEach(function (item) {
+                if (!item) { return; }
+
+                if (item.key) {
+                    keys.push(String(item.key));
+                }
+
+                if (Array.isArray(item.children) && item.children.length) {
+                    FlyoutRenderer.collectItemKeys(item.children, keys);
+                }
+            });
+
+            return keys;
+        },
+
+        getCurrentState: function () {
+            return {
+                params: new URLSearchParams(window.location.search || '')
+            };
+        },
+
+        selfMatchesCurrent: function (item, currentPage, currentState) {
+            if (!item) { return false; }
+
+            if (item.query && this.queryMatchesCurrent(item.query, currentState)) {
+                return true;
+            }
+
+            return item.key && String(item.key) === currentPage;
+        },
+
+        queryMatchesCurrent: function (query, currentState) {
+            if (!query || !currentState || !currentState.params) { return false; }
+
+            return Object.keys(query).every(function (key) {
+                return String(currentState.params.get(key) || '') === String(query[key]);
+            });
+        },
+
+        itemIsActive: function (items, currentPage, currentState) {
             return items.some(function (item) {
-                return item && String(item.key || '') === currentPage;
+                if (!item) { return false; }
+
+                if (FlyoutRenderer.selfMatchesCurrent(item, currentPage, currentState)) {
+                    return true;
+                }
+
+                return Array.isArray(item.children) && item.children.length
+                    ? FlyoutRenderer.itemIsActive(item.children, currentPage, currentState)
+                    : false;
             });
         }
     };
@@ -230,7 +317,7 @@
             var self = this;
 
             parentLi.addEventListener('keydown', function (e) {
-                var allLinks = flyout.querySelectorAll('a');
+                var allLinks = self.getDirectMenuLinks(flyout);
                 var focused = flyout.querySelector('a:focus');
                 var idx = Array.from(allLinks).indexOf(focused);
                 var visible = flyout.classList.contains('eop-submenu-flyout-visible');
@@ -273,19 +360,29 @@
         /* --- Show / Hide --- */
 
         showFlyout: function (parentLi, flyout) {
-            if (this.activeMenu && this.activeMenu !== flyout) {
+            if (this.activeMenu && this.activeMenu !== flyout && !this.activeMenu.contains(parentLi)) {
                 this.hideFlyout(this.activeMenu);
             }
             this.exitPoint = null;
             this.positionFlyout(parentLi, flyout);
             flyout.classList.add('eop-submenu-flyout-visible');
+            parentLi.classList.add('eop-flyout-open');
+            this.setExpanded(parentLi, true);
             this.activeMenu = flyout;
             this.activeParent = parentLi;
         },
 
         hideFlyout: function (flyout) {
             flyout.classList.remove('eop-submenu-flyout-visible');
-            if (this.activeMenu === flyout) {
+            var parentLi = flyout.parentElement;
+
+            if (parentLi && parentLi.classList) {
+                parentLi.classList.remove('eop-flyout-open');
+                this.setExpanded(parentLi, false);
+                this.closeDescendants(parentLi);
+            }
+
+            if (this.activeMenu === flyout || (this.activeMenu && flyout.contains(this.activeMenu))) {
                 this.activeMenu = null;
                 this.activeParent = null;
                 this.exitPoint = null;
@@ -398,9 +495,18 @@
         /* --- Smart positioning (prevent off-screen) --- */
 
         positionFlyout: function (parentLi, flyout) {
+            var prevDisplay = flyout.style.display;
+            var prevVisibility = flyout.style.visibility;
+
+            flyout.style.visibility = 'hidden';
+            flyout.style.display = 'block';
             flyout.style.top = '';
+            flyout.classList.remove('eop-submenu-flyout--reverse');
+
             var winH = window.innerHeight;
+            var winW = window.innerWidth;
             var flyH = flyout.offsetHeight;
+            var flyW = flyout.offsetWidth;
             var parentRect = parentLi.getBoundingClientRect();
 
             if (parentRect.top + flyH > winH) {
@@ -410,14 +516,21 @@
                 }
                 flyout.style.top = offset + 'px';
             }
+
+            if (parentRect.right + flyW > winW - 8) {
+                flyout.classList.add('eop-submenu-flyout--reverse');
+            }
+
+            flyout.style.display = prevDisplay;
+            flyout.style.visibility = prevVisibility;
         },
 
         /* --- Mobile support --- */
 
         setupMobileSupport: function () {
-            var self = this;
             if (window.innerWidth > 782) { return; }
 
+            var self = this;
             var links = document.querySelectorAll('#adminmenu li.eop-has-flyout > a');
 
             links.forEach(function (link) {
@@ -426,13 +539,19 @@
                     var flyout = parentLi.querySelector('.eop-submenu-flyout');
                     if (!flyout) { return; }
 
-                    if (parentLi.classList.contains('eop-flyout-open')) { return; }
-
                     e.preventDefault();
-                    document.querySelectorAll('#adminmenu li.eop-has-flyout').forEach(function (item) {
-                        item.classList.remove('eop-flyout-open');
-                    });
+
+                    if (parentLi.classList.contains('eop-flyout-open')) {
+                        self.closeDescendants(parentLi);
+                        parentLi.classList.remove('eop-flyout-open');
+                        self.setExpanded(parentLi, false);
+                        return;
+                    }
+
+                    self.closeSiblingMenus(parentLi);
+                    self.openAncestorChain(parentLi);
                     parentLi.classList.add('eop-flyout-open');
+                    self.setExpanded(parentLi, true);
                 });
             });
 
@@ -443,6 +562,72 @@
                     });
                 }
             });
+        },
+
+        getDirectMenuLinks: function (flyout) {
+            if (!flyout) { return []; }
+
+            return Array.from(flyout.querySelectorAll(':scope > li > a'));
+        },
+
+        setExpanded: function (parentLi, expanded) {
+            if (!parentLi) { return; }
+
+            var link = parentLi.querySelector(':scope > a');
+            if (link && link.hasAttribute('aria-haspopup')) {
+                link.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            }
+        },
+
+        closeDescendants: function (parentLi) {
+            if (!parentLi) { return; }
+
+            parentLi.querySelectorAll('li.eop-has-flyout').forEach(function (item) {
+                item.classList.remove('eop-flyout-open');
+                var link = item.querySelector(':scope > a');
+                if (link && link.hasAttribute('aria-haspopup')) {
+                    link.setAttribute('aria-expanded', 'false');
+                }
+                var submenu = item.querySelector(':scope > .eop-submenu-flyout');
+                if (submenu) {
+                    submenu.classList.remove('eop-submenu-flyout-visible');
+                }
+            });
+        },
+
+        closeSiblingMenus: function (parentLi) {
+            var list = parentLi && parentLi.parentElement;
+            if (!list) { return; }
+
+            Array.from(list.children).forEach(function (sibling) {
+                if (sibling === parentLi || !sibling.classList || !sibling.classList.contains('eop-has-flyout')) { return; }
+                sibling.classList.remove('eop-flyout-open');
+                var link = sibling.querySelector(':scope > a');
+                if (link && link.hasAttribute('aria-haspopup')) {
+                    link.setAttribute('aria-expanded', 'false');
+                }
+                var submenu = sibling.querySelector(':scope > .eop-submenu-flyout');
+                if (submenu) {
+                    submenu.classList.remove('eop-submenu-flyout-visible');
+                }
+                FlyoutInteraction.closeDescendants(sibling);
+            });
+        },
+
+        openAncestorChain: function (parentLi) {
+            var current = parentLi ? parentLi.parentElement : null;
+
+            while (current && current.id !== 'adminmenu') {
+                if (current.matches && current.matches('.eop-submenu-flyout')) {
+                    var owner = current.parentElement;
+                    if (owner && owner.classList.contains('eop-has-flyout')) {
+                        owner.classList.add('eop-flyout-open');
+                        this.setExpanded(owner, true);
+                    }
+                }
+
+                current = current.parentElement;
+            }
         }
     };
 
@@ -465,9 +650,8 @@
             var currentPage = String(cfg.currentPage || '');
             if (!currentPage) { return; }
 
-            var isChildPage = cfg.items.some(function (item) {
-                return item && String(item.key || '') === currentPage;
-            });
+            var currentState = FlyoutRenderer.getCurrentState();
+            var isChildPage = FlyoutRenderer.itemIsActive(cfg.items, currentPage, currentState);
 
             if (!isChildPage) { return; }
 

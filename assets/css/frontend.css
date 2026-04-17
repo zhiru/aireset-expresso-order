@@ -489,6 +489,7 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
   font-size: 14px;
   font-weight: 800;
   box-shadow: none;
+  text-align: left;
 }
 .eop-pdv-nav__item:hover, .eop-pdv-nav__item:focus {
   border-color: var(--eop-primary);

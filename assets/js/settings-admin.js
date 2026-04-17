@@ -15,7 +15,7 @@
 
     function setMediaOnWrap($wrap, url) {
         var hasUrl = Boolean(url);
-        var $hiddenInput = $wrap.find('#eop_logo');
+        var $hiddenInput = $wrap.find('input[type="hidden"]').first();
         var $urlInput = $wrap.find('[data-media-url]');
         var $preview = $wrap.find('[data-media-preview]');
         var $selectButton = $wrap.find('[data-media-select]');

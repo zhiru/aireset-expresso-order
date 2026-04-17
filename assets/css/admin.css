@@ -421,6 +421,57 @@ body.eop-admin-spa-screen #wpbody-content > .fs-notice {
   flex-direction: column;
   gap: 10px;
 }
+.eop-admin-spa-nav__group {
+  display: grid;
+  gap: 8px;
+}
+.eop-admin-spa-nav__group-toggle {
+  padding-right: 16px !important;
+}
+.eop-admin-spa-nav__group-arrow {
+  margin-left: auto;
+  transition: transform .2s ease, opacity .2s ease;
+  opacity: .72;
+}
+.eop-admin-spa-nav__group.is-open .eop-admin-spa-nav__group-arrow {
+  transform: rotate(180deg);
+}
+.eop-admin-spa-nav__submenu {
+  display: grid;
+  gap: 8px;
+  padding: 0 8px 6px 18px;
+}
+.eop-admin-spa-nav__submenu[hidden] {
+  display: none !important;
+}
+.eop-admin-spa-nav__submenu-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 44px;
+  padding: 0 16px 0 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: none;
+  transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
+}
+.eop-admin-spa-nav__submenu-item:hover,
+.eop-admin-spa-nav__submenu-item:focus {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  outline: none;
+}
+.eop-admin-spa-nav__submenu-item.is-active {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
 .eop-admin-spa__content {
   min-width: 0;
 }
@@ -689,5 +740,11 @@ body.eop-admin-spa-screen #wpbody-content > .fs-notice {
   }
   .eop-admin-spa__brand h1 {
     font-size: 28px;
+  }
+  .eop-admin-spa-nav__submenu {
+    padding-left: 10px;
+  }
+  .eop-admin-spa-nav__submenu-item {
+    padding-left: 18px;
   }
 }

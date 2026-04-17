@@ -18,6 +18,7 @@ class EOP_Settings {
             'flow_mode'                   => 'proposal',
             'discount_mode'               => 'both',
             'enable_checkout_confirmation' => 'no',
+            'order_page_id'               => 0,
             'proposal_page_id'            => 0,
             'brand_logo_url'              => '',
             'primary_color'               => '#00034b',
@@ -27,6 +28,9 @@ class EOP_Settings {
             'proposal_card_color'         => '#ffffff',
             'proposal_text_color'         => '#172033',
             'proposal_muted_color'        => '#5b6474',
+            'proposal_max_width'          => '1120',
+            'proposal_title_size'         => '40',
+            'proposal_text_size'          => '16',
             'border_radius'               => '18',
             'font_family'                 => 'Montserrat:400,700',
             'panel_title'                 => 'Pedido Expresso',
@@ -35,6 +39,10 @@ class EOP_Settings {
             'proposal_description'        => 'Revise os itens e confirme para continuar.',
             'proposal_button_label'       => 'Confirmar proposta',
             'proposal_pay_button_label'   => 'Ir para pagamento',
+            'pdf_company_name'            => get_bloginfo( 'name' ),
+            'pdf_company_document'        => '',
+            'pdf_company_address'         => '',
+            'pdf_footer_note'             => __( 'Documento gerado pelo Aireset Expresso Order.', EOP_TEXT_DOMAIN ),
         );
     }
 
@@ -72,6 +80,7 @@ class EOP_Settings {
             'flow_mode'                    => in_array( $input['flow_mode'] ?? '', array( 'direct_order', 'proposal' ), true ) ? $input['flow_mode'] : $defaults['flow_mode'],
             'discount_mode'                => in_array( $input['discount_mode'] ?? '', array( 'percent', 'fixed', 'both' ), true ) ? $input['discount_mode'] : $defaults['discount_mode'],
             'enable_checkout_confirmation' => 'yes' === ( $input['enable_checkout_confirmation'] ?? 'no' ) ? 'yes' : 'no',
+            'order_page_id'                => absint( $input['order_page_id'] ?? 0 ),
             'proposal_page_id'             => absint( $input['proposal_page_id'] ?? 0 ),
             'brand_logo_url'               => esc_url_raw( $input['brand_logo_url'] ?? '' ),
             'primary_color'                => self::sanitize_color( $input['primary_color'] ?? $defaults['primary_color'], $defaults['primary_color'] ),
@@ -81,6 +90,9 @@ class EOP_Settings {
             'proposal_card_color'          => self::sanitize_color( $input['proposal_card_color'] ?? $defaults['proposal_card_color'], $defaults['proposal_card_color'] ),
             'proposal_text_color'          => self::sanitize_color( $input['proposal_text_color'] ?? $defaults['proposal_text_color'], $defaults['proposal_text_color'] ),
             'proposal_muted_color'         => self::sanitize_color( $input['proposal_muted_color'] ?? $defaults['proposal_muted_color'], $defaults['proposal_muted_color'] ),
+            'proposal_max_width'           => (string) max( 720, min( 1600, absint( $input['proposal_max_width'] ?? $defaults['proposal_max_width'] ) ) ),
+            'proposal_title_size'          => (string) max( 22, min( 72, absint( $input['proposal_title_size'] ?? $defaults['proposal_title_size'] ) ) ),
+            'proposal_text_size'           => (string) max( 12, min( 24, absint( $input['proposal_text_size'] ?? $defaults['proposal_text_size'] ) ) ),
             'border_radius'                => (string) max( 0, min( 48, absint( $input['border_radius'] ?? $defaults['border_radius'] ) ) ),
             'font_family'                  => self::sanitize_font_family( $input['font_family'] ?? $defaults['font_family'], $defaults['font_family'] ),
             'panel_title'                  => sanitize_text_field( $input['panel_title'] ?? $defaults['panel_title'] ),
@@ -89,6 +101,10 @@ class EOP_Settings {
             'proposal_description'         => sanitize_textarea_field( $input['proposal_description'] ?? $defaults['proposal_description'] ),
             'proposal_button_label'        => sanitize_text_field( $input['proposal_button_label'] ?? $defaults['proposal_button_label'] ),
             'proposal_pay_button_label'    => sanitize_text_field( $input['proposal_pay_button_label'] ?? $defaults['proposal_pay_button_label'] ),
+            'pdf_company_name'             => sanitize_text_field( $input['pdf_company_name'] ?? $defaults['pdf_company_name'] ),
+            'pdf_company_document'         => sanitize_text_field( $input['pdf_company_document'] ?? $defaults['pdf_company_document'] ),
+            'pdf_company_address'          => sanitize_textarea_field( $input['pdf_company_address'] ?? $defaults['pdf_company_address'] ),
+            'pdf_footer_note'              => sanitize_textarea_field( $input['pdf_footer_note'] ?? $defaults['pdf_footer_note'] ),
         );
     }
 
@@ -299,6 +315,16 @@ class EOP_Settings {
                                     <small class="eop-settings-help"><?php esc_html_e( 'Mostra o botao de pagar apenas depois que o cliente confirmar a proposta.', EOP_TEXT_DOMAIN ); ?></small>
                                 </div>
                                 <div class="eop-settings-field is-full">
+                                    <label for="eop_order_page"><?php esc_html_e( 'Pagina do pedido', EOP_TEXT_DOMAIN ); ?></label>
+                                    <select id="eop_order_page" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[order_page_id]">
+                                        <option value="0"><?php esc_html_e( 'Selecione uma pagina', EOP_TEXT_DOMAIN ); ?></option>
+                                        <?php foreach ( $pages as $page ) : ?>
+                                            <option value="<?php echo esc_attr( $page->ID ); ?>" <?php selected( (int) $settings['order_page_id'], (int) $page->ID ); ?>><?php echo esc_html( $page->post_title ); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <small class="eop-settings-help"><?php esc_html_e( 'Pagina usada para o shortcode [expresso_order]. O plugin cria essa pagina automaticamente na ativacao.', EOP_TEXT_DOMAIN ); ?></small>
+                                </div>
+                                <div class="eop-settings-field is-full">
                                     <label for="eop_proposal_page"><?php esc_html_e( 'Pagina da proposta', EOP_TEXT_DOMAIN ); ?></label>
                                     <select id="eop_proposal_page" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_page_id]">
                                         <option value="0"><?php esc_html_e( 'Selecione uma pagina', EOP_TEXT_DOMAIN ); ?></option>
@@ -306,6 +332,7 @@ class EOP_Settings {
                                             <option value="<?php echo esc_attr( $page->ID ); ?>" <?php selected( (int) $settings['proposal_page_id'], (int) $page->ID ); ?>><?php echo esc_html( $page->post_title ); ?></option>
                                         <?php endforeach; ?>
                                     </select>
+                                    <small class="eop-settings-help"><?php esc_html_e( 'Pagina publica do shortcode [expresso_order_proposal]. O plugin tambem repara esse vinculo automaticamente.', EOP_TEXT_DOMAIN ); ?></small>
                                 </div>
                             </div>
                         </section>
@@ -382,6 +409,41 @@ class EOP_Settings {
                                 <div class="eop-settings-field">
                                     <label for="eop_proposal_muted_color"><?php esc_html_e( 'Texto auxiliar', EOP_TEXT_DOMAIN ); ?></label>
                                     <input id="eop_proposal_muted_color" class="eop-color-field" type="text" data-default-color="#5b6474" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_muted_color]" value="<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_proposal_max_width"><?php esc_html_e( 'Largura maxima da proposta (px)', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_proposal_max_width" type="number" min="720" max="1600" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_max_width]" value="<?php echo esc_attr( $settings['proposal_max_width'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_proposal_title_size"><?php esc_html_e( 'Tamanho do titulo (px)', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_proposal_title_size" type="number" min="22" max="72" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_title_size]" value="<?php echo esc_attr( $settings['proposal_title_size'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_proposal_text_size"><?php esc_html_e( 'Tamanho do texto base (px)', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_proposal_text_size" type="number" min="12" max="24" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_text_size]" value="<?php echo esc_attr( $settings['proposal_text_size'] ); ?>" />
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="eop-settings-card">
+                            <h2><?php esc_html_e( 'PDF nativo', EOP_TEXT_DOMAIN ); ?></h2>
+                            <p><?php esc_html_e( 'Defina os dados exibidos pelo gerador interno de PDF do plugin.', EOP_TEXT_DOMAIN ); ?></p>
+                            <div class="eop-settings-grid">
+                                <div class="eop-settings-field">
+                                    <label for="eop_pdf_company_name"><?php esc_html_e( 'Nome da empresa', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_pdf_company_name" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[pdf_company_name]" value="<?php echo esc_attr( $settings['pdf_company_name'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_pdf_company_document"><?php esc_html_e( 'Documento da empresa', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_pdf_company_document" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[pdf_company_document]" value="<?php echo esc_attr( $settings['pdf_company_document'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field is-full">
+                                    <label for="eop_pdf_company_address"><?php esc_html_e( 'Endereco da empresa', EOP_TEXT_DOMAIN ); ?></label>
+                                    <textarea id="eop_pdf_company_address" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[pdf_company_address]"><?php echo esc_textarea( $settings['pdf_company_address'] ); ?></textarea>
+                                </div>
+                                <div class="eop-settings-field is-full">
+                                    <label for="eop_pdf_footer_note"><?php esc_html_e( 'Rodape do documento', EOP_TEXT_DOMAIN ); ?></label>
+                                    <textarea id="eop_pdf_footer_note" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[pdf_footer_note]"><?php echo esc_textarea( $settings['pdf_footer_note'] ); ?></textarea>
                                 </div>
                             </div>
                         </section>

@@ -15,6 +15,139 @@
     var currentEditingOrderId = 0;
     var editLoadToken = 0;
 
+    function getCurrentPdfTab() {
+        var params = new URLSearchParams(window.location.search);
+        var fromUrl = params.get('pdf_tab');
+        var fromNav = $('.eop-admin-spa-nav__submenu-item.is-active').first().data('eop-pdf-tab');
+
+        if (fromUrl) {
+            return String(fromUrl);
+        }
+
+        if (fromNav) {
+            return String(fromNav);
+        }
+
+        return 'general';
+    }
+
+    function togglePdfNavGroup($toggle, forceOpen) {
+        var $group = $toggle.closest('.eop-admin-spa-nav__group');
+        var $submenu = $group.find('.eop-admin-spa-nav__submenu').first();
+        var isOpen = typeof forceOpen === 'boolean' ? !forceOpen : $toggle.attr('aria-expanded') === 'true';
+        var nextState = !isOpen;
+
+        if (!$group.length || !$submenu.length) {
+            return;
+        }
+
+        $group.toggleClass('is-open', nextState);
+        $toggle.attr('aria-expanded', nextState ? 'true' : 'false');
+        $submenu.attr('hidden', nextState ? false : true);
+    }
+
+    function setPdfPreviewState($admin, isOpen) {
+        if (!$admin.length) {
+            return;
+        }
+
+        $admin.toggleClass('is-preview-open', isOpen);
+        $admin.find('[data-eop-pdf-preview-toggle]').attr('aria-expanded', isOpen ? 'true' : 'false');
+        $admin.find('.eop-pdf-admin__preview-drawer').attr('aria-hidden', isOpen ? 'false' : 'true');
+    }
+
+    function syncBrowserUrl(url, replaceState) {
+        if (!url || !window.history || !window.history.pushState) {
+            return;
+        }
+
+        if (replaceState) {
+            window.history.replaceState({ eopView: currentView }, '', url);
+            return;
+        }
+
+        window.history.pushState({ eopView: currentView }, '', url);
+    }
+
+    function setPdfAdminLoading($admin, isLoading) {
+        if (!$admin.length) {
+            return;
+        }
+
+        $admin.toggleClass('is-loading', isLoading);
+    }
+
+    function updatePdfNavState(url) {
+        var parsedUrl = new URL(url, window.location.origin);
+        var nextTab = parsedUrl.searchParams.get('pdf_tab') || 'general';
+
+        $('.eop-admin-spa-nav__submenu-item').each(function () {
+            var isActive = $(this).data('eop-pdf-tab') === nextTab;
+            $(this).toggleClass('is-active', isActive);
+        });
+    }
+
+    function buildPdfToolbarUrl(form) {
+        var baseUrl = new URL(window.location.href, window.location.origin);
+
+        $(form).serializeArray().forEach(function (field) {
+            if (field.value === '') {
+                baseUrl.searchParams.delete(field.name);
+                return;
+            }
+
+            baseUrl.searchParams.set(field.name, field.value);
+        });
+
+        baseUrl.searchParams.set('view', 'pdf');
+        baseUrl.searchParams.set('pdf_tab', getCurrentPdfTab());
+
+        return baseUrl.toString();
+    }
+
+    function loadPdfTab(url, options) {
+        var settings = options || {};
+        var $admin = $('.eop-pdf-admin').first();
+        var preservePreview = settings.preservePreview !== false && $admin.hasClass('is-preview-open');
+
+        if (!$admin.length || !url) {
+            if (url) {
+                window.location.href = url;
+            }
+
+            return;
+        }
+
+        setPdfAdminLoading($admin, true);
+
+        $.get(url)
+            .done(function (response) {
+                var $parsed = $('<div>').append($.parseHTML(response, document, true));
+                var $nextShell = $parsed.find('[data-eop-pdf-shell]').first();
+
+                if (!$nextShell.length) {
+                    window.location.href = url;
+                    return;
+                }
+
+                $admin.find('[data-eop-pdf-shell]').first().replaceWith($nextShell);
+
+                if (!settings.skipHistory) {
+                    syncBrowserUrl(url, Boolean(settings.replaceState));
+                }
+
+                updatePdfNavState(url);
+                setAppView('pdf', { skipHistory: true });
+                setPdfPreviewState($admin, preservePreview);
+            })
+            .fail(function () {
+                window.location.href = url;
+            })
+            .always(function () {
+                setPdfAdminLoading($admin, false);
+            });
+    }
+
     function getShippingPanelElements() {
         return {
             toggle: $('#eop-shipping-toggle'),
@@ -169,6 +302,10 @@
     function getAllowedViews() {
         var views = ['new-order', 'orders'];
 
+        if ($('[data-eop-view="pdf"]').length) {
+            views.push('pdf');
+        }
+
         if ($('[data-eop-view="settings"]').length) {
             views.push('settings');
         }
@@ -193,6 +330,8 @@
 
     function buildViewUrl(viewName) {
         var base = String(eop_vars.view_url_base || '');
+        var currentParams = new URLSearchParams(window.location.search);
+        var normalizedView = normalizeView(viewName);
         var url;
 
         if (!base) {
@@ -200,7 +339,19 @@
         }
 
         url = new URL(base, window.location.origin);
-        url.searchParams.set('view', normalizeView(viewName));
+        url.searchParams.set('view', normalizedView);
+
+        if (normalizedView === 'pdf') {
+            url.searchParams.set('pdf_tab', getCurrentPdfTab());
+
+            ['document', 'preview_order'].forEach(function (key) {
+                var value = currentParams.get(key);
+
+                if (value) {
+                    url.searchParams.set(key, value);
+                }
+            });
+        }
 
         if (currentEditingOrderId > 0) {
             url.searchParams.set('action', 'edit');
@@ -243,6 +394,15 @@
             var isActive = $(this).data('eop-view') === targetView;
             $(this).toggleClass('is-active', isActive).attr('hidden', !isActive);
         });
+
+        $('.eop-admin-spa-nav__submenu-item').each(function () {
+            var isActive = targetView === 'pdf' && $(this).data('eop-pdf-tab') === getCurrentPdfTab();
+            $(this).toggleClass('is-active', isActive);
+        });
+
+        if (targetView === 'pdf') {
+            togglePdfNavGroup($('.eop-admin-spa-nav__group-toggle[data-eop-nav-toggle="pdf"]'), true);
+        }
 
         if (targetView === 'orders' && !ordersLoaded) {
             loadOrdersList(1);
@@ -1076,6 +1236,11 @@
     });
 
     $(document).on('click', '.eop-pdv-nav__item', function () {
+        if ($(this).is('[data-eop-nav-toggle]')) {
+            togglePdfNavGroup($(this));
+            return;
+        }
+
         var targetView = $(this).data('eop-view-target');
 
         if (targetView === 'new-order') {
@@ -1085,6 +1250,43 @@
         }
 
         setAppView(targetView);
+    });
+
+    $(document).on('click', '.eop-admin-spa-nav__submenu-item', function (e) {
+        var url;
+
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.which === 2) {
+            return;
+        }
+
+        url = $(this).attr('href');
+
+        if (!url) {
+            return;
+        }
+
+        e.preventDefault();
+        setAppView('pdf', { skipHistory: true });
+        loadPdfTab(url, { preservePreview: true });
+    });
+
+    $(document).on('change', '.eop-pdf-admin__preview-toolbar select', function () {
+        var $form = $(this).closest('.eop-pdf-admin__preview-toolbar');
+
+        setAppView('pdf', { skipHistory: true });
+        loadPdfTab(buildPdfToolbarUrl($form.get(0)), { preservePreview: true });
+    });
+
+    $(document).on('submit', '.eop-pdf-admin__preview-toolbar', function (e) {
+        var submitter = e.originalEvent && e.originalEvent.submitter ? $(e.originalEvent.submitter) : $();
+
+        if (submitter.length && submitter.is('.button-primary[formaction]')) {
+            return;
+        }
+
+        e.preventDefault();
+        setAppView('pdf', { skipHistory: true });
+        loadPdfTab(buildPdfToolbarUrl(this), { preservePreview: true });
     });
 
     $(document).on('click', '.eop-order-edit-spa', function () {
@@ -1135,9 +1337,24 @@
         }
     });
 
+    $(document).on('click', '[data-eop-pdf-preview-toggle]', function () {
+        var $admin = $(this).closest('.eop-pdf-admin');
+        setPdfPreviewState($admin, !$admin.hasClass('is-preview-open'));
+    });
+
+    $(document).on('click', '[data-eop-pdf-preview-close]', function () {
+        setPdfPreviewState($(this).closest('.eop-pdf-admin'), false);
+    });
+
     $(window).on('popstate', function () {
         var params = new URLSearchParams(window.location.search);
         var view = params.get('view') || eop_vars.initial_view || 'new-order';
+
+        if (view === 'pdf') {
+            setAppView('pdf', { replaceState: true, skipHistory: true });
+            loadPdfTab(window.location.href, { replaceState: true, skipHistory: true, preservePreview: $('.eop-pdf-admin').hasClass('is-preview-open') });
+            return;
+        }
 
         setAppView(view, { replaceState: true, skipHistory: true });
     });
@@ -1152,6 +1369,14 @@
 
         if (bootstrapAction === 'edit' && bootstrapOrderId > 0) {
             loadOrderForEditing(bootstrapOrderId);
+        }
+    });
+
+    $(document).on('keydown', function (e) {
+        if (e.key === 'Escape') {
+            $('.eop-pdf-admin.is-preview-open').each(function () {
+                setPdfPreviewState($(this), false);
+            });
         }
     });
 })(jQuery);

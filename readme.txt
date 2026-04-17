@@ -3,9 +3,9 @@ Contributors: aireset
 Tags: woocommerce, pedido expresso, vendas, proposta, administrativo
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 1.1.27
+Stable tag: 1.1.33
 
-Pedido expresso para vendedores do WooCommerce: busca e selecao rapida de cliente e produto, geracao de pedido e proposta publica com navegação SPA no admin.
+Pedido expresso para vendedores do WooCommerce: busca e selecao rapida de cliente e produto, geracao de pedido, proposta publica e PDF nativo com navegacao SPA no admin.
 
 == Description ==
 
@@ -33,10 +33,20 @@ Basta ter o WooCommerce ativo e o plugin instalado; as configuracoes de pedido e
 
 == Upgrade Notice ==
 
-= 1.1.27 =
-* Ajuste na montagem do pacote de release para garantir instalacao limpa no WordPress.
+= 1.1.33 =
+* O PDF final agora prioriza o mesmo HTML do preview para reduzir a diferenca visual no arquivo baixado.
 
 == Changelog ==
+
+= 1.1.33 =
+* priorizada a geracao do PDF final a partir do mesmo HTML do preview, usando Dompdf carregado do plugin de referencia com fallback seguro
+* modulo PDF integrado ao shell SPA do Pedido Expresso com submenu lateral em accordion e preview recolhido em drawer lateral
+* proposta publica e downloads passaram a usar metadados e nome de arquivo mais consistentes, incluindo download como id-do-pedido.pdf
+
+= 1.1.28 =
+* criacao automatica das paginas `[expresso_order]` e `[expresso_order_proposal]` na ativacao
+* gerador nativo de PDF com links privados e publicos sem depender de plugin externo
+* novo submenu `PDF` com central de documentos e configuracoes do modulo
 
 = 1.1.27 =
 * atualizacao do fluxo de build para gerar zip de release padrao e evitar empacotamentos quebrados

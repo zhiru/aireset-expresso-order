@@ -59,7 +59,7 @@
     #adminmenu .eop-has-flyout > a {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-start;
     }
 
     #adminmenu .eop-has-flyout > a::after {
@@ -67,7 +67,7 @@
         display: inline-block;
         width: 0;
         height: 0;
-        margin-left: 8px;
+        margin-left: auto;
         border-top: var(--eop-flyout-arrow-size) solid transparent;
         border-bottom: var(--eop-flyout-arrow-size) solid transparent;
         border-left: var(--eop-flyout-arrow-size) solid currentColor;
@@ -87,8 +87,8 @@
         top: calc(var(--eop-flyout-padding-y) * -1 - 2px);
         display: none;
         min-width: var(--eop-flyout-min-width);
-        max-height: var(--eop-flyout-max-h);
-        overflow-y: auto;
+        max-height: none;
+        overflow: visible;
         margin: 0;
         padding: var(--eop-flyout-padding-y) 0;
         list-style: none;
@@ -102,6 +102,18 @@
         left: auto;
         right: 100%;
         border-radius: var(--eop-flyout-radius) 0 0 var(--eop-flyout-radius);
+    }
+
+    #adminmenu .eop-submenu-flyout.eop-submenu-flyout--reverse {
+        left: auto;
+        right: 100%;
+        border-radius: var(--eop-flyout-radius) 0 0 var(--eop-flyout-radius);
+    }
+
+    .rtl #adminmenu .eop-submenu-flyout.eop-submenu-flyout--reverse {
+        left: 100%;
+        right: auto;
+        border-radius: 0 var(--eop-flyout-radius) var(--eop-flyout-radius) 0;
     }
 
     /* Visible state */
@@ -147,6 +159,11 @@
         background: var(--eop-flyout-active-bg);
     }
 
+    #adminmenu .eop-submenu-flyout li.eop-flyout-current-branch > a {
+        color: var(--eop-flyout-text-active);
+        background: rgba(255, 255, 255, 0.06);
+    }
+
     /* Icon sizing */
     #adminmenu .eop-submenu-flyout .eop-flyout-icon {
         width: var(--eop-flyout-icon-size);
@@ -156,23 +173,6 @@
         flex-shrink: 0;
     }
 
-    /* Scrollbar */
-    #adminmenu .eop-submenu-flyout::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    #adminmenu .eop-submenu-flyout::-webkit-scrollbar-track {
-        background: var(--eop-flyout-bg);
-    }
-
-    #adminmenu .eop-submenu-flyout::-webkit-scrollbar-thumb {
-        background: var(--eop-flyout-border);
-        border-radius: 3px;
-    }
-
-    #adminmenu .eop-submenu-flyout::-webkit-scrollbar-thumb:hover {
-        background: #50575e;
-    }
 }
 
 /* ---- Mobile (<783 px) ---- */

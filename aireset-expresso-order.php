@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Aireset — Expresso Order
  * Description: Pedido expresso para vendedores com busca de cliente, inclusao rapida de produtos e geracao de pedido no WooCommerce.
- * Version: 1.1.27
+ * Version: 1.1.33
  * Author: Aireset Agencia Web
  * Author URI: https://aireset.com.br
  * Requires Plugins: woocommerce
@@ -14,13 +14,49 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'EOP_VERSION', '1.1.27' );
+define( 'EOP_VERSION', '1.1.33' );
 define( 'EOP_PLUGIN_FILE', __FILE__ );
 define( 'EOP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EOP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'EOP_TEXT_DOMAIN', 'aireset-expresso-order' );
 
+/**
+ * Activation: create role and required pages.
+ */
+function eop_activate() {
+	if ( ! get_role( 'vendedor_expresso' ) ) {
+		add_role(
+			'vendedor_expresso',
+			__( 'Vendedor Expresso', EOP_TEXT_DOMAIN ),
+			array(
+				'read'                => true,
+				'edit_shop_orders'    => true,
+				'publish_shop_orders' => true,
+				'read_shop_orders'    => true,
+				'read_product'        => true,
+				'edit_shop_order'     => true,
+				'upload_files'        => false,
+			)
+		);
+	}
+
+	require_once EOP_PLUGIN_DIR . 'includes/trait-eop-license-guard.php';
+	require_once EOP_PLUGIN_DIR . 'includes/class-page-installer.php';
+
+	EOP_Page_Installer::activate();
+}
+register_activation_hook( __FILE__, 'eop_activate' );
+
+/**
+ * Deactivation: remove role.
+ */
+function eop_deactivate() {
+	remove_role( 'vendedor_expresso' );
+}
+register_deactivation_hook( __FILE__, 'eop_deactivate' );
+
 require_once EOP_PLUGIN_DIR . 'includes/trait-eop-license-guard.php';
+require_once EOP_PLUGIN_DIR . 'includes/class-page-installer.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-admin-page.php';
 
 /* License gate */
@@ -43,28 +79,16 @@ if ( ! EOP_License_Manager::is_valid() ) {
 
 require_once EOP_PLUGIN_DIR . 'includes/class-role.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-ajax-handlers.php';
+require_once EOP_PLUGIN_DIR . 'includes/class-document-manager.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-order-creator.php';
+require_once EOP_PLUGIN_DIR . 'includes/class-pdf-admin-page.php';
+require_once EOP_PLUGIN_DIR . 'includes/class-pdf-settings.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-settings.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-shipping-calculator.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-shortcode.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-public-proposal.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-orders-page.php';
-
-/**
- * Activation: create role.
- */
-function eop_activate() {
-	EOP_Role::create();
-}
-register_activation_hook( __FILE__, 'eop_activate' );
-
-/**
- * Deactivation: remove role.
- */
-function eop_deactivate() {
-	EOP_Role::remove();
-}
-register_deactivation_hook( __FILE__, 'eop_deactivate' );
+require_once EOP_PLUGIN_DIR . 'includes/class-wc-pdf-integration.php';
 
 /**
  * Load plugin translations.
@@ -90,8 +114,13 @@ function eop_init() {
 		return;
 	}
 
+	EOP_Page_Installer::init();
 	EOP_Admin_Page::init();
 	EOP_Ajax_Handlers::init();
+	EOP_Document_Manager::init();
+	EOP_PDF_Admin_Page::init();
+	EOP_PDF_Settings::init();
+	EOP_WC_PDF_Integration::init();
 	EOP_Shipping_Calculator::init();
 	EOP_Settings::init();
 	EOP_Shortcode::init();

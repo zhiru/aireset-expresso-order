@@ -332,7 +332,7 @@ class EOP_Order_Creator {
         }
 
         // --- PDF URL ---
-        $pdf_url = self::get_pdf_document_url( $order );
+        $pdf_url = self::get_pdf_document_url( $order, 'proposal' === $flow_mode ? 'proposal' : 'order' );
         $public_url = 'proposal' === $flow_mode ? EOP_Public_Proposal::get_public_link( $order ) : '';
 
         return array(
@@ -394,21 +394,17 @@ class EOP_Order_Creator {
     }
 
     /**
-     * Get PDF invoice URL from WooCommerce PDF Invoices & Packing Slips plugin.
+     * Get PDF document URL from the native Aireset document manager.
      *
      * @param WC_Order $order
+     * @param string   $document_type
      * @return string
      */
-    public static function get_pdf_document_url( $order ) {
-        if ( $order instanceof WC_Order && function_exists( 'wcpdf_get_document' ) && function_exists( 'WPO_WCPDF' ) ) {
-            $document = wcpdf_get_document( 'invoice', $order, true );
-
-            if ( $document && is_object( WPO_WCPDF() ) && isset( WPO_WCPDF()->endpoint ) && is_object( WPO_WCPDF()->endpoint ) ) {
-                return html_entity_decode( WPO_WCPDF()->endpoint->get_document_link( $order, 'invoice' ), ENT_QUOTES, 'UTF-8' );
-            }
+    public static function get_pdf_document_url( $order, $document_type = '' ) {
+        if ( $order instanceof WC_Order && class_exists( 'EOP_Document_Manager' ) ) {
+            return EOP_Document_Manager::get_pdf_document_url( $order, $document_type );
         }
 
-        // Fallback: WooCommerce admin order URL.
         return $order->get_edit_order_url();
     }
 }

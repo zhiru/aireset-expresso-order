@@ -1,0 +1,270 @@
+<?php
+defined( 'ABSPATH' ) || exit;
+
+class EOP_PDF_Admin_Page {
+
+    use EOP_License_Guard;
+
+    private static $page_hook = '';
+    private static $settings_hook = '';
+    private static $tab_hooks = array();
+    private static $hidden_submenu_hooked = false;
+
+    public static function init() {
+        if ( ! self::_resolve_env_config() ) {
+            return;
+        }
+
+        add_action( 'admin_menu', array( __CLASS__, 'register_submenu' ) );
+        add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+    }
+
+    public static function register_submenu() {
+        ensure_aireset_parent_menu();
+
+        self::$page_hook = add_submenu_page(
+            'aireset',
+            __( 'PDF', EOP_TEXT_DOMAIN ),
+            __( 'PDF', EOP_TEXT_DOMAIN ),
+            'edit_shop_orders',
+            'eop-pdf',
+            array( __CLASS__, 'render_documents_page' )
+        );
+
+        self::$settings_hook = add_submenu_page(
+            'aireset',
+            __( 'Configuracoes do PDF', EOP_TEXT_DOMAIN ),
+            __( 'Configuracoes do PDF', EOP_TEXT_DOMAIN ),
+            'manage_options',
+            'eop-pdf-configuracoes',
+            array( __CLASS__, 'render_settings_page' )
+        );
+
+        foreach ( self::get_tabs() as $tab => $label ) {
+            $slug = self::get_tab_page_slug( $tab );
+
+            if ( 'eop-pdf' === $slug ) {
+                continue;
+            }
+
+            self::$tab_hooks[ $tab ] = add_submenu_page(
+                'aireset',
+                $label,
+                $label,
+                self::get_tab_capability( $tab ),
+                $slug,
+                function () use ( $tab ) {
+                    self::render_tab_page( $tab );
+                }
+            );
+        }
+
+        if ( ! self::$hidden_submenu_hooked ) {
+            self::$hidden_submenu_hooked = true;
+
+            add_action(
+                'admin_menu',
+                function () {
+                    remove_submenu_page( 'aireset', 'eop-pdf-configuracoes' );
+                    foreach ( self::get_tabs() as $tab => $label ) {
+                        $slug = self::get_tab_page_slug( $tab );
+
+                        if ( 'eop-pdf' !== $slug ) {
+                            remove_submenu_page( 'aireset', $slug );
+                        }
+                    }
+                },
+                999
+            );
+        }
+    }
+
+    public static function enqueue_assets( $hook ) {
+        if ( self::$page_hook !== $hook && self::$settings_hook !== $hook && ! in_array( $hook, self::$tab_hooks, true ) ) {
+            return;
+        }
+
+        $font_url = EOP_Settings::get_font_stylesheet_url();
+        if ( $font_url ) {
+            wp_enqueue_style( 'eop-pdf-selected-font', $font_url, array(), null );
+        }
+
+        wp_enqueue_media();
+        wp_enqueue_style( 'wp-color-picker' );
+        wp_enqueue_script( 'wp-color-picker' );
+        wp_enqueue_style( 'eop-admin', EOP_PLUGIN_URL . 'assets/css/admin.css', array(), EOP_VERSION );
+        wp_enqueue_style( 'eop-orders', EOP_PLUGIN_URL . 'assets/css/orders.css', array( 'eop-admin' ), EOP_VERSION );
+        wp_enqueue_style( 'eop-settings-admin', EOP_PLUGIN_URL . 'assets/css/settings-admin.css', array( 'eop-admin' ), EOP_VERSION );
+        wp_enqueue_style( 'eop-pdf-admin', EOP_PLUGIN_URL . 'assets/css/pdf-admin.css', array( 'eop-settings-admin' ), EOP_VERSION );
+        wp_enqueue_script(
+            'eop-settings-admin',
+            EOP_PLUGIN_URL . 'assets/js/settings-admin.js',
+            array( 'jquery', 'wp-color-picker', 'media-editor', 'media-upload' ),
+            EOP_VERSION,
+            true
+        );
+        wp_localize_script(
+            'eop-settings-admin',
+            'eop_settings_vars',
+            array(
+                'has_fontselect'   => false,
+                'font_placeholder' => __( 'Escolha uma fonte Google', EOP_TEXT_DOMAIN ),
+                'media_title'      => __( 'Selecionar logo', EOP_TEXT_DOMAIN ),
+                'media_button'     => __( 'Usar esta imagem', EOP_TEXT_DOMAIN ),
+                'remove_logo'      => __( 'Remover logo', EOP_TEXT_DOMAIN ),
+                'select_logo'      => __( 'Selecionar logo', EOP_TEXT_DOMAIN ),
+                'change_logo'      => __( 'Trocar logo', EOP_TEXT_DOMAIN ),
+                'no_logo'          => __( 'Nenhum logo selecionado ainda.', EOP_TEXT_DOMAIN ),
+            )
+        );
+    }
+
+    public static function render_documents_page() {
+        if ( class_exists( 'EOP_Admin_Page' ) ) {
+            wp_safe_redirect( self::get_tab_url( 'general' ) );
+            exit;
+        }
+
+        self::render_page( 'general' );
+    }
+
+    public static function render_settings_page() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
+        }
+
+        wp_safe_redirect( self::get_tab_url( 'documents' ) );
+        exit;
+    }
+
+    public static function get_tab_capability( $tab ) {
+        $tab = self::normalize_tab( $tab );
+
+        return in_array( $tab, array( 'documents', 'edocuments', 'advanced', 'update' ), true ) ? 'manage_options' : 'edit_shop_orders';
+    }
+
+    public static function get_tabs() {
+        return array(
+            'general'     => __( 'Geral', EOP_TEXT_DOMAIN ),
+            'documents'   => __( 'Documentos', EOP_TEXT_DOMAIN ),
+            'edocuments'  => __( 'Documentos eletrônicos', EOP_TEXT_DOMAIN ),
+            'advanced'    => __( 'Avançado', EOP_TEXT_DOMAIN ),
+            'update'      => __( 'Atualizar', EOP_TEXT_DOMAIN ),
+        );
+    }
+
+    public static function get_accessible_tabs() {
+        $tabs = array();
+
+        foreach ( self::get_tabs() as $tab => $label ) {
+            if ( current_user_can( self::get_tab_capability( $tab ) ) ) {
+                $tabs[ $tab ] = $label;
+            }
+        }
+
+        return $tabs;
+    }
+
+    public static function normalize_tab( $tab, $default = 'general' ) {
+        $tabs = self::get_tabs();
+        $tab  = sanitize_key( (string) $tab );
+
+        if ( isset( $tabs[ $tab ] ) ) {
+            return $tab;
+        }
+
+        return isset( $tabs[ $default ] ) ? $default : 'general';
+    }
+
+    public static function get_tab_page_slug( $tab ) {
+        $tab = self::normalize_tab( $tab );
+
+        if ( 'general' === $tab ) {
+            return 'eop-pdf';
+        }
+
+        return 'eop-pdf-' . $tab;
+    }
+
+    public static function get_current_tab() {
+        $page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+
+        if ( self::is_spa_request() && isset( $_GET['pdf_tab'] ) ) {
+            return self::normalize_tab( wp_unslash( $_GET['pdf_tab'] ), 'general' );
+        }
+
+        if ( 0 === strpos( $page, 'eop-pdf-' ) ) {
+            return self::normalize_tab( substr( $page, 8 ), 'general' );
+        }
+
+        if ( isset( $_GET['tab'] ) ) {
+            return self::normalize_tab( wp_unslash( $_GET['tab'] ), 'general' );
+        }
+
+        return 'general';
+    }
+
+    public static function get_tab_url( $tab, $args = array() ) {
+        $tab = self::normalize_tab( $tab );
+
+        if ( class_exists( 'EOP_Admin_Page' ) ) {
+            return EOP_Admin_Page::get_view_url(
+                'pdf',
+                array_merge(
+                    array(
+                        'pdf_tab' => $tab,
+                    ),
+                    $args
+                )
+            );
+        }
+
+        $query = array_merge(
+            array(
+                'page' => self::get_tab_page_slug( $tab ),
+            ),
+            $args
+        );
+
+        return add_query_arg( $query, admin_url( 'admin.php' ) );
+    }
+
+    public static function render_tab_page( $tab ) {
+        $tab = self::normalize_tab( $tab );
+
+        if ( ! current_user_can( self::get_tab_capability( $tab ) ) ) {
+            wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
+        }
+
+        if ( class_exists( 'EOP_Admin_Page' ) && ! self::is_spa_request() ) {
+            wp_safe_redirect( self::get_tab_url( $tab ) );
+            exit;
+        }
+
+        self::render_page( $tab );
+    }
+
+    public static function render_embedded_page( $default_tab = 'general' ) {
+        $default_tab = self::normalize_tab( $default_tab );
+        $tab         = self::normalize_tab( self::get_current_tab(), $default_tab );
+
+        if ( ! current_user_can( self::get_tab_capability( $tab ) ) ) {
+            wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
+        }
+
+        self::render_page( $tab, true );
+    }
+
+    public static function is_spa_request() {
+        $page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+        $view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : '';
+
+        return 'eop-pedido-expresso' === $page && 'pdf' === $view;
+    }
+
+    private static function render_page( $default_tab, $embedded = false ) {
+        $default_tab = self::normalize_tab( $default_tab );
+        $embedded    = (bool) $embedded;
+        include EOP_PLUGIN_DIR . 'templates/pdf-admin-page.php';
+    }
+}

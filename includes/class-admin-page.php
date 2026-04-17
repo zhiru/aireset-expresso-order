@@ -33,7 +33,9 @@ if ( ! function_exists( 'ensure_aireset_parent_menu' ) ) {
             function aireset_parent_menu_icon_css() {
                 echo '<style>#toplevel_page_aireset .wp-menu-image img{width:24px!important;height:auto!important;padding:6px 0 0!important;}</style>';
             }
-            unset( $menu[4] );
+            if ( isset( $menu[4] ) ) {
+                unset( $menu[4] );
+            }
         }
 
         if ( ! $cleanup_hooked ) {
@@ -112,6 +114,7 @@ class EOP_Admin_Page {
         $views = array(
             'new-order' => current_user_can( 'edit_shop_orders' ),
             'orders'    => current_user_can( 'edit_shop_orders' ),
+            'pdf'       => current_user_can( 'edit_shop_orders' ),
             'settings'  => current_user_can( 'manage_options' ),
             'license'   => current_user_can( 'manage_options' ),
         );
@@ -186,65 +189,64 @@ class EOP_Admin_Page {
 
         wp_enqueue_style( 'eop-admin', EOP_PLUGIN_URL . 'assets/css/admin.css', array( 'select2' ), EOP_VERSION );
         wp_enqueue_style( 'eop-frontend', EOP_PLUGIN_URL . 'assets/css/frontend.css', array(), EOP_VERSION );
+        wp_enqueue_style( 'eop-pdf-admin', EOP_PLUGIN_URL . 'assets/css/pdf-admin.css', array( 'eop-admin' ), EOP_VERSION );
         wp_enqueue_script( 'eop-admin', EOP_PLUGIN_URL . 'assets/js/admin.js', array( 'jquery', 'select2' ), EOP_VERSION, true );
 
-        if ( current_user_can( 'manage_options' ) ) {
-            $font_css_path = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/css/jquery.fontselect.css';
-            $font_js_path  = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/js/jquery.fontselect.js';
+        $font_css_path = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/css/jquery.fontselect.css';
+        $font_js_path  = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/js/jquery.fontselect.js';
 
-            wp_enqueue_style( 'wp-color-picker' );
-            wp_enqueue_media();
+        wp_enqueue_style( 'wp-color-picker' );
+        wp_enqueue_media();
+        wp_enqueue_style(
+            'eop-settings-admin',
+            EOP_PLUGIN_URL . 'assets/css/settings-admin.css',
+            array( 'wp-color-picker' ),
+            EOP_VERSION
+        );
+
+        if ( file_exists( $font_css_path ) ) {
             wp_enqueue_style(
-                'eop-settings-admin',
-                EOP_PLUGIN_URL . 'assets/css/settings-admin.css',
-                array( 'wp-color-picker' ),
+                'eop-fontselect',
+                content_url( 'plugins/checkout-aireset-master/backend/assets/css/jquery.fontselect.css' ),
+                array(),
                 EOP_VERSION
             );
+        }
 
-            if ( file_exists( $font_css_path ) ) {
-                wp_enqueue_style(
-                    'eop-fontselect',
-                    content_url( 'plugins/checkout-aireset-master/backend/assets/css/jquery.fontselect.css' ),
-                    array(),
-                    EOP_VERSION
-                );
-            }
+        wp_enqueue_script( 'wp-color-picker' );
 
-            wp_enqueue_script( 'wp-color-picker' );
-
-            if ( file_exists( $font_js_path ) ) {
-                wp_enqueue_script(
-                    'eop-fontselect',
-                    content_url( 'plugins/checkout-aireset-master/backend/assets/js/jquery.fontselect.js' ),
-                    array( 'jquery' ),
-                    EOP_VERSION,
-                    true
-                );
-            }
-
+        if ( file_exists( $font_js_path ) ) {
             wp_enqueue_script(
-                'eop-settings-admin',
-                EOP_PLUGIN_URL . 'assets/js/settings-admin.js',
-                array_filter( array( 'jquery', 'wp-color-picker', 'media-editor', 'media-upload', file_exists( $font_js_path ) ? 'eop-fontselect' : '' ) ),
+                'eop-fontselect',
+                content_url( 'plugins/checkout-aireset-master/backend/assets/js/jquery.fontselect.js' ),
+                array( 'jquery' ),
                 EOP_VERSION,
                 true
             );
-
-            wp_localize_script(
-                'eop-settings-admin',
-                'eop_settings_vars',
-                array(
-                    'has_fontselect'   => file_exists( $font_js_path ),
-                    'font_placeholder' => __( 'Escolha uma fonte Google', EOP_TEXT_DOMAIN ),
-                    'media_title'      => __( 'Selecionar logo', EOP_TEXT_DOMAIN ),
-                    'media_button'     => __( 'Usar esta imagem', EOP_TEXT_DOMAIN ),
-                    'remove_logo'      => __( 'Remover logo', EOP_TEXT_DOMAIN ),
-                    'select_logo'      => __( 'Selecionar logo', EOP_TEXT_DOMAIN ),
-                    'change_logo'      => __( 'Trocar logo', EOP_TEXT_DOMAIN ),
-                    'no_logo'          => __( 'Nenhum logo selecionado ainda.', EOP_TEXT_DOMAIN ),
-                )
-            );
         }
+
+        wp_enqueue_script(
+            'eop-settings-admin',
+            EOP_PLUGIN_URL . 'assets/js/settings-admin.js',
+            array_filter( array( 'jquery', 'wp-color-picker', 'media-editor', 'media-upload', file_exists( $font_js_path ) ? 'eop-fontselect' : '' ) ),
+            EOP_VERSION,
+            true
+        );
+
+        wp_localize_script(
+            'eop-settings-admin',
+            'eop_settings_vars',
+            array(
+                'has_fontselect'   => file_exists( $font_js_path ),
+                'font_placeholder' => __( 'Escolha uma fonte Google', EOP_TEXT_DOMAIN ),
+                'media_title'      => __( 'Selecionar logo', EOP_TEXT_DOMAIN ),
+                'media_button'     => __( 'Usar esta imagem', EOP_TEXT_DOMAIN ),
+                'remove_logo'      => __( 'Remover logo', EOP_TEXT_DOMAIN ),
+                'select_logo'      => __( 'Selecionar logo', EOP_TEXT_DOMAIN ),
+                'change_logo'      => __( 'Trocar logo', EOP_TEXT_DOMAIN ),
+                'no_logo'          => __( 'Nenhum logo selecionado ainda.', EOP_TEXT_DOMAIN ),
+            )
+        );
 
         wp_localize_script( 'eop-admin', 'eop_vars', array(
             'ajax_url'      => admin_url( 'admin-ajax.php' ),
@@ -279,6 +281,7 @@ class EOP_Admin_Page {
                 'submit_label'     => __( 'Finalizar e Gerar PDF', EOP_TEXT_DOMAIN ),
                 'nav_new_order'    => __( 'Novo pedido', EOP_TEXT_DOMAIN ),
                 'nav_orders'       => __( 'Pedidos', EOP_TEXT_DOMAIN ),
+                'nav_pdf'          => __( 'PDF', EOP_TEXT_DOMAIN ),
                 'nav_settings'     => __( 'Configuracoes', EOP_TEXT_DOMAIN ),
                 'nav_license'      => __( 'Licenca', EOP_TEXT_DOMAIN ),
             ),
@@ -306,13 +309,89 @@ class EOP_Admin_Page {
         );
 
         $current_page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+        $pdf_children = array(
+            array(
+                'key'   => 'eop-view-pdf-general',
+                'label' => __( 'Geral', EOP_TEXT_DOMAIN ),
+                'icon'  => 'dashicons-admin-home',
+                'url'   => class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_tab_url( 'general' ) : admin_url( 'admin.php?page=eop-pdf&tab=general' ),
+                'query' => array(
+                    'page'    => 'eop-pedido-expresso',
+                    'view'    => 'pdf',
+                    'pdf_tab' => 'general',
+                ),
+            ),
+        );
+
+        if ( current_user_can( 'manage_options' ) ) {
+            $pdf_children[] = array(
+                'key'   => 'eop-view-pdf-documents',
+                'label' => __( 'Documentos', EOP_TEXT_DOMAIN ),
+                'icon'  => 'dashicons-media-text',
+                'url'   => class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_tab_url( 'documents' ) : admin_url( 'admin.php?page=eop-pdf&tab=documents' ),
+                'query' => array(
+                    'page'    => 'eop-pedido-expresso',
+                    'view'    => 'pdf',
+                    'pdf_tab' => 'documents',
+                ),
+            );
+            $pdf_children[] = array(
+                'key'   => 'eop-view-pdf-edocuments',
+                'label' => __( 'Documentos eletronicos', EOP_TEXT_DOMAIN ),
+                'icon'  => 'dashicons-media-spreadsheet',
+                'url'   => class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_tab_url( 'edocuments' ) : admin_url( 'admin.php?page=eop-pdf&tab=edocuments' ),
+                'query' => array(
+                    'page'    => 'eop-pedido-expresso',
+                    'view'    => 'pdf',
+                    'pdf_tab' => 'edocuments',
+                ),
+            );
+            $pdf_children[] = array(
+                'key'   => 'eop-view-pdf-advanced',
+                'label' => __( 'Avancado', EOP_TEXT_DOMAIN ),
+                'icon'  => 'dashicons-admin-tools',
+                'url'   => class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_tab_url( 'advanced' ) : admin_url( 'admin.php?page=eop-pdf&tab=advanced' ),
+                'query' => array(
+                    'page'    => 'eop-pedido-expresso',
+                    'view'    => 'pdf',
+                    'pdf_tab' => 'advanced',
+                ),
+            );
+            $pdf_children[] = array(
+                'key'   => 'eop-view-pdf-update',
+                'label' => __( 'Atualizar', EOP_TEXT_DOMAIN ),
+                'icon'  => 'dashicons-update',
+                'url'   => class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_tab_url( 'update' ) : admin_url( 'admin.php?page=eop-pdf&tab=update' ),
+                'query' => array(
+                    'page'    => 'eop-pedido-expresso',
+                    'view'    => 'pdf',
+                    'pdf_tab' => 'update',
+                ),
+            );
+        }
 
         $items = array(
             array(
-                'key'   => 'eop-pedidos',
+                'key'   => 'eop-view-orders',
                 'label' => __( 'Pedidos', EOP_TEXT_DOMAIN ),
                 'icon'  => 'dashicons-list-view',
                 'url'   => self::get_view_url( 'orders' ),
+                'query' => array(
+                    'page' => 'eop-pedido-expresso',
+                    'view' => 'orders',
+                ),
+            ),
+            array(
+                'key'   => 'eop-view-pdf',
+                'label' => __( 'PDF', EOP_TEXT_DOMAIN ),
+                'icon'  => 'dashicons-media-document',
+                'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'general' ) ),
+                'query' => array(
+                    'page'    => 'eop-pedido-expresso',
+                    'view'    => 'pdf',
+                    'pdf_tab' => 'general',
+                ),
+                'children' => $pdf_children,
             ),
         );
 
@@ -320,18 +399,26 @@ class EOP_Admin_Page {
             array_unshift(
                 $items,
                 array(
-                    'key'   => 'eop-configuracoes',
+                    'key'   => 'eop-view-settings',
                     'label' => __( 'Configuracoes', EOP_TEXT_DOMAIN ),
                     'icon'  => 'dashicons-admin-generic',
                     'url'   => self::get_view_url( 'settings' ),
+                    'query' => array(
+                        'page' => 'eop-pedido-expresso',
+                        'view' => 'settings',
+                    ),
                 )
             );
 
             $items[] = array(
-                'key'   => 'eop-license',
+                'key'   => 'eop-view-license',
                 'label' => __( 'Licenca', EOP_TEXT_DOMAIN ),
                 'icon'  => 'dashicons-admin-network',
                 'url'   => self::get_view_url( 'license' ),
+                'query' => array(
+                    'page' => 'eop-pedido-expresso',
+                    'view' => 'license',
+                ),
             );
         }
 

@@ -66,6 +66,7 @@ $statuses    = wc_get_order_statuses();
                     $date        = $order->get_date_created();
                     $wc_url      = $order->get_edit_order_url();
                     $public_url  = 'yes' === $order->get_meta( '_eop_is_proposal' ) ? EOP_Public_Proposal::get_public_link( $order ) : '';
+                    $pdf_url     = EOP_Order_Creator::get_pdf_document_url( $order );
                     $is_proposal = 'yes' === $order->get_meta( '_eop_is_proposal' );
                     ?>
                     <tr>
@@ -91,6 +92,9 @@ $statuses    = wc_get_order_statuses();
                         <td class="eop-orders-col-actions">
                             <?php if ( $public_url ) : ?>
                                 <a href="<?php echo esc_url( $public_url ); ?>" class="button button-small" target="_blank" title="<?php esc_attr_e( 'Abrir proposta', EOP_TEXT_DOMAIN ); ?>"><?php esc_html_e( 'Proposta', EOP_TEXT_DOMAIN ); ?></a>
+                            <?php endif; ?>
+                            <?php if ( $pdf_url ) : ?>
+                                <a href="<?php echo esc_url( $pdf_url ); ?>" class="button button-small" target="_blank" title="<?php esc_attr_e( 'Abrir PDF', EOP_TEXT_DOMAIN ); ?>"><?php esc_html_e( 'PDF', EOP_TEXT_DOMAIN ); ?></a>
                             <?php endif; ?>
                             <a href="<?php echo esc_url( $wc_url ); ?>" class="button button-small" target="_blank" title="<?php esc_attr_e( 'Ver no WC', EOP_TEXT_DOMAIN ); ?>"><?php esc_html_e( 'WC', EOP_TEXT_DOMAIN ); ?></a>
                         </td>

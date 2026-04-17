@@ -7,6 +7,12 @@ $order_statuses      = function_exists( 'wc_get_order_statuses' ) ? wc_get_order
 $initial_view        = EOP_Admin_Page::normalize_view( isset( $_GET['view'] ) ? wp_unslash( $_GET['view'] ) : '' );
 $license_manager     = class_exists( 'EOP_License_Manager' ) ? EOP_License_Manager::get_instance() : null;
 $can_manage_settings = current_user_can( 'manage_options' );
+$pdf_tabs            = class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_accessible_tabs() : array();
+$current_pdf_tab     = class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_current_tab() : 'general';
+$pdf_preview_args    = array(
+    'document'      => isset( $_GET['document'] ) && 'proposal' === sanitize_key( wp_unslash( $_GET['document'] ) ) ? 'proposal' : 'order',
+    'preview_order' => absint( $_GET['preview_order'] ?? 0 ),
+);
 ?>
 <style>
     .eop-admin-spa {
@@ -39,6 +45,39 @@ $can_manage_settings = current_user_can( 'manage_options' );
                     <span class="dashicons dashicons-list-view" aria-hidden="true"></span>
                     <span><?php esc_html_e( 'Pedidos', EOP_TEXT_DOMAIN ); ?></span>
                 </button>
+                <?php if ( ! empty( $pdf_tabs ) ) : ?>
+                    <div class="eop-admin-spa-nav__group eop-admin-spa-nav__group--pdf<?php echo 'pdf' === $initial_view ? ' is-open' : ''; ?>">
+                        <button
+                            type="button"
+                            class="eop-pdv-nav__item eop-admin-spa-nav__item eop-admin-spa-nav__group-toggle<?php echo 'pdf' === $initial_view ? ' is-active' : ''; ?>"
+                            data-eop-view-target="pdf"
+                            data-eop-nav-toggle="pdf"
+                            aria-selected="<?php echo 'pdf' === $initial_view ? 'true' : 'false'; ?>"
+                            aria-expanded="<?php echo 'pdf' === $initial_view ? 'true' : 'false'; ?>"
+                        >
+                            <span class="dashicons dashicons-media-document" aria-hidden="true"></span>
+                            <span><?php esc_html_e( 'PDF', EOP_TEXT_DOMAIN ); ?></span>
+                            <span class="eop-admin-spa-nav__group-arrow dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
+                        </button>
+
+                        <div class="eop-admin-spa-nav__submenu"<?php echo 'pdf' === $initial_view ? '' : ' hidden'; ?>>
+                            <?php foreach ( $pdf_tabs as $pdf_tab_key => $pdf_tab_label ) : ?>
+                                <a
+                                    class="eop-admin-spa-nav__submenu-item<?php echo 'pdf' === $initial_view && $current_pdf_tab === $pdf_tab_key ? ' is-active' : ''; ?>"
+                                    href="<?php echo esc_url( EOP_PDF_Admin_Page::get_tab_url( $pdf_tab_key, $pdf_preview_args ) ); ?>"
+                                    data-eop-pdf-tab="<?php echo esc_attr( $pdf_tab_key ); ?>"
+                                >
+                                    <span><?php echo esc_html( $pdf_tab_label ); ?></span>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php else : ?>
+                    <button type="button" class="eop-pdv-nav__item eop-admin-spa-nav__item<?php echo 'pdf' === $initial_view ? ' is-active' : ''; ?>" data-eop-view-target="pdf" aria-selected="<?php echo 'pdf' === $initial_view ? 'true' : 'false'; ?>">
+                        <span class="dashicons dashicons-media-document" aria-hidden="true"></span>
+                        <span><?php esc_html_e( 'PDF', EOP_TEXT_DOMAIN ); ?></span>
+                    </button>
+                <?php endif; ?>
                 <?php if ( $can_manage_settings ) : ?>
                     <button type="button" class="eop-pdv-nav__item eop-admin-spa-nav__item<?php echo 'settings' === $initial_view ? ' is-active' : ''; ?>" data-eop-view-target="settings" aria-selected="<?php echo 'settings' === $initial_view ? 'true' : 'false'; ?>">
                         <span class="dashicons dashicons-admin-generic" aria-hidden="true"></span>
@@ -268,6 +307,18 @@ $can_manage_settings = current_user_can( 'manage_options' );
                     <div class="eop-orders-browser__list" id="eop-orders-list"></div>
                     <div class="eop-orders-browser__pagination" id="eop-orders-pagination"></div>
                 </div>
+            </section>
+
+            <section class="eop-pdv-view<?php echo 'pdf' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="pdf"<?php echo 'pdf' === $initial_view ? '' : ' hidden'; ?>>
+                <div class="eop-admin-panel-head">
+                    <h2><?php esc_html_e( 'PDF', EOP_TEXT_DOMAIN ); ?></h2>
+                    <p><?php esc_html_e( 'Configure documentos, preview e comportamento do modulo PDF sem sair do shell original do Pedido Expresso.', EOP_TEXT_DOMAIN ); ?></p>
+                </div>
+                <?php
+                if ( class_exists( 'EOP_PDF_Admin_Page' ) ) {
+                    EOP_PDF_Admin_Page::render_embedded_page();
+                }
+                ?>
             </section>
 
             <?php if ( $can_manage_settings ) : ?>

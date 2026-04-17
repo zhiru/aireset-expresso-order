@@ -2,6 +2,37 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.33 - 2026-04-17
+
+- priorizada a geracao do PDF final a partir do mesmo HTML do preview, usando Dompdf carregado do plugin de referencia com fallback seguro
+- modulo PDF integrado ao shell SPA do Pedido Expresso com submenu lateral em accordion, tabs sem reload completo e preview recolhido em drawer lateral
+- proposta publica e downloads passaram a usar metadados visuais consistentes e nome de arquivo no formato `id-do-pedido.pdf`
+
+## 1.1.32 - 2026-04-17
+
+- alinhado o item do flyout para manter icone e texto no inicio, deixando apenas a seta do submenu no final
+
+## 1.1.31 - 2026-04-17
+
+- corrigido o flyout multinivel do menu Aireset para que o terceiro nivel do PDF nao seja recortado pelo submenu pai
+
+## 1.1.30 - 2026-04-16
+
+- colunas e totais do PDF/proposta agora podem ser ativados ou desativados por documento nas configuracoes
+- pagina publica da proposta ganhou controles de largura e tipografia, melhor alinhamento sem logo e layout visual refinado
+- abas do modulo PDF passaram a ter rotas dedicadas no admin para sustentar o flyout multinivel com Geral, Documentos, Documentos eletronicos, Avancado e Atualizar
+
+## 1.1.29 - 2026-04-16
+
+- integracao nativa do modulo de PDF com WooCommerce para emails, acoes do pedido, Minha Conta e metabox no admin
+- adicionada coluna de documento PDF e busca por numero do documento na listagem de pedidos do WooCommerce
+
+## 1.1.28 - 2026-04-16
+
+- criacao automatica das paginas de pedido e proposta na ativacao do plugin, com reparo dos shortcodes gerenciados
+- substituicao da dependencia externa de PDF por um gerador nativo de documentos e links publicos/privados dentro do plugin
+- novo submenu `PDF` com central de documentos e configuracoes do modulo no padrao Aireset
+
 ## 1.1.27 - 2026-04-16
 
 - atualizacao do fluxo de build para gerar zip de release padrao e evitar empacotamentos quebrados
