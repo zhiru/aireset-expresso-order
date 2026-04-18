@@ -345,11 +345,47 @@ $current_tab_label = isset( $tabs[ $tab ] ) ? $tabs[ $tab ] : __( 'PDF', EOP_TEX
                                 </select>
                             </div>
                             <div class="eop-settings-field">
+                                <label for="eop_doc_show_discounted_unit_price"><?php esc_html_e( 'Exibir coluna de valor unitario com desconto', EOP_TEXT_DOMAIN ); ?></label>
+                                <select id="eop_doc_show_discounted_unit_price" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_show_discounted_unit_price]">
+                                    <option value="yes" <?php selected( $pdf_settings[ $document . '_show_discounted_unit_price' ], 'yes' ); ?>><?php esc_html_e( 'Sim', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="no" <?php selected( $pdf_settings[ $document . '_show_discounted_unit_price' ], 'no' ); ?>><?php esc_html_e( 'Nao', EOP_TEXT_DOMAIN ); ?></option>
+                                </select>
+                            </div>
+                            <div class="eop-settings-field">
                                 <label for="eop_doc_show_line_total"><?php esc_html_e( 'Exibir coluna de total do item', EOP_TEXT_DOMAIN ); ?></label>
                                 <select id="eop_doc_show_line_total" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_show_line_total]">
                                     <option value="yes" <?php selected( $pdf_settings[ $document . '_show_line_total' ], 'yes' ); ?>><?php esc_html_e( 'Sim', EOP_TEXT_DOMAIN ); ?></option>
                                     <option value="no" <?php selected( $pdf_settings[ $document . '_show_line_total' ], 'no' ); ?>><?php esc_html_e( 'Nao', EOP_TEXT_DOMAIN ); ?></option>
                                 </select>
+                            </div>
+                        </div>
+                    </details>
+                    <details class="eop-pdf-admin__section" open>
+                        <summary><?php esc_html_e( 'Textos das colunas', EOP_TEXT_DOMAIN ); ?></summary>
+                        <div class="eop-pdf-admin__grid">
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_product_label"><?php esc_html_e( 'Texto da coluna de produto', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_product_label" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_product_label]" value="<?php echo esc_attr( $pdf_settings[ $document . '_product_label' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_quantity_label"><?php esc_html_e( 'Texto da coluna de quantidade', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_quantity_label" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_quantity_label]" value="<?php echo esc_attr( $pdf_settings[ $document . '_quantity_label' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_unit_price_label"><?php esc_html_e( 'Texto da coluna de valor unitario', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_unit_price_label" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_unit_price_label]" value="<?php echo esc_attr( $pdf_settings[ $document . '_unit_price_label' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_discount_label"><?php esc_html_e( 'Texto da coluna de desconto', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_discount_label" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discount_label]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discount_label' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_discounted_unit_price_label"><?php esc_html_e( 'Texto da coluna de valor unitario com desconto', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_discounted_unit_price_label" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discounted_unit_price_label]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discounted_unit_price_label' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_line_total_label"><?php esc_html_e( 'Texto da coluna de total do item', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_line_total_label" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_line_total_label]" value="<?php echo esc_attr( $pdf_settings[ $document . '_line_total_label' ] ); ?>" />
                             </div>
                         </div>
                     </details>

@@ -72,7 +72,14 @@ class EOP_PDF_Settings {
             'order_show_quantity'       => 'yes',
             'order_show_unit_price'     => 'yes',
             'order_show_discount'       => 'yes',
+            'order_show_discounted_unit_price' => 'yes',
             'order_show_line_total'     => 'yes',
+            'order_product_label'       => __( 'Produto', EOP_TEXT_DOMAIN ),
+            'order_quantity_label'      => __( 'Quantidade', EOP_TEXT_DOMAIN ),
+            'order_unit_price_label'    => __( 'Valor unitario', EOP_TEXT_DOMAIN ),
+            'order_discount_label'      => __( 'Desconto aplicado', EOP_TEXT_DOMAIN ),
+            'order_discounted_unit_price_label' => __( 'Valor unitario com desconto', EOP_TEXT_DOMAIN ),
+            'order_line_total_label'    => __( 'Total', EOP_TEXT_DOMAIN ),
             'order_show_total_subtotal' => 'yes',
             'order_show_total_shipping' => 'yes',
             'order_show_total_discount' => 'yes',
@@ -95,7 +102,14 @@ class EOP_PDF_Settings {
             'proposal_show_quantity'    => 'yes',
             'proposal_show_unit_price'  => 'yes',
             'proposal_show_discount'    => 'yes',
+            'proposal_show_discounted_unit_price' => 'yes',
             'proposal_show_line_total'  => 'yes',
+            'proposal_product_label'    => __( 'Produto', EOP_TEXT_DOMAIN ),
+            'proposal_quantity_label'   => __( 'Quantidade', EOP_TEXT_DOMAIN ),
+            'proposal_unit_price_label' => __( 'Valor unitario', EOP_TEXT_DOMAIN ),
+            'proposal_discount_label'   => __( 'Desconto aplicado', EOP_TEXT_DOMAIN ),
+            'proposal_discounted_unit_price_label' => __( 'Valor unitario com desconto', EOP_TEXT_DOMAIN ),
+            'proposal_line_total_label' => __( 'Total', EOP_TEXT_DOMAIN ),
             'proposal_show_total_subtotal' => 'yes',
             'proposal_show_total_shipping' => 'yes',
             'proposal_show_total_discount' => 'yes',
@@ -166,7 +180,14 @@ class EOP_PDF_Settings {
             'order_show_quantity'       => self::sanitize_toggle( $input['order_show_quantity'] ?? $defaults['order_show_quantity'] ),
             'order_show_unit_price'     => self::sanitize_toggle( $input['order_show_unit_price'] ?? $defaults['order_show_unit_price'] ),
             'order_show_discount'       => self::sanitize_toggle( $input['order_show_discount'] ?? $defaults['order_show_discount'] ),
+            'order_show_discounted_unit_price' => self::sanitize_toggle( $input['order_show_discounted_unit_price'] ?? $defaults['order_show_discounted_unit_price'] ),
             'order_show_line_total'     => self::sanitize_toggle( $input['order_show_line_total'] ?? $defaults['order_show_line_total'] ),
+            'order_product_label'       => self::sanitize_label( $input['order_product_label'] ?? $defaults['order_product_label'], $defaults['order_product_label'] ),
+            'order_quantity_label'      => self::sanitize_label( $input['order_quantity_label'] ?? $defaults['order_quantity_label'], $defaults['order_quantity_label'] ),
+            'order_unit_price_label'    => self::sanitize_label( $input['order_unit_price_label'] ?? $defaults['order_unit_price_label'], $defaults['order_unit_price_label'] ),
+            'order_discount_label'      => self::sanitize_label( $input['order_discount_label'] ?? $defaults['order_discount_label'], $defaults['order_discount_label'] ),
+            'order_discounted_unit_price_label' => self::sanitize_label( $input['order_discounted_unit_price_label'] ?? $defaults['order_discounted_unit_price_label'], $defaults['order_discounted_unit_price_label'] ),
+            'order_line_total_label'    => self::sanitize_label( $input['order_line_total_label'] ?? $defaults['order_line_total_label'], $defaults['order_line_total_label'] ),
             'order_show_total_subtotal' => self::sanitize_toggle( $input['order_show_total_subtotal'] ?? $defaults['order_show_total_subtotal'] ),
             'order_show_total_shipping' => self::sanitize_toggle( $input['order_show_total_shipping'] ?? $defaults['order_show_total_shipping'] ),
             'order_show_total_discount' => self::sanitize_toggle( $input['order_show_total_discount'] ?? $defaults['order_show_total_discount'] ),
@@ -189,7 +210,14 @@ class EOP_PDF_Settings {
             'proposal_show_quantity'    => self::sanitize_toggle( $input['proposal_show_quantity'] ?? $defaults['proposal_show_quantity'] ),
             'proposal_show_unit_price'  => self::sanitize_toggle( $input['proposal_show_unit_price'] ?? $defaults['proposal_show_unit_price'] ),
             'proposal_show_discount'    => self::sanitize_toggle( $input['proposal_show_discount'] ?? $defaults['proposal_show_discount'] ),
+            'proposal_show_discounted_unit_price' => self::sanitize_toggle( $input['proposal_show_discounted_unit_price'] ?? $defaults['proposal_show_discounted_unit_price'] ),
             'proposal_show_line_total'  => self::sanitize_toggle( $input['proposal_show_line_total'] ?? $defaults['proposal_show_line_total'] ),
+            'proposal_product_label'    => self::sanitize_label( $input['proposal_product_label'] ?? $defaults['proposal_product_label'], $defaults['proposal_product_label'] ),
+            'proposal_quantity_label'   => self::sanitize_label( $input['proposal_quantity_label'] ?? $defaults['proposal_quantity_label'], $defaults['proposal_quantity_label'] ),
+            'proposal_unit_price_label' => self::sanitize_label( $input['proposal_unit_price_label'] ?? $defaults['proposal_unit_price_label'], $defaults['proposal_unit_price_label'] ),
+            'proposal_discount_label'   => self::sanitize_label( $input['proposal_discount_label'] ?? $defaults['proposal_discount_label'], $defaults['proposal_discount_label'] ),
+            'proposal_discounted_unit_price_label' => self::sanitize_label( $input['proposal_discounted_unit_price_label'] ?? $defaults['proposal_discounted_unit_price_label'], $defaults['proposal_discounted_unit_price_label'] ),
+            'proposal_line_total_label' => self::sanitize_label( $input['proposal_line_total_label'] ?? $defaults['proposal_line_total_label'], $defaults['proposal_line_total_label'] ),
             'proposal_show_total_subtotal' => self::sanitize_toggle( $input['proposal_show_total_subtotal'] ?? $defaults['proposal_show_total_subtotal'] ),
             'proposal_show_total_shipping' => self::sanitize_toggle( $input['proposal_show_total_shipping'] ?? $defaults['proposal_show_total_shipping'] ),
             'proposal_show_total_discount' => self::sanitize_toggle( $input['proposal_show_total_discount'] ?? $defaults['proposal_show_total_discount'] ),
@@ -222,5 +250,15 @@ class EOP_PDF_Settings {
 
     private static function sanitize_toggle( $value ) {
         return 'yes' === sanitize_key( (string) $value ) ? 'yes' : 'no';
+    }
+
+    private static function sanitize_label( $value, $default ) {
+        $label = sanitize_text_field( (string) $value );
+
+        if ( '' === $label ) {
+            return sanitize_text_field( (string) $default );
+        }
+
+        return $label;
     }
 }

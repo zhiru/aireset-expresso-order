@@ -140,6 +140,7 @@ class EOP_Document_Manager {
             'show_quantity'       => $settings[ $prefix . '_show_quantity' ] ?? 'yes',
             'show_unit_price'     => $settings[ $prefix . '_show_unit_price' ] ?? 'yes',
             'show_discount'       => $settings[ $prefix . '_show_discount' ] ?? 'yes',
+            'show_discounted_unit_price' => $settings[ $prefix . '_show_discounted_unit_price' ] ?? 'yes',
             'show_line_total'     => $settings[ $prefix . '_show_line_total' ] ?? 'yes',
             'show_total_subtotal' => $settings[ $prefix . '_show_total_subtotal' ] ?? 'yes',
             'show_total_shipping' => $settings[ $prefix . '_show_total_shipping' ] ?? 'yes',
@@ -148,35 +149,64 @@ class EOP_Document_Manager {
         );
     }
 
+    public static function get_document_item_labels( $document_type = 'order' ) {
+        $settings = self::get_pdf_settings();
+        $prefix   = 'proposal' === self::normalize_document_type( $document_type ) ? 'proposal' : 'order';
+        $labels   = array(
+            'product'               => __( 'Produto', EOP_TEXT_DOMAIN ),
+            'quantity'              => __( 'Quantidade', EOP_TEXT_DOMAIN ),
+            'unit_price'            => __( 'Valor unitario', EOP_TEXT_DOMAIN ),
+            'discount'              => __( 'Desconto aplicado', EOP_TEXT_DOMAIN ),
+            'discounted_unit_price' => __( 'Valor unitario com desconto', EOP_TEXT_DOMAIN ),
+            'line_total'            => __( 'Total', EOP_TEXT_DOMAIN ),
+        );
+
+        foreach ( $labels as $key => $default ) {
+            $setting_key    = $prefix . '_' . $key . '_label';
+            $configured     = isset( $settings[ $setting_key ] ) ? sanitize_text_field( (string) $settings[ $setting_key ] ) : '';
+            $labels[ $key ] = '' !== $configured ? $configured : $default;
+        }
+
+        return $labels;
+    }
+
     public static function get_document_item_columns( $document_type = 'order' ) {
         $config  = self::get_document_display_settings( $document_type );
+        $labels  = self::get_document_item_labels( $document_type );
         $columns = array();
 
         if ( 'yes' === $config['show_quantity'] ) {
             $columns[] = array(
                 'key'   => 'quantity',
-                'label' => __( 'Quantidade', EOP_TEXT_DOMAIN ),
+                'label' => $labels['quantity'],
             );
         }
 
         if ( 'yes' === $config['show_unit_price'] ) {
             $columns[] = array(
                 'key'   => 'unit_price',
-                'label' => __( 'Valor unitario', EOP_TEXT_DOMAIN ),
+                'label' => $labels['unit_price'],
             );
         }
 
         if ( 'yes' === $config['show_discount'] ) {
             $columns[] = array(
                 'key'   => 'discount',
-                'label' => __( 'Desconto aplicado', EOP_TEXT_DOMAIN ),
+                'label' => $labels['discount'],
+            );
+        }
+
+        if ( 'yes' === $config['show_discounted_unit_price'] ) {
+            $columns[] = array(
+                'key'   => 'discounted_unit_price',
+                'label' => $labels['discounted_unit_price'],
             );
         }
 
         if ( 'yes' === $config['show_line_total'] ) {
             $columns[] = array(
                 'key'   => 'line_total',
-                'label' => __( 'Total', EOP_TEXT_DOMAIN ),
+                'label' => $labels['line_total'],
             );
         }
 
@@ -302,6 +332,7 @@ class EOP_Document_Manager {
         $document_type    = self::normalize_document_type( $document_type ? $document_type : self::detect_document_type( $order ) );
         $document_config  = self::get_document_display_settings( $document_type );
         $visible_columns  = self::get_document_item_columns( $document_type );
+        $column_labels    = self::get_document_item_labels( $document_type );
         $line_items       = self::get_order_line_items_display_data( $order );
         $shop_name        = trim( (string) $settings['shop_name'] );
         $shop_logo_url    = trim( (string) $settings['shop_logo_url'] );
@@ -371,7 +402,7 @@ class EOP_Document_Manager {
                 <table class="eop-pdf-preview__table">
                     <thead>
                         <tr>
-                            <th><?php esc_html_e( 'Produto', EOP_TEXT_DOMAIN ); ?></th>
+                            <th><?php echo esc_html( $column_labels['product'] ); ?></th>
                             <?php foreach ( $visible_columns as $column ) : ?>
                                 <th><?php echo esc_html( $column['label'] ); ?></th>
                             <?php endforeach; ?>
@@ -399,6 +430,8 @@ class EOP_Document_Manager {
                                         <?php elseif ( 'discount' === $column['key'] ) : ?>
                                             <strong><?php echo esc_html( self::format_percentage( $line_item['discount_percent'] ) ); ?></strong>
                                             <small><?php echo wp_kses_post( wc_price( $line_item['discount_per_unit'] ) ); ?> / <?php esc_html_e( 'un.', EOP_TEXT_DOMAIN ); ?></small>
+                                        <?php elseif ( 'discounted_unit_price' === $column['key'] ) : ?>
+                                            <?php echo wp_kses_post( wc_price( $line_item['discounted_unit_price'] ) ); ?>
                                         <?php elseif ( 'line_total' === $column['key'] ) : ?>
                                             <?php echo wp_kses_post( wc_price( $line_item['line_total'] ) ); ?>
                                         <?php endif; ?>
@@ -571,6 +604,7 @@ class EOP_Document_Manager {
         $line_items      = self::get_order_line_items_display_data( $order );
         $total_rows      = self::get_document_total_rows( $totals, $document_type );
         $columns         = self::get_document_item_columns( $document_type );
+        $column_labels   = self::get_document_item_labels( $document_type );
         $date            = $order->get_date_created();
         $document_number = self::get_document_number( $order, $document_type, false );
         $company_name    = trim( (string) $settings['shop_name'] );
@@ -732,26 +766,36 @@ class EOP_Document_Manager {
         }
 
         $header_top    = $y;
-        $header_height = 34;
+        $header_height = 44;
         $fill_rect( $page_left, $header_top, $content_width, $header_height, 0.08 );
-        $add_text_at( strtoupper( __( 'Produto', EOP_TEXT_DOMAIN ) ), $page_left + 12, $header_top - 21, 'F2', 9, 'left', 1 );
+        $add_text_at( strtoupper( $column_labels['product'] ), $page_left + 12, $header_top - 21, 'F2', 9, 'left', 1 );
 
-        if ( array_filter( $columns, function ( $column ) { return isset( $column['key'] ) && 'quantity' === $column['key']; } ) ) {
-            $add_text_at( strtoupper( __( 'Quantidade', EOP_TEXT_DOMAIN ) ), 255, $header_top - 21, 'F2', 9, 'center', 1 );
-        }
+        $column_positions = array(
+            'quantity'              => 240,
+            'unit_price'            => 315,
+            'discount'              => 390,
+            'discounted_unit_price' => 470,
+        );
 
-        if ( array_filter( $columns, function ( $column ) { return isset( $column['key'] ) && 'unit_price' === $column['key']; } ) ) {
-            $add_text_at( strtoupper( __( 'Valor', EOP_TEXT_DOMAIN ) ), 338, $header_top - 15, 'F2', 8, 'center', 1 );
-            $add_text_at( strtoupper( __( 'Unitario', EOP_TEXT_DOMAIN ) ), 338, $header_top - 26, 'F2', 8, 'center', 1 );
-        }
+        $render_column_header = function ( $label, $x ) use ( $header_top, $add_text_at ) {
+            $lines      = array_slice( self::wrap_text( strtoupper( $label ), 16 ), 0, 3 );
+            $line_count = count( $lines );
+            $start_gap  = 21 - max( 0, $line_count - 1 ) * 5;
 
-        if ( array_filter( $columns, function ( $column ) { return isset( $column['key'] ) && 'discount' === $column['key']; } ) ) {
-            $add_text_at( strtoupper( __( 'Desconto', EOP_TEXT_DOMAIN ) ), 428, $header_top - 15, 'F2', 8, 'center', 1 );
-            $add_text_at( strtoupper( __( 'Aplicado', EOP_TEXT_DOMAIN ) ), 428, $header_top - 26, 'F2', 8, 'center', 1 );
-        }
+            foreach ( $lines as $line_index => $line ) {
+                $add_text_at( $line, $x, $header_top - $start_gap - ( $line_index * 11 ), 'F2', 8, 'center', 1 );
+            }
+        };
 
-        if ( $show_line_total ) {
-            $add_text_at( strtoupper( __( 'Total', EOP_TEXT_DOMAIN ) ), 520, $header_top - 21, 'F2', 9, 'center', 1 );
+        foreach ( $columns as $column ) {
+            if ( 'line_total' === ( $column['key'] ?? '' ) ) {
+                $render_column_header( $column['label'], 520 );
+                continue;
+            }
+
+            if ( isset( $column_positions[ $column['key'] ] ) ) {
+                $render_column_header( $column['label'], $column_positions[ $column['key'] ] );
+            }
         }
 
         $y = $header_top - $header_height - 18;
@@ -775,6 +819,10 @@ class EOP_Document_Manager {
                 $meta_lines['discount_sub']  = self::format_money( $line_item['discount_per_unit'] ) . '/' . __( 'un.', EOP_TEXT_DOMAIN );
             }
 
+            if ( array_filter( $columns, function ( $column ) { return isset( $column['key'] ) && 'discounted_unit_price' === $column['key']; } ) ) {
+                $meta_lines['discounted_unit_price'] = self::format_money( $line_item['discounted_unit_price'] );
+            }
+
             $sku_line   = $show_sku && $product && $product->get_sku() ? sprintf( __( 'SKU: %s', EOP_TEXT_DOMAIN ), $product->get_sku() ) : '';
             $row_height = max( 26, count( $name_lines ) * 13 + ( '' !== $sku_line ? 14 : 0 ), isset( $meta_lines['discount_sub'] ) ? 26 : 14 ) + 14;
 
@@ -793,19 +841,23 @@ class EOP_Document_Manager {
             }
 
             if ( isset( $meta_lines['quantity'] ) ) {
-                $add_text_at( $meta_lines['quantity'], 255, $row_top, 'F1', 10, 'center', 0.12 );
+                $add_text_at( $meta_lines['quantity'], 240, $row_top, 'F1', 10, 'center', 0.12 );
             }
 
             if ( isset( $meta_lines['unit_price'] ) ) {
-                $add_text_at( $meta_lines['unit_price'], 338, $row_top, 'F1', 10, 'center', 0.12 );
+                $add_text_at( $meta_lines['unit_price'], 315, $row_top, 'F1', 10, 'center', 0.12 );
             }
 
             if ( isset( $meta_lines['discount_main'] ) ) {
-                $add_text_at( $meta_lines['discount_main'], 428, $row_top, 'F2', 10, 'center', 0.12 );
+                $add_text_at( $meta_lines['discount_main'], 390, $row_top, 'F2', 10, 'center', 0.12 );
             }
 
             if ( isset( $meta_lines['discount_sub'] ) ) {
-                $add_text_at( $meta_lines['discount_sub'], 428, $row_top - 16, 'F1', 9, 'center', 0.5 );
+                $add_text_at( $meta_lines['discount_sub'], 390, $row_top - 16, 'F1', 9, 'center', 0.5 );
+            }
+
+            if ( isset( $meta_lines['discounted_unit_price'] ) ) {
+                $add_text_at( $meta_lines['discounted_unit_price'], 470, $row_top, 'F1', 10, 'center', 0.12 );
             }
 
             if ( $show_line_total ) {
@@ -1153,6 +1205,7 @@ class EOP_Document_Manager {
             $effective_total    = max( 0, round( $line_subtotal - $discount_total, $decimals ) );
             $unit_price         = $quantity > 0 ? $line_subtotal / $quantity : $line_subtotal;
             $discount_per_unit  = $quantity > 0 ? $discount_total / $quantity : $discount_total;
+            $discounted_unit_price = $quantity > 0 ? $effective_total / $quantity : $effective_total;
             $discount_percent   = $line_subtotal > 0 ? ( $discount_total / $line_subtotal ) * 100 : 0;
 
             $rows[] = array(
@@ -1162,6 +1215,7 @@ class EOP_Document_Manager {
                 'unit_price'        => round( $unit_price, $decimals ),
                 'discount_percent'  => round( $discount_percent, 2 ),
                 'discount_per_unit' => round( $discount_per_unit, $decimals ),
+                'discounted_unit_price' => round( $discounted_unit_price, $decimals ),
                 'discount_total'    => $discount_total,
                 'line_total'        => $effective_total,
             );

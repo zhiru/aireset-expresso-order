@@ -114,6 +114,7 @@ class EOP_Public_Proposal {
         $pdf_url         = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_public_document_url( $order, true ) : '';
         $document_config = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_document_display_settings( 'proposal' ) : array();
         $item_columns    = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_document_item_columns( 'proposal' ) : array();
+        $item_labels     = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_document_item_labels( 'proposal' ) : array();
         $total_rows      = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_document_total_rows( $totals, 'proposal' ) : array();
         $show_sku        = 'yes' === ( $document_config['show_sku'] ?? 'yes' );
         $show_email      = 'yes' === ( $document_config['show_email'] ?? 'yes' );
@@ -225,8 +226,8 @@ class EOP_Public_Proposal {
                                                 <span class="eop-proposal-item__pill">
                                                     <?php
                                                     printf(
-                                                        /* translators: %s: quantity */
-                                                        esc_html__( 'Quantidade: %s', EOP_TEXT_DOMAIN ),
+                                                        '%1$s: %2$s',
+                                                        esc_html( $column['label'] ),
                                                         esc_html( $line_item['quantity'] )
                                                     );
                                                     ?>
@@ -235,9 +236,9 @@ class EOP_Public_Proposal {
                                                 <span class="eop-proposal-item__pill">
                                                     <?php
                                                     printf(
-                                                        /* translators: %s: unit price */
-                                                        esc_html__( 'Unitario: %s', EOP_TEXT_DOMAIN ),
-                                                        wp_strip_all_tags( wc_price( $line_item['unit_price'] ) )
+                                                        '%1$s: %2$s',
+                                                        esc_html( $column['label'] ),
+                                                        esc_html( wp_strip_all_tags( wc_price( $line_item['unit_price'] ) ) )
                                                     );
                                                     ?>
                                                 </span>
@@ -245,10 +246,21 @@ class EOP_Public_Proposal {
                                                 <span class="eop-proposal-item__pill">
                                                     <?php
                                                     printf(
-                                                        /* translators: 1: discount percent, 2: per-unit discount */
-                                                        esc_html__( 'Desconto: %1$s (%2$s/un.)', EOP_TEXT_DOMAIN ),
+                                                        '%1$s: %2$s (%3$s/%4$s)',
+                                                        esc_html( $column['label'] ),
                                                         esc_html( number_format_i18n( $line_item['discount_percent'], abs( $line_item['discount_percent'] - round( $line_item['discount_percent'] ) ) < 0.01 ? 0 : 2 ) . '%' ),
-                                                        wp_strip_all_tags( wc_price( $line_item['discount_per_unit'] ) )
+                                                        esc_html( wp_strip_all_tags( wc_price( $line_item['discount_per_unit'] ) ) ),
+                                                        esc_html__( 'un.', EOP_TEXT_DOMAIN )
+                                                    );
+                                                    ?>
+                                                </span>
+                                            <?php elseif ( 'discounted_unit_price' === $column['key'] ) : ?>
+                                                <span class="eop-proposal-item__pill">
+                                                    <?php
+                                                    printf(
+                                                        '%1$s: %2$s',
+                                                        esc_html( $column['label'] ),
+                                                        esc_html( wp_strip_all_tags( wc_price( $line_item['discounted_unit_price'] ) ) )
                                                     );
                                                     ?>
                                                 </span>
@@ -270,7 +282,7 @@ class EOP_Public_Proposal {
                             </div>
                             <?php if ( $show_line_total ) : ?>
                                 <div class="eop-proposal-item__summary">
-                                    <span><?php esc_html_e( 'Total', EOP_TEXT_DOMAIN ); ?></span>
+                                    <span><?php echo esc_html( $item_labels['line_total'] ?? __( 'Total', EOP_TEXT_DOMAIN ) ); ?></span>
                                     <strong><?php echo wp_kses_post( wc_price( $line_item['line_total'] ) ); ?></strong>
                                 </div>
                             <?php endif; ?>
