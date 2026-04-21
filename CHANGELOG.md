@@ -2,6 +2,12 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.39 - 2026-04-20
+
+- adicionadas acoes em massa de quantidade e desconto no cadastro rapido, na edicao de pedidos e na interface por shortcode para acelerar o preenchimento dos itens
+- cards de item passaram a mostrar o valor unitario com desconto e o modo de desconto fixo ou percentual agora e preservado ao salvar, recarregar e reabrir pedidos
+- fluxo SPA e listagens foram alinhados para exibir apenas o tipo de PDF compativel com cada pedido, enquanto o shell visual recebeu ajustes de navegacao e responsividade
+
 ## 1.1.38 - 2026-04-21
 
 - a aba morta de atualizacao do modulo PDF foi substituida por documentacao interna completa, com textos de efeito real por configuracao e tooltips no formulario

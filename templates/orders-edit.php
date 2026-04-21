@@ -64,6 +64,24 @@ $order_id = absint( $_GET['order_id'] ?? 0 );
         <div class="eop-card">
             <h2><?php esc_html_e( 'Produtos', EOP_TEXT_DOMAIN ); ?></h2>
 
+            <div class="eop-item-defaults">
+                <div class="eop-item-defaults__title"><?php esc_html_e( 'Acoes em massa', EOP_TEXT_DOMAIN ); ?></div>
+                <div class="eop-field">
+                    <label for="eop-default-item-quantity"><?php esc_html_e( 'Quantidade', EOP_TEXT_DOMAIN ); ?></label>
+                    <input type="number" id="eop-default-item-quantity" min="1" step="1" value="1" inputmode="numeric" />
+                </div>
+                <div class="eop-field">
+                    <label for="eop-default-item-discount"><?php esc_html_e( 'Desconto', EOP_TEXT_DOMAIN ); ?></label>
+                    <div class="eop-item-discount-group eop-item-defaults__discount-group">
+                        <input type="text" id="eop-default-item-discount" class="eop-discount-text-input" value="" placeholder="" inputmode="decimal" />
+                        <span class="eop-item-discount-suffix" id="eop-default-item-discount-suffix" hidden></span>
+                    </div>
+                </div>
+                <div class="eop-field eop-item-defaults__action">
+                    <button type="button" id="eop-apply-item-defaults" class="button"><?php esc_html_e( 'Aplicar', EOP_TEXT_DOMAIN ); ?></button>
+                </div>
+            </div>
+
             <div class="eop-field">
                 <label for="eop-product-search"><?php esc_html_e( 'Buscar Produto', EOP_TEXT_DOMAIN ); ?></label>
                 <select id="eop-product-search" style="width:100%"></select>

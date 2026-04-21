@@ -4,10 +4,55 @@
 
     var items = [];
     var i18n = eop_orders_vars.i18n || {};
+    var discountMode = eop_orders_vars.discount_mode || 'both';
     var selectedShippingRate = null;
     var shippingAddress = {};
     var postcodeLookupCache = {};
     var postcodeLookupBusy = false;
+
+    function getDefaultDiscountFieldConfig() {
+        if (discountMode === 'percent') {
+            return {
+                placeholder: i18n.default_discount_placeholder_percent || '10',
+                help: i18n.default_discount_help_percent || 'Informe somente porcentagem (%).',
+                suffix: '%'
+            };
+        }
+
+        if (discountMode === 'fixed') {
+            return {
+                placeholder: i18n.default_discount_placeholder_fixed || '10,00',
+                help: i18n.default_discount_help_fixed || 'Informe somente valor fixo (R$).',
+                suffix: 'R$'
+            };
+        }
+
+        return {
+            placeholder: i18n.default_discount_placeholder_both || '10 ou 10%',
+            help: i18n.default_discount_help_both || 'Aceita valor fixo ou porcentagem.',
+            suffix: ''
+        };
+    }
+
+    function syncDefaultDiscountFieldUi() {
+        var config = getDefaultDiscountFieldConfig();
+        var $input = $('#eop-default-item-discount');
+        var $suffix = $('#eop-default-item-discount-suffix');
+
+        if ($input.length) {
+            $input.attr('placeholder', config.placeholder);
+            $input.attr('title', config.help);
+            $input.attr('aria-description', config.help);
+        }
+
+        if ($suffix.length) {
+            if (config.suffix) {
+                $suffix.text(config.suffix).prop('hidden', false);
+            } else {
+                $suffix.text('').prop('hidden', true);
+            }
+        }
+    }
 
     /* ========================================
      *  Utilities
@@ -23,13 +68,52 @@
         var numeric = parseFloat(raw.replace(/[^0-9.\-]/g, ''));
 
         if (isNaN(numeric) || numeric <= 0) {
-            return { type: 'fixed', value: 0 };
+            return { type: discountMode === 'percent' ? 'percent' : 'fixed', value: 0 };
         }
 
         return {
-            type: hasPercent ? 'percent' : 'fixed',
+            type: discountMode === 'percent' ? 'percent' : (discountMode === 'fixed' ? 'fixed' : (hasPercent ? 'percent' : 'fixed')),
             value: Math.max(0, numeric)
         };
+    }
+
+    function getDefaultItemQuantity() {
+        var quantity = parseInt($('#eop-default-item-quantity').val(), 10);
+
+        if (isNaN(quantity) || quantity < 1) {
+            return 1;
+        }
+
+        return quantity;
+    }
+
+    function getDefaultItemDiscount() {
+        return parseDiscountInput($('#eop-default-item-discount').val());
+    }
+
+    function getDiscountedUnitPrice(item) {
+        var quantity = Math.max(1, parseInt(item.quantity, 10) || 1);
+        var lineTotal = item.price * quantity;
+        var discount = calcItemDiscount(item);
+
+        return Math.max(0, (lineTotal - discount) / quantity);
+    }
+
+    function applyItemDefaultsToAll() {
+        var quantity = getDefaultItemQuantity();
+        var discount = getDefaultItemDiscount();
+
+        if (!items.length) {
+            return;
+        }
+
+        items.forEach(function (item) {
+            item.quantity = quantity;
+            item.discount_type = discount.type;
+            item.discount_value = discount.value;
+        });
+
+        renderItems();
     }
 
     function formatDiscountInput(type, value) {
@@ -112,7 +196,10 @@
         var lineTotal = item.price * item.quantity;
         var disc = calcItemDiscount(item);
         var sub = lineTotal - disc;
+        var discountedUnitPrice = getDiscountedUnitPrice(item);
+
         $card.find('.eop-item-card__subtotal').text(formatBRL(sub));
+        $card.find('.eop-item-card__discounted-unit-price').text(formatBRL(discountedUnitPrice));
     }
 
     function renderItems() {
@@ -129,10 +216,22 @@
             var lineTotal = item.price * item.quantity;
             var disc = calcItemDiscount(item);
             var sub = lineTotal - disc;
+            var discountedUnitPrice = getDiscountedUnitPrice(item);
             var discType = item.discount_type || 'fixed';
             var discVal = parseFloat(item.discount_value) || 0;
             var imgSrc = item.image || '';
             var nameHtml = $('<span>').text(item.name + (item.sku ? ' [' + item.sku + ']' : '')).html();
+            var discSuffix = '';
+            var discPlaceholder = '0';
+
+            if (discountMode === 'percent') {
+                discSuffix = '<span class="eop-item-discount-suffix">%</span>';
+            } else if (discountMode === 'fixed') {
+                discSuffix = '<span class="eop-item-discount-suffix">R$</span>';
+                discPlaceholder = '0,00';
+            } else {
+                discPlaceholder = '10 ou 10%';
+            }
 
             var card = '<div class="eop-item-card" data-idx="' + idx + '">' +
                 '<a href="#" class="eop-remove-item" title="Remover">&times;</a>' +
@@ -143,21 +242,26 @@
                     '<div class="eop-item-card__name">' + nameHtml + '</div>' +
                     '<div class="eop-item-card__fields">' +
                         '<div class="eop-item-card__field">' +
-                            '<span class="eop-item-card__label">Preço</span>' +
+                            '<span class="eop-item-card__label">' + $('<span>').text(i18n.label_price || 'Preco').html() + '</span>' +
                             '<span class="eop-item-card__value">' + formatBRL(item.price) + '</span>' +
                         '</div>' +
                         '<div class="eop-item-card__field">' +
-                            '<span class="eop-item-card__label">Qtd</span>' +
-                            '<input type="number" class="eop-qty" min="1" value="' + item.quantity + '" />' +
+                            '<span class="eop-item-card__label">' + $('<span>').text(i18n.label_quantity || 'Qtd').html() + '</span>' +
+                            '<input type="number" class="eop-qty" min="1" value="' + item.quantity + '" inputmode="numeric" />' +
                         '</div>' +
                         '<div class="eop-item-card__field">' +
-                            '<span class="eop-item-card__label">Desconto</span>' +
+                            '<span class="eop-item-card__label">' + $('<span>').text(i18n.label_discount || 'Desconto').html() + '</span>' +
                             '<div class="eop-item-discount-group">' +
-                                '<input type="text" class="eop-item-discount" value="' + $('<span>').text(formatDiscountInput(discType, discVal)).html() + '" placeholder="10%" />' +
+                                '<input type="text" class="eop-item-discount" value="' + $('<span>').text(discVal > 0 ? formatDiscountInput(discType, discVal) : '').html() + '" placeholder="' + $('<span>').text(discPlaceholder).html() + '" inputmode="decimal" />' +
+                                discSuffix +
                             '</div>' +
                         '</div>' +
                         '<div class="eop-item-card__field">' +
-                            '<span class="eop-item-card__label">Subtotal</span>' +
+                            '<span class="eop-item-card__label">' + $('<span>').text(i18n.label_discounted_unit_price || 'Valor c/ desconto').html() + '</span>' +
+                            '<span class="eop-item-card__value eop-item-card__discounted-unit-price">' + formatBRL(discountedUnitPrice) + '</span>' +
+                        '</div>' +
+                        '<div class="eop-item-card__field">' +
+                            '<span class="eop-item-card__label">' + $('<span>').text(i18n.label_subtotal || 'Subtotal').html() + '</span>' +
                             '<span class="eop-item-card__value eop-item-card__subtotal">' + formatBRL(sub) + '</span>' +
                         '</div>' +
                     '</div>' +
@@ -378,6 +482,8 @@
         return; // Not on edit page
     }
 
+    syncDefaultDiscountFieldUi();
+
     // Load order on page load
     loadOrder();
 
@@ -439,10 +545,12 @@
 
     $('#eop-product-search').on('select2:select', function (e) {
         var selected = e.params.data;
+        var defaultQuantity = getDefaultItemQuantity();
+        var defaultDiscount = getDefaultItemDiscount();
         var existing = items.find(function (item) { return item.product_id === selected.id; });
 
         if (existing) {
-            existing.quantity += 1;
+            existing.quantity += defaultQuantity;
         } else {
             items.push({
                 product_id: selected.id,
@@ -450,9 +558,9 @@
                 sku: selected.sku || '',
                 price: selected.price,
                 image: selected.image || '',
-                quantity: 1,
-                discount_type: 'fixed',
-                discount_value: 0
+                quantity: defaultQuantity,
+                discount_type: defaultDiscount.type,
+                discount_value: defaultDiscount.value
             });
         }
 
@@ -488,6 +596,10 @@
         items[idx].discount_value = parsed.value;
         updateCardSubtotal($card, idx);
         recalcTotals();
+    });
+
+    $('#eop-apply-item-defaults').on('click', function () {
+        applyItemDefaultsToAll();
     });
 
     // General discount & shipping

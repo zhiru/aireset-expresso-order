@@ -50,8 +50,20 @@ class EOP_Orders_Page {
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'nonce'    => wp_create_nonce( 'eop_nonce' ),
             'edit_url' => admin_url( 'admin.php?page=eop-pedidos&action=edit&order_id=' ),
+            'discount_mode' => EOP_Settings::get( 'discount_mode', 'both' ),
             'i18n'     => array(
                 'search_product'    => __( 'Buscar produto por nome ou SKU...', EOP_TEXT_DOMAIN ),
+                'label_price'       => __( 'Preco', EOP_TEXT_DOMAIN ),
+                'label_quantity'    => __( 'Qtd', EOP_TEXT_DOMAIN ),
+                'label_discount'    => __( 'Desconto', EOP_TEXT_DOMAIN ),
+                'label_discounted_unit_price' => __( 'Valor c/ desconto', EOP_TEXT_DOMAIN ),
+                'label_subtotal'    => __( 'Subtotal', EOP_TEXT_DOMAIN ),
+                'default_discount_placeholder_percent' => __( '10', EOP_TEXT_DOMAIN ),
+                'default_discount_placeholder_fixed'   => __( '10,00', EOP_TEXT_DOMAIN ),
+                'default_discount_placeholder_both'    => __( '10 ou 10%', EOP_TEXT_DOMAIN ),
+                'default_discount_help_percent'        => __( 'Informe somente porcentagem (%).', EOP_TEXT_DOMAIN ),
+                'default_discount_help_fixed'          => __( 'Informe somente valor fixo (R$).', EOP_TEXT_DOMAIN ),
+                'default_discount_help_both'           => __( 'Aceita valor fixo ou porcentagem.', EOP_TEXT_DOMAIN ),
                 'processing'        => __( 'Salvando...', EOP_TEXT_DOMAIN ),
                 'save_label'        => __( 'Salvar alteracoes', EOP_TEXT_DOMAIN ),
                 'error'             => __( 'Erro ao salvar. Tente novamente.', EOP_TEXT_DOMAIN ),
@@ -221,12 +233,20 @@ class EOP_Orders_Page {
             wp_send_json_error( array( 'message' => __( 'Voce nao pode acessar este pedido.', EOP_TEXT_DOMAIN ) ) );
         }
 
-        $items = array();
+        $items         = array();
+        $discount_mode = EOP_Settings::get( 'discount_mode', 'both' );
         foreach ( $order->get_items() as $item ) {
             $product = $item->get_product();
             $subtotal = (float) $item->get_subtotal();
             $total    = (float) $item->get_total();
             $disc     = $subtotal - $total;
+            $discount_data = self::resolve_loaded_discount_data(
+                $disc,
+                $subtotal,
+                $discount_mode,
+                $item->get_meta( '_eop_discount_type', true ),
+                $item->get_meta( '_eop_discount_value', true )
+            );
 
             $image_url = '';
             if ( $product ) {
@@ -248,8 +268,8 @@ class EOP_Orders_Page {
                 'sku'            => $product ? $product->get_sku() : '',
                 'price'          => $item->get_quantity() > 0 ? $subtotal / $item->get_quantity() : 0,
                 'quantity'       => $item->get_quantity(),
-                'discount_type'  => 'fixed',
-                'discount_value' => round( $disc, 2 ),
+                'discount_type'  => $discount_data['type'],
+                'discount_value' => $discount_data['value'],
                 'image'          => $image_url,
             );
         }
@@ -268,7 +288,14 @@ class EOP_Orders_Page {
             break;
         }
 
-        $document = $order->get_meta( '_billing_cpf' ) ?: $order->get_meta( '_billing_cnpj' );
+        $document              = $order->get_meta( '_billing_cpf' ) ?: $order->get_meta( '_billing_cnpj' );
+        $general_discount_data = self::resolve_loaded_discount_data(
+            $discount_fee,
+            max( 0, (float) $order->get_subtotal() ),
+            $discount_mode,
+            $order->get_meta( '_eop_discount_type', true ),
+            $order->get_meta( '_eop_discount_value', true )
+        );
 
         wp_send_json_success( array(
             'order_id' => $order->get_id(),
@@ -292,8 +319,8 @@ class EOP_Orders_Page {
                 'neighborhood' => $order->get_meta( '_shipping_neighborhood' ),
                 'address_2'    => $order->get_shipping_address_2(),
             ),
-            'discount'      => $discount_fee,
-            'discount_type' => 'fixed',
+            'discount'      => $general_discount_data['value'],
+            'discount_type' => $general_discount_data['type'],
             'notes'         => $order->get_customer_note(),
         ) );
     }
@@ -418,6 +445,8 @@ class EOP_Orders_Page {
                     if ( $line_item ) {
                         $line_item->set_subtotal( $line_total );
                         $line_item->set_total( $line_total - $disc_amount );
+                        $line_item->update_meta_data( '_eop_discount_type', $item_disc_type );
+                        $line_item->update_meta_data( '_eop_discount_value', $item_disc_value );
                         $line_item->save();
                     }
                     $items_subtotal += ( $line_total - $disc_amount );
@@ -448,6 +477,9 @@ class EOP_Orders_Page {
         $discount_value = floatval( $data['discount'] ?? 0 );
         $discount_value = max( 0, $discount_value );
         $discount_type  = in_array( $data['discount_type'] ?? 'fixed', array( 'fixed', 'percent' ), true ) ? $data['discount_type'] : 'fixed';
+
+        $order->update_meta_data( '_eop_discount_type', $discount_type );
+        $order->update_meta_data( '_eop_discount_value', $discount_value );
 
         if ( $discount_value > 0 ) {
             if ( 'percent' === $discount_type ) {
@@ -531,6 +563,39 @@ class EOP_Orders_Page {
             'public_url'      => $public_url,
             'is_proposal'     => ! empty( $public_url ),
             'created_by_name' => (string) $order->get_meta( '_eop_created_by_name' ),
+        );
+    }
+
+    private static function resolve_loaded_discount_data( $discount_amount, $base_amount, $discount_mode, $stored_type = '', $stored_value = '' ) {
+        $discount_amount = max( 0, (float) $discount_amount );
+        $base_amount     = max( 0, (float) $base_amount );
+        $stored_type     = in_array( $stored_type, array( 'fixed', 'percent' ), true ) ? $stored_type : '';
+        $stored_value    = max( 0, (float) $stored_value );
+
+        if ( '' !== $stored_type && $stored_value > 0 ) {
+            return array(
+                'type'  => $stored_type,
+                'value' => round( $stored_value, 2 ),
+            );
+        }
+
+        if ( $discount_amount <= 0 ) {
+            return array(
+                'type'  => 'percent' === $discount_mode ? 'percent' : 'fixed',
+                'value' => 0,
+            );
+        }
+
+        if ( 'percent' === $discount_mode ) {
+            return array(
+                'type'  => 'percent',
+                'value' => $base_amount > 0 ? round( ( $discount_amount / $base_amount ) * 100, 2 ) : 0,
+            );
+        }
+
+        return array(
+            'type'  => 'fixed',
+            'value' => round( $discount_amount, 2 ),
         );
     }
 }

@@ -142,6 +142,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 110px;
 }
 .eop-item-card__field:last-child {
   align-self: stretch;
@@ -167,6 +168,41 @@
   align-items: center;
   justify-content: flex-end;
   font-size: 20px;
+}
+
+.eop-item-defaults {
+  display: grid;
+  grid-template-columns: 140px minmax(120px, 160px) minmax(140px, 180px) minmax(110px, 140px);
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid #d7e2ff;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff 0%, #f7f9ff 100%);
+}
+.eop-item-defaults__title {
+  color: #2850dd;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  align-self: center;
+}
+.eop-item-defaults .eop-field {
+  margin-bottom: 0;
+}
+.eop-item-defaults__discount-group {
+  min-height: 44px;
+}
+.eop-item-defaults__action {
+  display: flex;
+  align-items: end;
+}
+.eop-item-defaults__action .button,
+.eop-item-defaults__action .eop-btn {
+  width: 100%;
+  min-height: 44px;
 }
 
 .eop-qty-stepper {
@@ -296,6 +332,17 @@
   text-align: center;
 }
 
+@media screen and (max-width: 782px) {
+  .eop-item-defaults {
+    grid-template-columns: 1fr;
+  }
+  .eop-item-defaults__title {
+    margin-bottom: -4px;
+  }
+  .eop-item-card__field {
+    min-width: calc(50% - 6px);
+  }
+}
 .eop-modal {
   position: fixed;
   top: 0;
@@ -421,57 +468,6 @@ body.eop-admin-spa-screen #wpbody-content > .fs-notice {
   flex-direction: column;
   gap: 10px;
 }
-.eop-admin-spa-nav__group {
-  display: grid;
-  gap: 8px;
-}
-.eop-admin-spa-nav__group-toggle {
-  padding-right: 16px !important;
-}
-.eop-admin-spa-nav__group-arrow {
-  margin-left: auto;
-  transition: transform .2s ease, opacity .2s ease;
-  opacity: .72;
-}
-.eop-admin-spa-nav__group.is-open .eop-admin-spa-nav__group-arrow {
-  transform: rotate(180deg);
-}
-.eop-admin-spa-nav__submenu {
-  display: grid;
-  gap: 8px;
-  padding: 0 8px 6px 18px;
-}
-.eop-admin-spa-nav__submenu[hidden] {
-  display: none !important;
-}
-.eop-admin-spa-nav__submenu-item {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  min-height: 44px;
-  padding: 0 16px 0 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 13px;
-  font-weight: 700;
-  text-align: left;
-  text-decoration: none;
-  transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
-}
-.eop-admin-spa-nav__submenu-item:hover,
-.eop-admin-spa-nav__submenu-item:focus {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  outline: none;
-}
-.eop-admin-spa-nav__submenu-item.is-active {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.28);
-  color: #fff;
-}
 .eop-admin-spa__content {
   min-width: 0;
 }
@@ -511,6 +507,63 @@ body.eop-admin-spa-screen #wpbody-content > .fs-notice {
 .eop-admin-spa-nav__item.is-active {
   background: #fff !important;
   color: var(--eop-primary, #00034b) !important;
+}
+
+.eop-admin-spa-nav__group {
+  display: grid;
+  gap: 8px;
+}
+
+.eop-admin-spa-nav__group-toggle {
+  padding-right: 16px !important;
+}
+
+.eop-admin-spa-nav__group-arrow {
+  margin-left: auto;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0.72;
+}
+
+.eop-admin-spa-nav__group.is-open .eop-admin-spa-nav__group-arrow {
+  transform: rotate(180deg);
+}
+
+.eop-admin-spa-nav__submenu {
+  display: grid;
+  gap: 8px;
+  padding: 0 8px 6px 18px;
+}
+
+.eop-admin-spa-nav__submenu[hidden] {
+  display: none !important;
+}
+
+.eop-admin-spa-nav__submenu-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 44px;
+  padding: 0 16px 0 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+.eop-admin-spa-nav__submenu-item:hover, .eop-admin-spa-nav__submenu-item:focus {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  outline: none;
+}
+.eop-admin-spa-nav__submenu-item.is-active {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
 }
 
 .eop-admin-panel-head {

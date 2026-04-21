@@ -185,6 +185,8 @@ class EOP_Order_Creator {
                     if ( $line_item ) {
                         $line_item->set_subtotal( $line_total );
                         $line_item->set_total( $line_total - $disc_amount );
+                        $line_item->update_meta_data( '_eop_discount_type', $item_disc_type );
+                        $line_item->update_meta_data( '_eop_discount_value', $item_disc_value );
                         $line_item->save();
                     }
                     $items_subtotal += ( $line_total - $disc_amount );
@@ -268,6 +270,9 @@ class EOP_Order_Creator {
         $discount_value = floatval( $data['discount'] ?? 0 );
         $discount_value = max( 0, $discount_value );
         $discount_type  = in_array( $data['discount_type'] ?? 'fixed', array( 'fixed', 'percent' ), true ) ? $data['discount_type'] : 'fixed';
+
+        $order->update_meta_data( '_eop_discount_type', $discount_type );
+        $order->update_meta_data( '_eop_discount_value', $discount_value );
 
         if ( $discount_value > 0 ) {
             if ( 'percent' === $discount_type ) {

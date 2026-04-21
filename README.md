@@ -4,7 +4,7 @@ Plugin WordPress para operacao comercial com WooCommerce, focado em criacao rapi
 
 ## Versao atual
 
-`1.1.38`
+`1.1.39`
 
 ## Principais recursos
 
@@ -88,11 +88,11 @@ O plugin usa integracao proprietaria com Elite Licenser.
 
 O historico completo de alteracoes esta em [`CHANGELOG.md`](./CHANGELOG.md).
 
-Destaques recentes da serie `1.1.38`:
+Destaques recentes da serie `1.1.39`:
 
-- documentacao completa do modulo PDF disponivel no admin e ajuda curta em tooltips
-- runtime do PDF alinhado com opcoes que antes estavam salvas mas nao afetavam o documento
-- exportacao XML experimental e ferramentas operacionais seguras para cache e numeracao
+- acoes em massa para aplicar quantidade e desconto padrao aos itens no admin e no shortcode
+- valor unitario com desconto visivel nos cards e persistencia correta do modo de desconto ao recarregar pedidos
+- ajuste das acoes e caixas de PDF para respeitar o tipo real do documento em cada pedido
 
 ## Autor
 

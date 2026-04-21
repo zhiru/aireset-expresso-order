@@ -50,7 +50,9 @@ class EOP_WC_PDF_Integration {
             return $actions;
         }
 
-        if ( EOP_Document_Manager::is_document_enabled( $order, 'order' ) ) {
+        $document_type = EOP_Document_Manager::get_document_type_for_order( $order );
+
+        if ( 'order' === $document_type && EOP_Document_Manager::is_document_enabled( $order, 'order' ) ) {
             $actions['eop_order_pdf'] = array(
                 'url'    => EOP_Document_Manager::get_pdf_document_url( $order, 'order' ),
                 'name'   => __( 'Abrir PDF do pedido', EOP_TEXT_DOMAIN ),
@@ -58,7 +60,7 @@ class EOP_WC_PDF_Integration {
             );
         }
 
-        if ( EOP_Document_Manager::is_document_enabled( $order, 'proposal' ) ) {
+        if ( 'proposal' === $document_type && EOP_Document_Manager::is_document_enabled( $order, 'proposal' ) ) {
             $actions['eop_proposal_pdf'] = array(
                 'url'    => EOP_Document_Manager::get_pdf_document_url( $order, 'proposal' ),
                 'name'   => __( 'Abrir PDF da proposta', EOP_TEXT_DOMAIN ),
@@ -130,16 +132,17 @@ class EOP_WC_PDF_Integration {
             return;
         }
 
-        $record = EOP_Document_Manager::get_document_record( $order );
+        $record        = EOP_Document_Manager::get_document_record( $order );
+        $document_type = EOP_Document_Manager::get_document_type_for_order( $order );
         ?>
         <div class="eop-order-pdf-box">
-            <?php if ( ! empty( $record['order']['url'] ) ) : ?>
+            <?php if ( 'order' === $document_type && ! empty( $record['order']['url'] ) ) : ?>
                 <p><a class="button button-primary" target="_blank" href="<?php echo esc_url( $record['order']['url'] ); ?>"><?php esc_html_e( 'Abrir PDF do pedido', EOP_TEXT_DOMAIN ); ?></a></p>
             <?php endif; ?>
-            <?php if ( ! empty( $record['proposal']['url'] ) ) : ?>
+            <?php if ( 'proposal' === $document_type && ! empty( $record['proposal']['url'] ) ) : ?>
                 <p><a class="button" target="_blank" href="<?php echo esc_url( $record['proposal']['url'] ); ?>"><?php esc_html_e( 'Abrir PDF da proposta', EOP_TEXT_DOMAIN ); ?></a></p>
             <?php endif; ?>
-            <?php if ( ! empty( $record['proposal']['public_url'] ) ) : ?>
+            <?php if ( 'proposal' === $document_type && ! empty( $record['proposal']['public_url'] ) ) : ?>
                 <p><a class="button" target="_blank" href="<?php echo esc_url( $record['proposal']['public_url'] ); ?>"><?php esc_html_e( 'Abrir PDF publico', EOP_TEXT_DOMAIN ); ?></a></p>
             <?php endif; ?>
             <?php if ( ! empty( $record['order']['generated_at'] ) || ! empty( $record['proposal']['generated_at'] ) ) : ?>

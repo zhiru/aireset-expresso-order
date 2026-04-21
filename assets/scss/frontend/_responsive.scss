@@ -51,6 +51,15 @@
     grid-template-columns: 1fr;
   }
 
+  .eop-pdv .eop-item-card__fields {
+    grid-template-areas:
+      'price'
+      'quantity'
+      'discount'
+      'discounted'
+      'subtotal';
+  }
+
   .eop-pdv .eop-item-card {
     grid-template-columns: 1fr;
   }

@@ -15,6 +15,91 @@
     var currentEditingOrderId = 0;
     var editLoadToken = 0;
 
+    function getDefaultDiscountFieldConfig() {
+        if (discountMode === 'percent') {
+            return {
+                placeholder: i18n.default_discount_placeholder_percent || '10',
+                help: i18n.default_discount_help_percent || 'Informe somente porcentagem (%).',
+                suffix: '%'
+            };
+        }
+
+        if (discountMode === 'fixed') {
+            return {
+                placeholder: i18n.default_discount_placeholder_fixed || '10,00',
+                help: i18n.default_discount_help_fixed || 'Informe somente valor fixo (R$).',
+                suffix: 'R$'
+            };
+        }
+
+        return {
+            placeholder: i18n.default_discount_placeholder_both || '10 ou 10%',
+            help: i18n.default_discount_help_both || 'Aceita valor fixo ou porcentagem.',
+            suffix: ''
+        };
+    }
+
+    function syncDefaultDiscountFieldUi() {
+        var config = getDefaultDiscountFieldConfig();
+        var $input = $('#eop-default-item-discount');
+        var $suffix = $('#eop-default-item-discount-suffix');
+
+        if ($input.length) {
+            $input.attr('placeholder', config.placeholder);
+            $input.attr('title', config.help);
+            $input.attr('aria-description', config.help);
+        }
+
+        if ($suffix.length) {
+            if (config.suffix) {
+                $suffix.text(config.suffix).prop('hidden', false);
+            } else {
+                $suffix.text('').prop('hidden', true);
+            }
+        }
+    }
+
+    function getDefaultItemQuantity() {
+        var quantity = parseInt($('#eop-default-item-quantity').val(), 10);
+
+        if (isNaN(quantity) || quantity < 1) {
+            return 1;
+        }
+
+        return quantity;
+    }
+
+    function getDefaultItemDiscount() {
+        return parseDiscountInput($('#eop-default-item-discount').val());
+    }
+
+    function getDiscountedUnitPrice(item) {
+        var quantity = Math.max(1, parseInt(item.quantity, 10) || 1);
+        var lineTotal = item.price * quantity;
+        var discount = calcItemDiscount(item);
+
+        return Math.max(0, (lineTotal - discount) / quantity);
+    }
+
+    function applyItemDefaultsToAll() {
+        var quantity = getDefaultItemQuantity();
+        var discount = getDefaultItemDiscount();
+
+        if (!items.length) {
+            return;
+        }
+
+        items.forEach(function (item) {
+            item.quantity = quantity;
+            item.discount_type = discount.type;
+            item.discount_value = discount.value;
+        });
+
+        renderItems();
+    }
+
+    syncDefaultDiscountFieldUi();
+
     function getCurrentPdfTab() {
         var params = new URLSearchParams(window.location.search);
         var fromUrl = params.get('pdf_tab');
@@ -54,6 +139,68 @@
         $admin.toggleClass('is-preview-open', isOpen);
         $admin.find('[data-eop-pdf-preview-toggle]').attr('aria-expanded', isOpen ? 'true' : 'false');
         $admin.find('.eop-pdf-admin__preview-drawer').attr('aria-hidden', isOpen ? 'false' : 'true');
+    }
+
+    function getActivePdfSettingsForm() {
+        return $('.eop-pdf-admin__sidebar .eop-pdf-admin__form').first();
+    }
+
+    function getPdfSettingsFormSnapshot($form) {
+        if (!$form || !$form.length) {
+            return '';
+        }
+
+        return $form.serialize();
+    }
+
+    function syncPdfSettingsFormSnapshot($scope) {
+        var $forms = ($scope && $scope.length ? $scope : $(document)).find('.eop-pdf-admin__sidebar .eop-pdf-admin__form');
+
+        $forms.each(function () {
+            var $form = $(this);
+            $form.data('eopSnapshot', getPdfSettingsFormSnapshot($form));
+        });
+    }
+
+    function savePendingPdfSettings() {
+        var $form = getActivePdfSettingsForm();
+        var deferred = $.Deferred();
+        var currentSnapshot;
+        var initialSnapshot;
+
+        if (!$form.length) {
+            deferred.resolve();
+            return deferred.promise();
+        }
+
+        currentSnapshot = getPdfSettingsFormSnapshot($form);
+        initialSnapshot = $form.data('eopSnapshot');
+
+        if (typeof initialSnapshot === 'undefined') {
+            $form.data('eopSnapshot', currentSnapshot);
+            initialSnapshot = currentSnapshot;
+        }
+
+        if (currentSnapshot === initialSnapshot) {
+            deferred.resolve();
+            return deferred.promise();
+        }
+
+        $.ajax({
+            url: $form.attr('action') || window.location.href,
+            method: ($form.attr('method') || 'post').toUpperCase(),
+            data: currentSnapshot,
+            xhrFields: {
+                withCredentials: true
+            }
+        }).done(function () {
+            $form.data('eopSnapshot', currentSnapshot);
+            deferred.resolve();
+        }).fail(function () {
+            deferred.reject();
+        });
+
+        return deferred.promise();
     }
 
     function syncBrowserUrl(url, replaceState) {
@@ -139,6 +286,7 @@
                 updatePdfNavState(url);
                 setAppView('pdf', { skipHistory: true });
                 setPdfPreviewState($admin, preservePreview);
+                syncPdfSettingsFormSnapshot($admin);
             })
             .fail(function () {
                 window.location.href = url;
@@ -625,7 +773,7 @@
             return Math.min(lineTotal, lineTotal * discVal / 100);
         }
 
-        return Math.min(lineTotal, discVal * item.quantity);
+        return Math.min(lineTotal, discVal);
     }
 
     function recalcTotals() {
@@ -667,7 +815,10 @@
         var lineTotal = item.price * item.quantity;
         var disc = calcItemDiscount(item);
         var sub = lineTotal - disc;
+        var discountedUnitPrice = getDiscountedUnitPrice(item);
+
         $card.find('.eop-item-card__subtotal').text(formatBRL(sub));
+        $card.find('.eop-item-card__discounted-unit-price').text(formatBRL(discountedUnitPrice));
     }
 
     function renderItems() {
@@ -676,7 +827,7 @@
         $body.empty();
 
         if (!items.length) {
-            $body.append('<div class="eop-items-empty">Nenhum produto adicionado.</div>');
+            $body.append('<div class="eop-items-empty">' + escapeHtml(i18n.no_items || 'Nenhum produto adicionado.') + '</div>');
             recalcTotals();
             return;
         }
@@ -685,6 +836,7 @@
             var lineTotal = item.price * item.quantity;
             var disc = calcItemDiscount(item);
             var sub = lineTotal - disc;
+            var discountedUnitPrice = getDiscountedUnitPrice(item);
             var discType = item.discount_type || 'fixed';
             var discVal = parseFloat(item.discount_value) || 0;
             var imgSrc = item.image || '';
@@ -713,11 +865,11 @@
                     '<div class="eop-item-card__name">' + nameHtml + '</div>' +
                     '<div class="eop-item-card__fields">' +
                         '<div class="eop-item-card__field">' +
-                            '<span class="eop-item-card__label">Preço</span>' +
+                            '<span class="eop-item-card__label">' + escapeHtml(i18n.label_price || 'Preco') + '</span>' +
                             '<span class="eop-item-card__value">' + formatBRL(item.price) + '</span>' +
                         '</div>' +
                         '<div class="eop-item-card__field">' +
-                            '<span class="eop-item-card__label">Qtd</span>' +
+                            '<span class="eop-item-card__label">' + escapeHtml(i18n.label_quantity || 'Qtd') + '</span>' +
                             '<div class="eop-qty-stepper">' +
                                 '<button type="button" class="eop-qty-btn eop-qty-dec" aria-label="Diminuir">&#8722;</button>' +
                                 '<input type="number" class="eop-qty" min="1" value="' + item.quantity + '" inputmode="numeric" />' +
@@ -725,14 +877,18 @@
                             '</div>' +
                         '</div>' +
                         '<div class="eop-item-card__field">' +
-                            '<span class="eop-item-card__label">Desconto</span>' +
+                            '<span class="eop-item-card__label">' + escapeHtml(i18n.label_discount || 'Desconto') + '</span>' +
                             '<div class="eop-item-discount-group">' +
                                 '<input type="text" class="eop-item-discount" value="' + (discVal > 0 ? formatDiscountInput(discType, discVal) : '') + '" placeholder="' + discPlaceholder + '" inputmode="decimal" />' +
                                 discSuffix +
                             '</div>' +
                         '</div>' +
                         '<div class="eop-item-card__field">' +
-                            '<span class="eop-item-card__label">Subtotal</span>' +
+                            '<span class="eop-item-card__label">' + escapeHtml(i18n.label_discounted_unit_price || 'Valor c/ desconto') + '</span>' +
+                            '<span class="eop-item-card__value eop-item-card__discounted-unit-price">' + formatBRL(discountedUnitPrice) + '</span>' +
+                        '</div>' +
+                        '<div class="eop-item-card__field">' +
+                            '<span class="eop-item-card__label">' + escapeHtml(i18n.label_subtotal || 'Subtotal') + '</span>' +
                             '<span class="eop-item-card__value eop-item-card__subtotal">' + formatBRL(sub) + '</span>' +
                         '</div>' +
                     '</div>' +
@@ -755,6 +911,8 @@
         $('#eop-user-id').val(0);
         $('#eop-shipping').val(0);
         $('#eop-discount').val('');
+        $('#eop-default-item-quantity').val(1);
+        $('#eop-default-item-discount').val('');
         $('#eop-status').val('completed');
         $('#eop-product-search').val(null).trigger('change');
         $('#eop-customer-status').text('').attr('class', 'eop-status');
@@ -959,12 +1117,14 @@
 
     $('#eop-product-search').on('select2:select', function (e) {
         var selected = e.params.data;
+        var defaultQuantity = getDefaultItemQuantity();
+        var defaultDiscount = getDefaultItemDiscount();
         var existing = items.find(function (item) {
             return item.product_id === selected.id;
         });
 
         if (existing) {
-            existing.quantity += 1;
+            existing.quantity += defaultQuantity;
         } else {
             items.push({
                 product_id: selected.id,
@@ -972,9 +1132,9 @@
                 sku: selected.sku || '',
                 price: selected.price,
                 image: selected.image || '',
-                quantity: 1,
-                discount_type: discountMode === 'fixed' ? 'fixed' : 'percent',
-                discount_value: 0
+                quantity: defaultQuantity,
+                discount_type: defaultDiscount.type,
+                discount_value: defaultDiscount.value
             });
         }
 
@@ -1028,6 +1188,10 @@
 
         items.splice(idx, 1);
         renderItems();
+    });
+
+    $('#eop-apply-item-defaults').on('click', function () {
+        applyItemDefaultsToAll();
     });
 
     $('#eop-shipping, #eop-discount').on('input change', recalcTotals);
@@ -1270,24 +1434,47 @@
         loadPdfTab(url, { preservePreview: true });
     });
 
+    $(document).on('input change', '.eop-pdf-admin__sidebar .eop-pdf-admin__form :input', function () {
+        var $form = $(this).closest('.eop-pdf-admin__form');
+
+        if (typeof $form.data('eopSnapshot') === 'undefined') {
+            $form.data('eopSnapshot', getPdfSettingsFormSnapshot($form));
+        }
+    });
+
     $(document).on('change', '.eop-pdf-admin__preview-toolbar select', function () {
         var $form = $(this).closest('.eop-pdf-admin__preview-toolbar');
+        var targetUrl = buildPdfToolbarUrl($form.get(0));
 
-        setAppView('pdf', { skipHistory: true });
-        loadPdfTab(buildPdfToolbarUrl($form.get(0)), { preservePreview: true });
+        savePendingPdfSettings().done(function () {
+            setAppView('pdf', { skipHistory: true });
+            loadPdfTab(targetUrl, { preservePreview: true });
+        }).fail(function () {
+            showNotice(i18n.error || 'Nao foi possivel salvar as configuracoes do PDF.', 'error');
+        });
     });
 
     $(document).on('submit', '.eop-pdf-admin__preview-toolbar', function (e) {
         var submitter = e.originalEvent && e.originalEvent.submitter ? $(e.originalEvent.submitter) : $();
-
-        if (submitter.length && submitter.is('.button-primary[formaction]')) {
-            return;
-        }
+        var toolbar = this;
+        var pdfUrl = submitter.length && submitter.is('.button-primary[formaction]') ? submitter.attr('formaction') : '';
 
         e.preventDefault();
-        setAppView('pdf', { skipHistory: true });
-        loadPdfTab(buildPdfToolbarUrl(this), { preservePreview: true });
+
+        savePendingPdfSettings().done(function () {
+            if (pdfUrl) {
+                window.location.href = pdfUrl;
+                return;
+            }
+
+            setAppView('pdf', { skipHistory: true });
+            loadPdfTab(buildPdfToolbarUrl(toolbar), { preservePreview: true });
+        }).fail(function () {
+            showNotice(i18n.error || 'Nao foi possivel salvar as configuracoes do PDF.', 'error');
+        });
     });
+
+    syncPdfSettingsFormSnapshot($(document));
 
     $(document).on('click', '.eop-order-edit-spa', function () {
         loadOrderForEditing($(this).data('order-id'));
