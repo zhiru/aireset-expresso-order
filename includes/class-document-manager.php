@@ -12,18 +12,29 @@ class EOP_Document_Manager {
 
         add_action( 'admin_post_eop_download_pdf', array( __CLASS__, 'handle_download' ) );
         add_action( 'admin_post_nopriv_eop_download_pdf', array( __CLASS__, 'handle_download' ) );
+        add_action( 'template_redirect', array( __CLASS__, 'handle_frontend_download_request' ) );
+
+        if ( class_exists( 'EOP_PDF_Settings' ) ) {
+            add_action( 'update_option_' . EOP_PDF_Settings::OPTION_KEY, array( __CLASS__, 'maybe_invalidate_cached_documents' ), 10, 2 );
+        }
     }
 
     public static function get_pdf_document_url( WC_Order $order, $document_type = '', $force_download = false ) {
         $document_type = self::normalize_document_type( $document_type ? $document_type : self::detect_document_type( $order ) );
+        $args          = self::get_private_download_args( $order, $document_type, $force_download );
+
+        if ( self::use_pretty_pdf_links() ) {
+            $args['eop_download_pdf'] = '1';
+
+            return add_query_arg( $args, home_url( '/' ) );
+        }
 
         return add_query_arg(
-            array(
-                'action'   => 'eop_download_pdf',
-                'order_id' => $order->get_id(),
-                'document' => $document_type,
-                'download' => $force_download ? '1' : '0',
-                '_wpnonce' => wp_create_nonce( 'eop_download_pdf_' . $order->get_id() . '_' . $document_type ),
+            array_merge(
+                array(
+                    'action' => 'eop_download_pdf',
+                ),
+                $args
             ),
             admin_url( 'admin-post.php' )
         );
@@ -37,12 +48,28 @@ class EOP_Document_Manager {
         return self::detect_document_type( $order );
     }
 
+    public static function is_matching_document_type( WC_Order $order, $document_type = '' ) {
+        $document_type = self::normalize_document_type( $document_type ? $document_type : self::detect_document_type( $order ) );
+
+        return $document_type === self::detect_document_type( $order );
+    }
+
+    public static function resolve_document_type_for_order( WC_Order $order, $document_type = '' ) {
+        $document_type = self::normalize_document_type( $document_type ? $document_type : self::detect_document_type( $order ) );
+
+        if ( self::is_matching_document_type( $order, $document_type ) ) {
+            return $document_type;
+        }
+
+        return self::detect_document_type( $order );
+    }
+
     public static function is_document_enabled( WC_Order $order, $document_type = '' ) {
         if ( ! self::is_expresso_order( $order ) ) {
             return false;
         }
 
-        $document_type = self::normalize_document_type( $document_type ? $document_type : self::detect_document_type( $order ) );
+        $document_type = self::resolve_document_type_for_order( $order, $document_type ? $document_type : self::detect_document_type( $order ) );
         $settings      = self::get_pdf_settings();
 
         if ( 'proposal' === $document_type && 'yes' !== ( $settings['proposal_public_pdf'] ?? 'yes' ) && 'yes' === (string) $order->get_meta( '_eop_is_proposal', true ) ) {
@@ -89,27 +116,51 @@ class EOP_Document_Manager {
             return '';
         }
 
+        $args = array(
+            'document' => 'proposal',
+            'download' => $force_download ? '1' : '0',
+            'token'    => rawurlencode( $token ),
+        );
+
+        if ( self::use_pretty_pdf_links() ) {
+            $args['eop_download_pdf'] = '1';
+
+            return add_query_arg( $args, home_url( '/' ) );
+        }
+
         return add_query_arg(
-            array(
-                'action'   => 'eop_download_pdf',
-                'document' => 'proposal',
-                'download' => $force_download ? '1' : '0',
-                'token'    => rawurlencode( $token ),
+            array_merge(
+                array(
+                    'action' => 'eop_download_pdf',
+                ),
+                $args
             ),
             admin_url( 'admin-post.php' )
         );
     }
 
+    public static function handle_frontend_download_request() {
+        $is_front_request = isset( $_GET['eop_download_pdf'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['eop_download_pdf'] ) );
+
+        if ( ! $is_front_request ) {
+            return;
+        }
+
+        self::handle_download();
+    }
+
     public static function get_document_record( WC_Order $order ) {
+        $document_type = self::detect_document_type( $order );
+
         return array(
             'order' => array(
-                'url'          => self::is_document_enabled( $order, 'order' ) ? self::get_pdf_document_url( $order, 'order' ) : '',
+                'url'          => 'order' === $document_type && self::is_document_enabled( $order, 'order' ) ? self::get_pdf_document_url( $order, 'order' ) : '',
                 'generated_at' => (string) $order->get_meta( '_eop_pdf_order_generated_at', true ),
                 'generated_by' => absint( $order->get_meta( '_eop_pdf_order_generated_by', true ) ),
             ),
             'proposal' => array(
-                'url'          => self::is_document_enabled( $order, 'proposal' ) ? self::get_pdf_document_url( $order, 'proposal' ) : '',
-                'public_url'   => self::get_public_document_url( $order ),
+                'url'          => 'proposal' === $document_type && self::is_document_enabled( $order, 'proposal' ) ? self::get_pdf_document_url( $order, 'proposal' ) : '',
+                'public_url'   => 'proposal' === $document_type ? self::get_public_document_url( $order ) : '',
                 'generated_at' => (string) $order->get_meta( '_eop_pdf_proposal_generated_at', true ),
                 'generated_by' => absint( $order->get_meta( '_eop_pdf_proposal_generated_by', true ) ),
             ),
@@ -152,19 +203,23 @@ class EOP_Document_Manager {
     public static function get_document_item_labels( $document_type = 'order' ) {
         $settings = self::get_pdf_settings();
         $prefix   = 'proposal' === self::normalize_document_type( $document_type ) ? 'proposal' : 'order';
-        $labels   = array(
-            'product'               => __( 'Produto', EOP_TEXT_DOMAIN ),
-            'quantity'              => __( 'Quantidade', EOP_TEXT_DOMAIN ),
-            'unit_price'            => __( 'Valor unitario', EOP_TEXT_DOMAIN ),
-            'discount'              => __( 'Desconto aplicado', EOP_TEXT_DOMAIN ),
-            'discounted_unit_price' => __( 'Valor unitario com desconto', EOP_TEXT_DOMAIN ),
-            'line_total'            => __( 'Total', EOP_TEXT_DOMAIN ),
-        );
+        $labels   = class_exists( 'EOP_PDF_Settings' )
+            ? EOP_PDF_Settings::get_document_item_label_defaults( $document_type )
+            : array(
+                'product'               => __( 'Produto', EOP_TEXT_DOMAIN ),
+                'quantity'              => __( 'Quantidade', EOP_TEXT_DOMAIN ),
+                'unit_price'            => __( 'Valor unitario', EOP_TEXT_DOMAIN ),
+                'discount'              => __( 'Desconto aplicado', EOP_TEXT_DOMAIN ),
+                'discounted_unit_price' => __( 'Valor unitario com desconto', EOP_TEXT_DOMAIN ),
+                'line_total'            => __( 'Total', EOP_TEXT_DOMAIN ),
+            );
 
         foreach ( $labels as $key => $default ) {
             $setting_key    = $prefix . '_' . $key . '_label';
             $configured     = isset( $settings[ $setting_key ] ) ? sanitize_text_field( (string) $settings[ $setting_key ] ) : '';
-            $labels[ $key ] = '' !== $configured ? $configured : $default;
+            $labels[ $key ] = class_exists( 'EOP_PDF_Settings' )
+                ? EOP_PDF_Settings::resolve_document_item_label( $document_type, $key, $configured, $default )
+                : ( '' !== $configured ? $configured : $default );
         }
 
         return $labels;
@@ -270,13 +325,23 @@ class EOP_Document_Manager {
         $upload_dir = wp_upload_dir();
         $base_dir   = trailingslashit( $upload_dir['basedir'] ) . 'eop-pdf';
 
+        self::maybe_cleanup_cache_directories();
+
         if ( ! wp_mkdir_p( $base_dir ) ) {
             return '';
         }
 
         $version = (string) $order->get_meta( '_eop_pdf_' . $document_type . '_generated_at', true );
         $stamp   = '' !== $version ? sanitize_file_name( str_replace( array( ':', ' ' ), '-', $version ) ) : 'draft';
-        $path    = trailingslashit( $base_dir ) . sanitize_file_name( $document_type . '-' . $order->get_id() . '-' . $stamp . '.pdf' );
+        $hash    = class_exists( 'EOP_PDF_Settings' ) ? substr( EOP_PDF_Settings::get_output_signature(), 0, 12 ) : '';
+        $suffix  = implode( '-', array_filter( array( $stamp, $hash ) ) );
+        $cache_dir = trailingslashit( $base_dir ) . sanitize_file_name( $suffix ?: 'current' );
+
+        if ( ! wp_mkdir_p( $cache_dir ) ) {
+            return '';
+        }
+
+        $path = trailingslashit( $cache_dir ) . self::get_document_filename( $order, $document_type );
 
         if ( ! $force_regenerate && file_exists( $path ) ) {
             return $path;
@@ -294,6 +359,52 @@ class EOP_Document_Manager {
         }
 
         return $path;
+    }
+
+    public static function maybe_invalidate_cached_documents( $old_value, $value ) {
+        if ( ! class_exists( 'EOP_PDF_Settings' ) ) {
+            return;
+        }
+
+        if ( EOP_PDF_Settings::get_output_signature( $old_value ) === EOP_PDF_Settings::get_output_signature( $value ) ) {
+            return;
+        }
+
+        self::purge_cached_documents();
+    }
+
+    private static function purge_cached_documents() {
+        $upload_dir = wp_upload_dir();
+
+        if ( empty( $upload_dir['basedir'] ) ) {
+            return;
+        }
+
+        $base_dir = trailingslashit( $upload_dir['basedir'] ) . 'eop-pdf';
+
+        if ( ! is_dir( $base_dir ) ) {
+            return;
+        }
+
+        $entries = scandir( $base_dir );
+
+        if ( false === $entries ) {
+            return;
+        }
+
+        foreach ( $entries as $entry ) {
+            if ( '.' === $entry || '..' === $entry ) {
+                continue;
+            }
+
+            $path = trailingslashit( $base_dir ) . $entry;
+
+            if ( is_dir( $path ) ) {
+                self::delete_directory_recursive( $path );
+            } elseif ( is_file( $path ) ) {
+                @unlink( $path );
+            }
+        }
     }
 
     public static function get_recent_orders( $limit = 20 ) {
@@ -327,6 +438,54 @@ class EOP_Document_Manager {
         return $orders[0];
     }
 
+    public static function is_edocument_enabled() {
+        $settings = self::get_pdf_settings();
+
+        return isset( $settings['edoc_enabled'] ) && 'yes' === (string) $settings['edoc_enabled'];
+    }
+
+    public static function get_edocument_xml_preview( WC_Order $order, $document_type = '' ) {
+        if ( ! self::is_edocument_enabled() || ! self::is_expresso_order( $order ) ) {
+            return '';
+        }
+
+        $settings      = self::get_pdf_settings();
+        $document_type = self::resolve_document_type_for_order( $order, $document_type ? $document_type : self::detect_document_type( $order ) );
+        $format        = isset( $settings['edoc_format'] ) ? sanitize_key( (string) $settings['edoc_format'] ) : 'ubl';
+        $format        = in_array( $format, array( 'ubl', 'cii', 'peppol' ), true ) ? $format : 'ubl';
+
+        if ( 'cii' === $format ) {
+            return self::build_cii_xml_document( $order, $document_type, $settings );
+        }
+
+        return self::build_ubl_xml_document( $order, $document_type, $settings, 'peppol' === $format );
+    }
+
+    public static function get_edocument_filename( WC_Order $order, $document_type = '' ) {
+        $document_type = self::normalize_document_type( $document_type ? $document_type : self::detect_document_type( $order ) );
+
+        return self::get_document_filename_base( $order, $document_type ) . '.xml';
+    }
+
+    public static function purge_cached_documents_manually() {
+        self::purge_cached_documents();
+    }
+
+    public static function reset_document_counters() {
+        if ( ! class_exists( 'EOP_PDF_Settings' ) ) {
+            return;
+        }
+
+        $settings = EOP_PDF_Settings::get_all();
+
+        foreach ( array( 'order', 'proposal' ) as $document_type ) {
+            $settings[ $document_type . '_next_number' ]     = '1';
+            $settings[ $document_type . '_last_reset_year' ] = '0';
+        }
+
+        update_option( EOP_PDF_Settings::OPTION_KEY, $settings );
+    }
+
     public static function get_preview_html( WC_Order $order, $document_type = '' ) {
         $settings         = self::get_pdf_settings();
         $document_type    = self::normalize_document_type( $document_type ? $document_type : self::detect_document_type( $order ) );
@@ -336,6 +495,8 @@ class EOP_Document_Manager {
         $line_items       = self::get_order_line_items_display_data( $order );
         $shop_name        = trim( (string) $settings['shop_name'] );
         $shop_logo_url    = trim( (string) $settings['shop_logo_url'] );
+        $shop_logo_height = self::sanitize_css_measurement( $settings['shop_logo_height'] ?? '' );
+        $shop_identity    = self::get_shop_identity_lines( $settings );
         $customer_name    = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
         $date             = $order->get_date_created();
         $totals           = EOP_Order_Creator::sync_order_totals( $order );
@@ -349,6 +510,7 @@ class EOP_Document_Manager {
         $show_billing     = 'yes' === $document_config['show_billing'];
         $show_notes       = 'yes' === $document_config['show_notes'];
         $show_sku         = 'yes' === $document_config['show_sku'];
+        $test_mode        = ! empty( $settings['test_mode'] ) && 'yes' === (string) $settings['test_mode'];
         $total_rows       = self::get_document_total_rows( $totals, $document_type );
         $billing_label    = self::get_billing_label( $order );
 
@@ -356,14 +518,19 @@ class EOP_Document_Manager {
         ?>
         <div class="eop-pdf-preview eop-pdf-preview--<?php echo esc_attr( $template_name ); ?><?php echo $ink_saving ? ' is-ink-saving' : ''; ?>">
             <div class="eop-pdf-preview__sheet eop-pdf-preview__sheet--<?php echo esc_attr( strtolower( $paper_size ) ); ?>">
+                <?php if ( $test_mode ) : ?>
+                    <div class="eop-pdf-preview__watermark"><?php esc_html_e( 'MODO DE TESTE', EOP_TEXT_DOMAIN ); ?></div>
+                <?php endif; ?>
                 <div class="eop-pdf-preview__header">
                     <div class="eop-pdf-preview__brand">
                         <?php if ( $shop_logo_url ) : ?>
-                            <img class="eop-pdf-preview__logo" src="<?php echo esc_url( $shop_logo_url ); ?>" alt="">
+                            <img class="eop-pdf-preview__logo" src="<?php echo esc_url( $shop_logo_url ); ?>" style="max-height: <?php echo esc_attr( $shop_logo_height ); ?>;" alt="">
                         <?php endif; ?>
                         <div>
                             <strong><?php echo esc_html( $shop_name ?: get_bloginfo( 'name' ) ); ?></strong>
-                            <span><?php echo esc_html( self::get_shop_address_label() ); ?></span>
+                            <?php foreach ( $shop_identity as $identity_line ) : ?>
+                                <span><?php echo esc_html( $identity_line ); ?></span>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                     <div class="eop-pdf-preview__meta">
@@ -475,8 +642,11 @@ class EOP_Document_Manager {
         $token         = isset( $_GET['token'] ) ? sanitize_text_field( wp_unslash( $_GET['token'] ) ) : '';
         $order_id      = absint( $_GET['order_id'] ?? 0 );
         $force_download = isset( $_GET['download'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['download'] ) );
-        $is_public     = '' !== $token;
-        $order         = $is_public ? self::get_order_by_token( $token ) : wc_get_order( $order_id );
+        $order         = $order_id ? wc_get_order( $order_id ) : null;
+
+        if ( ! $order instanceof WC_Order && '' !== $token ) {
+            $order = self::get_order_by_token( $token, $document_type );
+        }
 
         if ( ! $order instanceof WC_Order ) {
             wp_die( esc_html__( 'Documento nao encontrado.', EOP_TEXT_DOMAIN ) );
@@ -486,15 +656,21 @@ class EOP_Document_Manager {
             wp_die( esc_html__( 'Documento indisponivel para este pedido.', EOP_TEXT_DOMAIN ) );
         }
 
+        $document_type = self::resolve_document_type_for_order( $order, $document_type );
+
+        $is_public = self::is_public_token_request( $order, $document_type, $token );
+
         if ( $is_public ) {
-            if ( 'proposal' !== $document_type || ! self::public_token_matches_order( $order, $token ) || ! self::can_public_proposal_download( $order ) ) {
+            if ( ! self::can_access_via_token( $order, $document_type, $token ) ) {
                 wp_die( esc_html__( 'Documento indisponivel.', EOP_TEXT_DOMAIN ) );
             }
         } else {
-            $nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '';
+            if ( self::requires_private_nonce() ) {
+                $nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '';
 
-            if ( ! wp_verify_nonce( $nonce, 'eop_download_pdf_' . $order->get_id() . '_' . $document_type ) ) {
-                wp_die( esc_html__( 'Link de documento invalido.', EOP_TEXT_DOMAIN ) );
+                if ( ! wp_verify_nonce( $nonce, 'eop_download_pdf_' . $order->get_id() . '_' . $document_type ) ) {
+                    wp_die( esc_html__( 'Link de documento invalido.', EOP_TEXT_DOMAIN ) );
+                }
             }
 
             if ( current_user_can( 'edit_shop_orders' ) ) {
@@ -511,6 +687,7 @@ class EOP_Document_Manager {
         }
 
         self::store_document_meta( $order, $document_type, $is_public );
+        self::maybe_mark_document_printed( $order, $document_type, $is_public );
         self::get_document_number( $order, $document_type, true );
 
         $binary = self::maybe_build_browser_pdf_document( $order, $document_type );
@@ -522,10 +699,23 @@ class EOP_Document_Manager {
         $filename = self::get_document_filename( $order, $document_type );
         $disposition = $force_download ? 'attachment' : self::get_content_disposition();
 
+        self::log_document_event(
+            $order,
+            $document_type,
+            sprintf(
+                /* translators: 1: document type, 2: access mode */
+                __( 'Documento %1$s gerado com acesso %2$s.', EOP_TEXT_DOMAIN ),
+                $document_type,
+                $is_public ? 'token' : 'restrito'
+            )
+        );
+
         nocache_headers();
         header( 'Content-Type: application/pdf' );
-        header( 'Content-Disposition: ' . $disposition . '; filename="' . $filename . '"; filename*=UTF-8\'\'' . rawurlencode( $filename ) );
+        header( 'Content-Disposition: ' . $disposition . '; filename="' . $filename . '"' );
         header( 'Content-Length: ' . strlen( $binary ) );
+        header( 'Cache-Control: private, max-age=0, must-revalidate' );
+        header( 'Pragma: public' );
 
         echo $binary; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         exit;
@@ -552,22 +742,29 @@ class EOP_Document_Manager {
         return 'yes' === $order->get_meta( '_eop_is_proposal', true ) && hash_equals( (string) $order->get_meta( '_eop_public_token', true ), (string) $token );
     }
 
-    private static function get_order_by_token( $token ) {
-        $orders = wc_get_orders(
-            array(
-                'limit'      => 1,
-                'type'       => 'shop_order',
-                'meta_key'   => '_eop_public_token',
-                'meta_value' => $token,
-                'status'     => array_keys( wc_get_order_statuses() ),
+    private static function get_order_by_token( $token, $document_type = 'order' ) {
+        global $wpdb;
+
+        $meta_keys = array_unique(
+            array_filter(
+                array(
+                    '_eop_public_token',
+                    self::get_private_access_token_meta_key( $document_type ),
+                    'proposal' === self::normalize_document_type( $document_type ) ? self::get_private_access_token_meta_key( 'proposal' ) : '',
+                )
             )
         );
 
-        if ( empty( $orders[0] ) || ! $orders[0] instanceof WC_Order ) {
+        if ( empty( $meta_keys ) ) {
             return null;
         }
 
-        return $orders[0];
+        $placeholders = implode( ', ', array_fill( 0, count( $meta_keys ), '%s' ) );
+        $query        = "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key IN ({$placeholders}) AND meta_value = %s ORDER BY meta_id DESC LIMIT 1";
+        $prepared     = $wpdb->prepare( $query, array_merge( $meta_keys, array( $token ) ) );
+        $order_id     = absint( $wpdb->get_var( $prepared ) );
+
+        return $order_id ? wc_get_order( $order_id ) : null;
     }
 
     private static function detect_document_type( WC_Order $order ) {
@@ -588,7 +785,14 @@ class EOP_Document_Manager {
     }
 
     private static function get_document_filename( WC_Order $order, $document_type ) {
-        return sanitize_file_name( $order->get_id() . '.pdf' );
+        return self::get_document_filename_base( $order, $document_type ) . '.pdf';
+    }
+
+    private static function get_document_filename_base( WC_Order $order, $document_type ) {
+        $document_type = self::normalize_document_type( $document_type );
+        $prefix        = 'proposal' === $document_type ? 'proposta' : 'pedido';
+
+        return sanitize_file_name( $prefix . '-' . $order->get_id() );
     }
 
     private static function build_pdf_document( WC_Order $order, $document_type ) {
@@ -608,12 +812,13 @@ class EOP_Document_Manager {
         $date            = $order->get_date_created();
         $document_number = self::get_document_number( $order, $document_type, false );
         $company_name    = trim( (string) $settings['shop_name'] );
-        $company_addr    = trim( self::get_shop_address_label() );
+        $company_lines   = self::get_shop_identity_lines( $settings );
         $footer_note     = trim( (string) $settings['shop_footer'] );
         $customer_name   = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
         $show_sku        = 'yes' === $document_config['show_sku'];
         $show_notes      = 'yes' === $document_config['show_notes'];
         $billing_label   = self::get_billing_label( $order );
+        $test_mode       = ! empty( $settings['test_mode'] ) && 'yes' === (string) $settings['test_mode'];
         $show_line_total = false;
 
         foreach ( $columns as $column ) {
@@ -729,14 +934,20 @@ class EOP_Document_Manager {
         $ensure_space( 220 );
 
         $add_text_at( $company_name ?: get_bloginfo( 'name' ), $page_left, $y, 'F2', 20, 'left', 0.08 );
-        $add_text_at( $company_addr, $page_left, $y - 24, 'F1', 11, 'left', 0.45 );
+
+        foreach ( $company_lines as $line_index => $company_line ) {
+            $add_text_at( $company_line, $page_left, $y - 24 - ( $line_index * 14 ), 'F1', 11, 'left', 0.45 );
+        }
 
         $add_text_at( $document_heading, $page_right, $y + 2, 'F2', 25, 'right', 0.08 );
+        if ( $test_mode ) {
+            $add_text_at( __( 'MODO DE TESTE', EOP_TEXT_DOMAIN ), $page_right, $y - 16, 'F2', 12, 'right', 0.35 );
+        }
         $add_text_at( sprintf( __( 'Numero do documento: %s', EOP_TEXT_DOMAIN ), $document_number ), $page_right, $y - 24, 'F1', 11, 'right', 0.36 );
         $add_text_at( sprintf( __( 'Data: %s', EOP_TEXT_DOMAIN ), $date ? $date->date_i18n( 'd/m/Y' ) : '—' ), $page_right, $y - 40, 'F1', 11, 'right', 0.36 );
         $add_text_at( sprintf( __( 'Pedido WooCommerce: #%s', EOP_TEXT_DOMAIN ), $order->get_id() ), $page_right, $y - 56, 'F1', 11, 'right', 0.36 );
 
-        $y -= 98;
+        $y -= max( 98, 70 + ( count( $company_lines ) * 14 ) );
 
         if ( ! empty( $summary_blocks ) ) {
             $block_count = count( $summary_blocks );
@@ -768,7 +979,7 @@ class EOP_Document_Manager {
         $header_top    = $y;
         $header_height = 44;
         $fill_rect( $page_left, $header_top, $content_width, $header_height, 0.08 );
-        $add_text_at( strtoupper( $column_labels['product'] ), $page_left + 12, $header_top - 21, 'F2', 9, 'left', 1 );
+        $add_text_at( $column_labels['product'], $page_left + 12, $header_top - 21, 'F2', 9, 'left', 1 );
 
         $column_positions = array(
             'quantity'              => 240,
@@ -778,7 +989,7 @@ class EOP_Document_Manager {
         );
 
         $render_column_header = function ( $label, $x ) use ( $header_top, $add_text_at ) {
-            $lines      = array_slice( self::wrap_text( strtoupper( $label ), 16 ), 0, 3 );
+            $lines      = array_slice( self::wrap_text( $label, 16 ), 0, 3 );
             $line_count = count( $lines );
             $start_gap  = 21 - max( 0, $line_count - 1 ) * 5;
 
@@ -927,6 +1138,8 @@ class EOP_Document_Manager {
             return $binary;
         }
 
+        self::log_document_event( $order, $document_type, __( 'Fallback para browser headless acionado apos falha ou indisponibilidade do Dompdf.', EOP_TEXT_DOMAIN ) );
+
         return self::maybe_build_headless_browser_pdf_document( $order, $document_type );
     }
 
@@ -978,8 +1191,25 @@ class EOP_Document_Manager {
 
             $binary = $dompdf->output();
 
-            return is_string( $binary ) ? $binary : '';
+            if ( ! is_string( $binary ) || '' === $binary ) {
+                return '';
+            }
+
+            $pdf_file = trailingslashit( $runtime_paths['temp'] ) . self::get_document_filename( $order, $document_type );
+
+            @unlink( $pdf_file );
+
+            if ( false === file_put_contents( $pdf_file, $binary ) ) {
+                return $binary;
+            }
+
+            $stored_binary = file_get_contents( $pdf_file );
+
+            @unlink( $pdf_file );
+
+            return false === $stored_binary ? $binary : $stored_binary;
         } catch ( \Throwable $throwable ) {
+            self::log_document_event( $order, $document_type, sprintf( __( 'Dompdf falhou: %s', EOP_TEXT_DOMAIN ), $throwable->getMessage() ) );
             return '';
         }
     }
@@ -991,14 +1221,18 @@ class EOP_Document_Manager {
             return '';
         }
 
-        $html_file = wp_tempnam( 'eop-pdf-preview.html' );
-        $pdf_file  = wp_tempnam( 'eop-pdf-output.pdf' );
+        $runtime_paths = self::get_dompdf_runtime_paths();
 
-        if ( ! $html_file || ! $pdf_file ) {
+        if ( empty( $runtime_paths['temp'] ) ) {
             return '';
         }
 
+        $file_base = self::get_document_filename_base( $order, $document_type );
+        $html_file = trailingslashit( $runtime_paths['temp'] ) . $file_base . '.html';
+        $pdf_file  = trailingslashit( $runtime_paths['temp'] ) . self::get_document_filename( $order, $document_type );
+
         @unlink( $pdf_file );
+        @unlink( $html_file );
 
         $html = self::get_preview_print_document_html( $order, $document_type );
 
@@ -1025,6 +1259,7 @@ class EOP_Document_Manager {
         @exec( $command, $output, $status );
 
         if ( 0 !== (int) $status || ! file_exists( $pdf_file ) ) {
+            self::log_document_event( $order, $document_type, __( 'Headless browser nao conseguiu gerar o PDF.', EOP_TEXT_DOMAIN ) );
             @unlink( $html_file );
             @unlink( $pdf_file );
             return '';
@@ -1327,6 +1562,398 @@ class EOP_Document_Manager {
         return class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings::get_all() : array();
     }
 
+    private static function use_pretty_pdf_links() {
+        $settings = self::get_pdf_settings();
+
+        return isset( $settings['advanced_pretty_links'] ) && 'yes' === (string) $settings['advanced_pretty_links'];
+    }
+
+    private static function get_access_policy() {
+        $settings = self::get_pdf_settings();
+        $policy   = isset( $settings['advanced_link_access'] ) ? sanitize_key( (string) $settings['advanced_link_access'] ) : 'private_nonce';
+
+        return in_array( $policy, array( 'private_nonce', 'public_token', 'order_owner' ), true ) ? $policy : 'private_nonce';
+    }
+
+    private static function requires_private_nonce() {
+        return 'private_nonce' === self::get_access_policy();
+    }
+
+    private static function get_private_download_args( WC_Order $order, $document_type, $force_download ) {
+        $args = array(
+            'order_id' => $order->get_id(),
+            'document' => $document_type,
+            'download' => $force_download ? '1' : '0',
+        );
+
+        if ( self::requires_private_nonce() ) {
+            $args['_wpnonce'] = wp_create_nonce( 'eop_download_pdf_' . $order->get_id() . '_' . $document_type );
+        } elseif ( 'public_token' === self::get_access_policy() ) {
+            $args['token'] = rawurlencode( self::get_private_access_token( $order, $document_type ) );
+        }
+
+        return $args;
+    }
+
+    private static function is_public_token_request( WC_Order $order, $document_type, $token ) {
+        return '' !== (string) $token && self::can_access_via_token( $order, $document_type, $token );
+    }
+
+    private static function can_access_via_token( WC_Order $order, $document_type, $token ) {
+        $token = (string) $token;
+
+        if ( '' === $token ) {
+            return false;
+        }
+
+        if ( 'proposal' === $document_type && self::public_token_matches_order( $order, $token ) && self::can_public_proposal_download( $order ) ) {
+            return true;
+        }
+
+        return 'public_token' === self::get_access_policy() && self::private_access_token_matches_order( $order, $document_type, $token );
+    }
+
+    private static function get_private_access_token( WC_Order $order, $document_type ) {
+        $document_type = self::normalize_document_type( $document_type );
+        $meta_key      = self::get_private_access_token_meta_key( $document_type );
+        $token         = (string) $order->get_meta( $meta_key, true );
+
+        if ( 'proposal' === $document_type ) {
+            $public_token = (string) $order->get_meta( '_eop_public_token', true );
+
+            if ( '' !== $public_token ) {
+                return $public_token;
+            }
+        }
+
+        if ( '' === $token ) {
+            $token = wp_generate_password( 32, false, false );
+            $order->update_meta_data( $meta_key, $token );
+            $order->save();
+        }
+
+        return $token;
+    }
+
+    private static function get_private_access_token_meta_key( $document_type ) {
+        return '_eop_pdf_' . self::normalize_document_type( $document_type ) . '_access_token';
+    }
+
+    private static function private_access_token_matches_order( WC_Order $order, $document_type, $token ) {
+        $expected = (string) $order->get_meta( self::get_private_access_token_meta_key( $document_type ), true );
+
+        if ( '' === $expected && 'proposal' === self::normalize_document_type( $document_type ) ) {
+            $expected = (string) $order->get_meta( '_eop_public_token', true );
+        }
+
+        return '' !== $expected && hash_equals( $expected, (string) $token );
+    }
+
+    private static function should_auto_cleanup_cache() {
+        $settings = self::get_pdf_settings();
+
+        return isset( $settings['advanced_auto_cleanup'] ) && 'yes' === (string) $settings['advanced_auto_cleanup'];
+    }
+
+    private static function should_log_debug() {
+        $settings = self::get_pdf_settings();
+
+        return isset( $settings['advanced_debug'] ) && 'yes' === (string) $settings['advanced_debug'];
+    }
+
+    private static function should_log_order_notes() {
+        $settings = self::get_pdf_settings();
+
+        return isset( $settings['advanced_order_note_logs'] ) && 'yes' === (string) $settings['advanced_order_note_logs'];
+    }
+
+    private static function log_document_event( WC_Order $order, $document_type, $message ) {
+        $prefix = sprintf( '[EOP PDF][%s][pedido %d] ', strtoupper( self::normalize_document_type( $document_type ) ), $order->get_id() );
+
+        if ( self::should_log_debug() ) {
+            error_log( $prefix . wp_strip_all_tags( (string) $message ) );
+        }
+
+        if ( self::should_log_order_notes() ) {
+            $order->add_order_note( wp_strip_all_tags( (string) $message ), false, true );
+        }
+    }
+
+    private static function maybe_mark_document_printed( WC_Order $order, $document_type, $is_public ) {
+        $settings       = self::get_pdf_settings();
+        $document_type  = self::normalize_document_type( $document_type );
+        $setting_key    = $document_type . '_mark_printed';
+
+        if ( ! isset( $settings[ $setting_key ] ) || 'yes' !== (string) $settings[ $setting_key ] ) {
+            return;
+        }
+
+        $timestamp = current_time( 'mysql' );
+        $user_id   = get_current_user_id();
+
+        $order->update_meta_data( '_eop_pdf_' . $document_type . '_printed_at', $timestamp );
+        $order->update_meta_data( '_eop_pdf_' . $document_type . '_printed_by', $user_id );
+        $order->update_meta_data( '_eop_pdf_' . $document_type . '_printed_access', $is_public ? 'token' : 'restricted' );
+        $order->save();
+    }
+
+    private static function should_log_edoc() {
+        $settings = self::get_pdf_settings();
+
+        return isset( $settings['edoc_logging'] ) && 'yes' === (string) $settings['edoc_logging'];
+    }
+
+    private static function maybe_cleanup_cache_directories() {
+        if ( ! self::should_auto_cleanup_cache() ) {
+            return;
+        }
+
+        $upload_dir = wp_upload_dir();
+
+        if ( empty( $upload_dir['basedir'] ) ) {
+            return;
+        }
+
+        self::cleanup_directory_by_age( trailingslashit( $upload_dir['basedir'] ) . 'eop-pdf', 7 * DAY_IN_SECONDS, array( 'dompdf' ) );
+        self::cleanup_directory_by_age( trailingslashit( $upload_dir['basedir'] ) . 'eop-pdf/dompdf/tmp', DAY_IN_SECONDS );
+    }
+
+    private static function cleanup_directory_by_age( $directory, $ttl, $protected = array() ) {
+        if ( ! is_dir( $directory ) ) {
+            return;
+        }
+
+        $entries = scandir( $directory );
+
+        if ( false === $entries ) {
+            return;
+        }
+
+        $now = time();
+
+        foreach ( $entries as $entry ) {
+            if ( '.' === $entry || '..' === $entry || in_array( $entry, $protected, true ) ) {
+                continue;
+            }
+
+            $path = trailingslashit( $directory ) . $entry;
+
+            if ( is_dir( $path ) ) {
+                if ( filemtime( $path ) && ( $now - (int) filemtime( $path ) ) >= $ttl ) {
+                    self::delete_directory_recursive( $path );
+                }
+
+                continue;
+            }
+
+            if ( is_file( $path ) && filemtime( $path ) && ( $now - (int) filemtime( $path ) ) >= $ttl ) {
+                @unlink( $path );
+            }
+        }
+    }
+
+    private static function delete_directory_recursive( $directory ) {
+        if ( ! is_dir( $directory ) ) {
+            return;
+        }
+
+        $entries = scandir( $directory );
+
+        if ( false !== $entries ) {
+            foreach ( $entries as $entry ) {
+                if ( '.' === $entry || '..' === $entry ) {
+                    continue;
+                }
+
+                $path = trailingslashit( $directory ) . $entry;
+
+                if ( is_dir( $path ) ) {
+                    self::delete_directory_recursive( $path );
+                } elseif ( is_file( $path ) ) {
+                    @unlink( $path );
+                }
+            }
+        }
+
+        @rmdir( $directory );
+    }
+
+    private static function sanitize_css_measurement( $value, $fallback = '3cm' ) {
+        $value = trim( (string) $value );
+
+        if ( '' === $value ) {
+            return $fallback;
+        }
+
+        if ( preg_match( '/^\d+(?:\.\d+)?(px|cm|mm|in|pt|pc|em|rem|vh|vw|%)$/', $value ) ) {
+            return $value;
+        }
+
+        return $fallback;
+    }
+
+    private static function maybe_log_edocument_event( WC_Order $order, $message ) {
+        if ( self::should_log_edoc() || self::should_log_debug() ) {
+            self::log_document_event( $order, self::detect_document_type( $order ), $message );
+        }
+    }
+
+    private static function build_ubl_xml_document( WC_Order $order, $document_type, $settings, $is_peppol = false ) {
+        $number      = self::get_document_number( $order, $document_type, false );
+        $line_items  = self::get_order_line_items_display_data( $order );
+        $totals      = EOP_Order_Creator::sync_order_totals( $order );
+        $date        = $order->get_date_created();
+        $issue_date  = $date ? $date->date_i18n( 'Y-m-d' ) : gmdate( 'Y-m-d' );
+        $customer_id = $order->get_billing_email() ? $order->get_billing_email() : 'cliente-' . $order->get_id();
+        $supplier_id = ! empty( $settings['shop_email'] ) ? $settings['shop_email'] : home_url();
+        $xml         = array();
+
+        $xml[] = '<?xml version="1.0" encoding="UTF-8"?>';
+        $xml[] = '<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">';
+
+        if ( $is_peppol ) {
+            $xml[] = '  <cbc:CustomizationID>urn:fdc:peppol.eu:2017:poacc:billing:3.0</cbc:CustomizationID>';
+            $xml[] = '  <cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>';
+        }
+
+        $xml[] = '  <cbc:ID>' . esc_html( $number ) . '</cbc:ID>';
+        $xml[] = '  <cbc:IssueDate>' . esc_html( $issue_date ) . '</cbc:IssueDate>';
+        $xml[] = '  <cbc:DocumentCurrencyCode>' . esc_html( get_woocommerce_currency() ) . '</cbc:DocumentCurrencyCode>';
+        $xml[] = '  <cac:AccountingSupplierParty>';
+        $xml[] = '    <cac:Party>';
+        $xml[] = '      <cbc:EndpointID schemeID="' . esc_attr( $settings['edoc_supplier_scheme'] ?: 'EMAIL' ) . '">' . esc_html( $supplier_id ) . '</cbc:EndpointID>';
+        $xml[] = '      <cac:PartyName><cbc:Name>' . esc_html( $settings['shop_name'] ?: get_bloginfo( 'name' ) ) . '</cbc:Name></cac:PartyName>';
+        $xml[] = '    </cac:Party>';
+        $xml[] = '  </cac:AccountingSupplierParty>';
+        $xml[] = '  <cac:AccountingCustomerParty>';
+        $xml[] = '    <cac:Party>';
+        $xml[] = '      <cbc:EndpointID schemeID="' . esc_attr( $settings['edoc_customer_scheme'] ?: 'EMAIL' ) . '">' . esc_html( $customer_id ) . '</cbc:EndpointID>';
+        $xml[] = '      <cac:PartyName><cbc:Name>' . esc_html( trim( $order->get_formatted_billing_full_name() ) ?: 'Cliente' ) . '</cbc:Name></cac:PartyName>';
+        $xml[] = '    </cac:Party>';
+        $xml[] = '  </cac:AccountingCustomerParty>';
+
+        foreach ( $line_items as $index => $line_item ) {
+            $sku = $line_item['product'] && $line_item['product']->get_sku() ? $line_item['product']->get_sku() : '';
+
+            $xml[] = '  <cac:InvoiceLine>';
+            $xml[] = '    <cbc:ID>' . esc_html( (string) ( $index + 1 ) ) . '</cbc:ID>';
+            $xml[] = '    <cbc:InvoicedQuantity>' . esc_html( (string) $line_item['quantity'] ) . '</cbc:InvoicedQuantity>';
+            $xml[] = '    <cbc:LineExtensionAmount currencyID="' . esc_attr( get_woocommerce_currency() ) . '">' . esc_html( wc_format_decimal( $line_item['line_total'], wc_get_price_decimals() ) ) . '</cbc:LineExtensionAmount>';
+            $xml[] = '    <cac:Item>';
+            $xml[] = '      <cbc:Name>' . esc_html( $line_item['item']->get_name() ) . '</cbc:Name>';
+            if ( '' !== $sku ) {
+                $xml[] = '      <cac:SellersItemIdentification><cbc:ID>' . esc_html( $sku ) . '</cbc:ID></cac:SellersItemIdentification>';
+            }
+            $xml[] = '    </cac:Item>';
+            $xml[] = '    <cac:Price><cbc:PriceAmount currencyID="' . esc_attr( get_woocommerce_currency() ) . '">' . esc_html( wc_format_decimal( $line_item['discounted_unit_price'], wc_get_price_decimals() ) ) . '</cbc:PriceAmount></cac:Price>';
+            $xml[] = '  </cac:InvoiceLine>';
+        }
+
+        $xml[] = '  <cac:LegalMonetaryTotal>';
+        $xml[] = '    <cbc:LineExtensionAmount currencyID="' . esc_attr( get_woocommerce_currency() ) . '">' . esc_html( wc_format_decimal( $totals['items_subtotal'], wc_get_price_decimals() ) ) . '</cbc:LineExtensionAmount>';
+        $xml[] = '    <cbc:AllowanceTotalAmount currencyID="' . esc_attr( get_woocommerce_currency() ) . '">' . esc_html( wc_format_decimal( $totals['discount_total'], wc_get_price_decimals() ) ) . '</cbc:AllowanceTotalAmount>';
+        $xml[] = '    <cbc:PayableAmount currencyID="' . esc_attr( get_woocommerce_currency() ) . '">' . esc_html( wc_format_decimal( $totals['grand_total'], wc_get_price_decimals() ) ) . '</cbc:PayableAmount>';
+        $xml[] = '  </cac:LegalMonetaryTotal>';
+
+        if ( ! empty( $settings['edoc_embed_pdf'] ) && 'yes' === (string) $settings['edoc_embed_pdf'] ) {
+            $pdf_url = self::get_pdf_document_url( $order, $document_type, true );
+            $xml[]   = '  <cac:AdditionalDocumentReference>';
+            $xml[]   = '    <cbc:ID>PDF</cbc:ID>';
+            $xml[]   = '    <cac:Attachment><cac:ExternalReference><cbc:URI>' . esc_url( $pdf_url ) . '</cbc:URI></cac:ExternalReference></cac:Attachment>';
+            $xml[]   = '  </cac:AdditionalDocumentReference>';
+        }
+
+        if ( $is_peppol && ! empty( $settings['edoc_network_endpoint'] ) ) {
+            $xml[] = '  <cbc:BuyerReference>' . esc_html( $settings['edoc_network_endpoint'] ) . '</cbc:BuyerReference>';
+        }
+
+        $xml[] = '</Invoice>';
+
+        self::maybe_log_edocument_event( $order, __( 'XML eletronico UBL/Peppol gerado no admin.', EOP_TEXT_DOMAIN ) );
+
+        return implode( "\n", $xml );
+    }
+
+    private static function build_cii_xml_document( WC_Order $order, $document_type, $settings ) {
+        $number      = self::get_document_number( $order, $document_type, false );
+        $line_items  = self::get_order_line_items_display_data( $order );
+        $totals      = EOP_Order_Creator::sync_order_totals( $order );
+        $date        = $order->get_date_created();
+        $issue_date  = $date ? $date->date_i18n( 'Ymd' ) : gmdate( 'Ymd' );
+        $xml         = array();
+
+        $xml[] = '<?xml version="1.0" encoding="UTF-8"?>';
+        $xml[] = '<CrossIndustryInvoice xmlns="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100">';
+        $xml[] = '  <ExchangedDocument>';
+        $xml[] = '    <ID>' . esc_html( $number ) . '</ID>';
+        $xml[] = '    <IssueDateTime><DateTimeString format="102">' . esc_html( $issue_date ) . '</DateTimeString></IssueDateTime>';
+        $xml[] = '  </ExchangedDocument>';
+        $xml[] = '  <SupplyChainTradeTransaction>';
+        $xml[] = '    <ApplicableHeaderTradeAgreement>';
+        $xml[] = '      <SellerTradeParty><Name>' . esc_html( $settings['shop_name'] ?: get_bloginfo( 'name' ) ) . '</Name></SellerTradeParty>';
+        $xml[] = '      <BuyerTradeParty><Name>' . esc_html( trim( $order->get_formatted_billing_full_name() ) ?: 'Cliente' ) . '</Name></BuyerTradeParty>';
+        $xml[] = '    </ApplicableHeaderTradeAgreement>';
+
+        foreach ( $line_items as $index => $line_item ) {
+            $xml[] = '    <IncludedSupplyChainTradeLineItem>';
+            $xml[] = '      <AssociatedDocumentLineDocument><LineID>' . esc_html( (string) ( $index + 1 ) ) . '</LineID></AssociatedDocumentLineDocument>';
+            $xml[] = '      <SpecifiedTradeProduct><Name>' . esc_html( $line_item['item']->get_name() ) . '</Name></SpecifiedTradeProduct>';
+            $xml[] = '      <SpecifiedLineTradeAgreement><NetPriceProductTradePrice><ChargeAmount>' . esc_html( wc_format_decimal( $line_item['discounted_unit_price'], wc_get_price_decimals() ) ) . '</ChargeAmount></NetPriceProductTradePrice></SpecifiedLineTradeAgreement>';
+            $xml[] = '      <SpecifiedLineTradeDelivery><BilledQuantity>' . esc_html( (string) $line_item['quantity'] ) . '</BilledQuantity></SpecifiedLineTradeDelivery>';
+            $xml[] = '      <SpecifiedLineTradeSettlement><SpecifiedTradeSettlementLineMonetarySummation><LineTotalAmount>' . esc_html( wc_format_decimal( $line_item['line_total'], wc_get_price_decimals() ) ) . '</LineTotalAmount></SpecifiedTradeSettlementLineMonetarySummation></SpecifiedLineTradeSettlement>';
+            $xml[] = '    </IncludedSupplyChainTradeLineItem>';
+        }
+
+        $xml[] = '    <ApplicableHeaderTradeSettlement>';
+        $xml[] = '      <InvoiceCurrencyCode>' . esc_html( get_woocommerce_currency() ) . '</InvoiceCurrencyCode>';
+        $xml[] = '      <SpecifiedTradeSettlementHeaderMonetarySummation>';
+        $xml[] = '        <LineTotalAmount>' . esc_html( wc_format_decimal( $totals['items_subtotal'], wc_get_price_decimals() ) ) . '</LineTotalAmount>';
+        $xml[] = '        <AllowanceTotalAmount>' . esc_html( wc_format_decimal( $totals['discount_total'], wc_get_price_decimals() ) ) . '</AllowanceTotalAmount>';
+        $xml[] = '        <GrandTotalAmount>' . esc_html( wc_format_decimal( $totals['grand_total'], wc_get_price_decimals() ) ) . '</GrandTotalAmount>';
+        $xml[] = '      </SpecifiedTradeSettlementHeaderMonetarySummation>';
+        $xml[] = '    </ApplicableHeaderTradeSettlement>';
+        $xml[] = '  </SupplyChainTradeTransaction>';
+        $xml[] = '</CrossIndustryInvoice>';
+
+        self::maybe_log_edocument_event( $order, __( 'XML eletronico CII gerado no admin.', EOP_TEXT_DOMAIN ) );
+
+        return implode( "\n", $xml );
+    }
+
+    private static function get_shop_identity_lines( $settings = null ) {
+        $settings = is_array( $settings ) ? $settings : self::get_pdf_settings();
+        $lines    = array();
+        $address  = self::get_shop_address_label();
+
+        if ( '' !== $address ) {
+            $lines[] = $address;
+        }
+
+        if ( ! empty( $settings['shop_phone'] ) ) {
+            $lines[] = sprintf( __( 'Telefone: %s', EOP_TEXT_DOMAIN ), wp_strip_all_tags( (string) $settings['shop_phone'] ) );
+        }
+
+        if ( ! empty( $settings['shop_email'] ) ) {
+            $lines[] = sprintf( __( 'E-mail: %s', EOP_TEXT_DOMAIN ), wp_strip_all_tags( (string) $settings['shop_email'] ) );
+        }
+
+        if ( ! empty( $settings['shop_vat_number'] ) ) {
+            $lines[] = sprintf( __( 'Documento: %s', EOP_TEXT_DOMAIN ), wp_strip_all_tags( (string) $settings['shop_vat_number'] ) );
+        }
+
+        if ( ! empty( $settings['shop_chamber_of_commerce'] ) ) {
+            $lines[] = sprintf( __( 'Registro: %s', EOP_TEXT_DOMAIN ), wp_strip_all_tags( (string) $settings['shop_chamber_of_commerce'] ) );
+        }
+
+        foreach ( array( 'shop_extra_1', 'shop_extra_2', 'shop_extra_3' ) as $extra_key ) {
+            if ( ! empty( $settings[ $extra_key ] ) ) {
+                $lines[] = wp_strip_all_tags( (string) $settings[ $extra_key ] );
+            }
+        }
+
+        return array_values( array_filter( array_map( 'trim', $lines ) ) );
+    }
+
     private static function get_pdf_table_positions( $column_keys ) {
         $column_keys = array_values( array_filter( array_map( 'sanitize_key', (array) $column_keys ) ) );
         $count       = count( $column_keys );
@@ -1430,6 +2057,18 @@ class EOP_Document_Manager {
         }
 
         $settings = self::get_pdf_settings();
+        $last_year = absint( $settings[ $document_type . '_last_reset_year' ] ?? 0 );
+        $year      = absint( gmdate( 'Y', current_time( 'timestamp' ) ) );
+
+        if ( 'yes' === ( $settings[ $document_type . '_reset_yearly' ] ?? 'no' ) && $last_year !== $year ) {
+            $settings[ $document_type . '_next_number' ]     = '1';
+            $settings[ $document_type . '_last_reset_year' ] = (string) $year;
+
+            if ( class_exists( 'EOP_PDF_Settings' ) ) {
+                update_option( EOP_PDF_Settings::OPTION_KEY, $settings );
+            }
+        }
+
         $prefix   = (string) ( $settings[ $document_type . '_prefix' ] ?? '' );
         $suffix   = (string) ( $settings[ $document_type . '_suffix' ] ?? '' );
         $padding  = max( 0, absint( $settings[ $document_type . '_padding' ] ?? 0 ) );
@@ -1445,6 +2084,7 @@ class EOP_Document_Manager {
 
         if ( class_exists( 'EOP_PDF_Settings' ) ) {
             $settings[ $document_type . '_next_number' ] = (string) ( $next + 1 );
+            $settings[ $document_type . '_last_reset_year' ] = (string) $year;
             update_option( EOP_PDF_Settings::OPTION_KEY, $settings );
         }
 

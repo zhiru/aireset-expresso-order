@@ -15,12 +15,24 @@ if ( ! isset( $tabs[ $tab ] ) ) {
 $document        = isset( $_GET['document'] ) && 'proposal' === sanitize_key( wp_unslash( $_GET['document'] ) ) ? 'proposal' : 'order';
 $recent_orders   = EOP_Document_Manager::get_recent_orders( 20 );
 $preview_order   = EOP_Document_Manager::get_preview_order( absint( $_GET['preview_order'] ?? 0 ) );
+$preview_document = $preview_order instanceof WC_Order ? EOP_Document_Manager::get_document_type_for_order( $preview_order ) : $document;
+$editing_label   = 'proposal' === $document ? __( 'Proposta', EOP_TEXT_DOMAIN ) : __( 'Pedido', EOP_TEXT_DOMAIN );
+$preview_label   = 'proposal' === $preview_document ? __( 'Proposta', EOP_TEXT_DOMAIN ) : __( 'Pedido', EOP_TEXT_DOMAIN );
+$preview_notice  = $preview_order instanceof WC_Order && $preview_document !== $document;
 $preview_allowed = $preview_order instanceof WC_Order && 'no' === $pdf_settings['advanced_html_output'];
 $preview_mode    = empty( $_GET['preview_order'] ) ? __( 'Atualmente mostrando o ultimo pedido', EOP_TEXT_DOMAIN ) : __( 'Atualmente mostrando o pedido selecionado', EOP_TEXT_DOMAIN );
-$preview_pdf_url = $preview_order instanceof WC_Order ? EOP_Document_Manager::get_pdf_document_url( $preview_order, $document ) : '';
+$preview_pdf_url = $preview_order instanceof WC_Order ? EOP_Document_Manager::get_pdf_document_url( $preview_order, $preview_document ) : '';
+$preview_xml     = $preview_order instanceof WC_Order && class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_edocument_xml_preview( $preview_order, $preview_document ) : '';
+$preview_xml_url = $preview_order instanceof WC_Order ? wp_nonce_url( add_query_arg( array( 'action' => 'eop_download_edoc_xml', 'order_id' => $preview_order->get_id(), 'document' => $preview_document ), admin_url( 'admin-post.php' ) ), 'eop_download_edoc_xml' ) : '';
+$danger_zone_enabled = 'yes' === ( $pdf_settings['advanced_danger_zone'] ?? 'no' );
+$purge_cache_url = wp_nonce_url( add_query_arg( array( 'action' => 'eop_pdf_purge_cache' ), admin_url( 'admin-post.php' ) ), 'eop_pdf_purge_cache' );
+$reset_counters_url = wp_nonce_url( add_query_arg( array( 'action' => 'eop_pdf_reset_counters' ), admin_url( 'admin-post.php' ) ), 'eop_pdf_reset_counters' );
+$pdf_action_notice = isset( $_GET['eop_pdf_action'] ) ? sanitize_key( wp_unslash( $_GET['eop_pdf_action'] ) ) : '';
 $order_page_url  = EOP_Page_Installer::get_page_url( 'order' );
 $proposal_url    = EOP_Page_Installer::get_page_url( 'proposal' );
 $current_tab_label = isset( $tabs[ $tab ] ) ? $tabs[ $tab ] : __( 'PDF', EOP_TEXT_DOMAIN );
+$woo_general_url = admin_url( 'admin.php?page=wc-settings&tab=general' );
+$documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings::get_documentation_sections() : array();
 ?>
 <style>
     .eop-pdf-admin {
@@ -55,6 +67,12 @@ $current_tab_label = isset( $tabs[ $tab ] ) ? $tabs[ $tab ] : __( 'PDF', EOP_TEX
 
     <?php if ( isset( $_GET['settings-updated'] ) && 'true' === wp_unslash( $_GET['settings-updated'] ) ) : ?>
         <div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Configuracoes do PDF salvas com sucesso.', EOP_TEXT_DOMAIN ); ?></p></div>
+    <?php endif; ?>
+
+    <?php if ( 'cache_purged' === $pdf_action_notice ) : ?>
+        <div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Cache do modulo PDF removido com sucesso.', EOP_TEXT_DOMAIN ); ?></p></div>
+    <?php elseif ( 'counters_reset' === $pdf_action_notice ) : ?>
+        <div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Contadores de numeracao resetados para 1.', EOP_TEXT_DOMAIN ); ?></p></div>
     <?php endif; ?>
 
     <div class="eop-pdf-admin__shell" data-eop-pdf-shell data-eop-pdf-tab-current="<?php echo esc_attr( $tab ); ?>">
@@ -118,6 +136,9 @@ $current_tab_label = isset( $tabs[ $tab ] ) ? $tabs[ $tab ] : __( 'PDF', EOP_TEX
 
                     <details class="eop-pdf-admin__section" open>
                         <summary><?php esc_html_e( 'Informacoes sobre a loja', EOP_TEXT_DOMAIN ); ?></summary>
+                        <div class="eop-pdf-admin__section-note">
+                            <p><?php printf( wp_kses_post( __( 'Endereco, cidade, estado, CEP e pais sao sincronizados com o WooCommerce. Para alterar esses dados, edite em <a href="%s">WooCommerce > Configuracoes > Geral</a>.', EOP_TEXT_DOMAIN ) ), esc_url( $woo_general_url ) ); ?></p>
+                        </div>
                         <div class="eop-pdf-admin__grid">
                             <div class="eop-settings-field is-full">
                                 <label><?php esc_html_e( 'Logo/Cabecalho da loja', EOP_TEXT_DOMAIN ); ?></label>
@@ -149,27 +170,27 @@ $current_tab_label = isset( $tabs[ $tab ] ) ? $tabs[ $tab ] : __( 'PDF', EOP_TEX
                             </div>
                             <div class="eop-settings-field">
                                 <label for="eop_shop_address_line_1"><?php esc_html_e( 'Endereco da loja, linha 1', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_shop_address_line_1" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_address_line_1]" value="<?php echo esc_attr( $pdf_settings['shop_address_line_1'] ); ?>" />
+                                <input id="eop_shop_address_line_1" class="eop-settings-field__readonly" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_address_line_1]" value="<?php echo esc_attr( $pdf_settings['shop_address_line_1'] ); ?>" readonly aria-readonly="true" />
                             </div>
                             <div class="eop-settings-field">
                                 <label for="eop_shop_address_line_2"><?php esc_html_e( 'Endereco da loja, linha 2', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_shop_address_line_2" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_address_line_2]" value="<?php echo esc_attr( $pdf_settings['shop_address_line_2'] ); ?>" />
+                                <input id="eop_shop_address_line_2" class="eop-settings-field__readonly" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_address_line_2]" value="<?php echo esc_attr( $pdf_settings['shop_address_line_2'] ); ?>" readonly aria-readonly="true" />
                             </div>
                             <div class="eop-settings-field">
                                 <label for="eop_shop_city"><?php esc_html_e( 'Cidade', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_shop_city" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_city]" value="<?php echo esc_attr( $pdf_settings['shop_city'] ); ?>" />
+                                <input id="eop_shop_city" class="eop-settings-field__readonly" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_city]" value="<?php echo esc_attr( $pdf_settings['shop_city'] ); ?>" readonly aria-readonly="true" />
                             </div>
                             <div class="eop-settings-field">
                                 <label for="eop_shop_state"><?php esc_html_e( 'Estado', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_shop_state" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_state]" value="<?php echo esc_attr( $pdf_settings['shop_state'] ); ?>" />
+                                <input id="eop_shop_state" class="eop-settings-field__readonly" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_state]" value="<?php echo esc_attr( $pdf_settings['shop_state'] ); ?>" readonly aria-readonly="true" />
                             </div>
                             <div class="eop-settings-field">
                                 <label for="eop_shop_postcode"><?php esc_html_e( 'CEP', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_shop_postcode" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_postcode]" value="<?php echo esc_attr( $pdf_settings['shop_postcode'] ); ?>" />
+                                <input id="eop_shop_postcode" class="eop-settings-field__readonly" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_postcode]" value="<?php echo esc_attr( $pdf_settings['shop_postcode'] ); ?>" readonly aria-readonly="true" />
                             </div>
                             <div class="eop-settings-field">
                                 <label for="eop_shop_country"><?php esc_html_e( 'Pais', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_shop_country" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_country]" value="<?php echo esc_attr( $pdf_settings['shop_country'] ); ?>" />
+                                <input id="eop_shop_country" class="eop-settings-field__readonly" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_country]" value="<?php echo esc_attr( $pdf_settings['shop_country'] ); ?>" readonly aria-readonly="true" />
                             </div>
                             <div class="eop-settings-field">
                                 <label for="eop_shop_phone"><?php esc_html_e( 'Telefone da loja', EOP_TEXT_DOMAIN ); ?></label>
@@ -211,6 +232,15 @@ $current_tab_label = isset( $tabs[ $tab ] ) ? $tabs[ $tab ] : __( 'PDF', EOP_TEX
             <?php elseif ( 'documents' === $tab ) : ?>
                 <form method="post" action="options.php" class="eop-pdf-admin__form">
                     <?php settings_fields( 'eop_pdf_settings_group' ); ?>
+
+                    <div class="eop-pdf-admin__document-switcher" aria-label="<?php esc_attr_e( 'Documento em configuracao', EOP_TEXT_DOMAIN ); ?>">
+                        <a class="eop-pdf-admin__document-pill<?php echo 'order' === $document ? ' is-active' : ''; ?>" href="<?php echo esc_url( EOP_PDF_Admin_Page::get_tab_url( $tab, array( 'document' => 'order', 'preview_order' => $preview_order ? $preview_order->get_id() : 0 ) ) ); ?>"><?php esc_html_e( 'Pedido', EOP_TEXT_DOMAIN ); ?></a>
+                        <a class="eop-pdf-admin__document-pill<?php echo 'proposal' === $document ? ' is-active' : ''; ?>" href="<?php echo esc_url( EOP_PDF_Admin_Page::get_tab_url( $tab, array( 'document' => 'proposal', 'preview_order' => $preview_order ? $preview_order->get_id() : 0 ) ) ); ?>"><?php esc_html_e( 'Proposta', EOP_TEXT_DOMAIN ); ?></a>
+                    </div>
+
+                    <div class="eop-pdf-admin__notice eop-pdf-admin__notice--document-context">
+                        <p><?php printf( esc_html__( 'Voce esta editando as configuracoes de %s. Pedido e proposta possuem textos e opcoes independentes.', EOP_TEXT_DOMAIN ), esc_html( $editing_label ) ); ?></p>
+                    </div>
 
                     <details class="eop-pdf-admin__section" open>
                         <summary><?php echo esc_html( 'proposal' === $document ? __( 'Configuracoes da proposta', EOP_TEXT_DOMAIN ) : __( 'Configuracoes do pedido', EOP_TEXT_DOMAIN ) ); ?></summary>
@@ -360,7 +390,7 @@ $current_tab_label = isset( $tabs[ $tab ] ) ? $tabs[ $tab ] : __( 'PDF', EOP_TEX
                             </div>
                         </div>
                     </details>
-                    <details class="eop-pdf-admin__section" open>
+                    <details class="eop-pdf-admin__section eop-pdf-admin__section--column-labels" open>
                         <summary><?php esc_html_e( 'Textos das colunas', EOP_TEXT_DOMAIN ); ?></summary>
                         <div class="eop-pdf-admin__grid">
                             <div class="eop-settings-field">
@@ -484,6 +514,26 @@ $current_tab_label = isset( $tabs[ $tab ] ) ? $tabs[ $tab ] : __( 'PDF', EOP_TEX
                             </div>
                         </div>
                     </details>
+
+                    <?php if ( 'yes' === $pdf_settings['edoc_enabled'] && 'yes' === $pdf_settings['edoc_preview_xml'] && $preview_order instanceof WC_Order && '' !== $preview_xml ) : ?>
+                        <details class="eop-pdf-admin__section" open>
+                            <summary><?php esc_html_e( 'Preview do XML tecnico', EOP_TEXT_DOMAIN ); ?></summary>
+                            <div class="eop-pdf-admin__section-note">
+                                <p><?php printf( esc_html__( 'Preview gerado a partir do %1$s #%2$d.', EOP_TEXT_DOMAIN ), esc_html( strtolower( $preview_label ) ), esc_html( $preview_order->get_id() ) ); ?></p>
+                            </div>
+                            <div class="eop-pdf-admin__xml-panel">
+                                <textarea readonly aria-readonly="true"><?php echo esc_textarea( $preview_xml ); ?></textarea>
+                            </div>
+                            <div class="eop-pdf-admin__actions">
+                                <a class="button button-secondary" href="<?php echo esc_url( $preview_xml_url ); ?>"><?php esc_html_e( 'Baixar XML do preview', EOP_TEXT_DOMAIN ); ?></a>
+                            </div>
+                        </details>
+                    <?php elseif ( 'yes' === $pdf_settings['edoc_enabled'] ) : ?>
+                        <div class="eop-pdf-admin__notice">
+                            <p><?php esc_html_e( 'Ative o preview XML e selecione um pedido valido para visualizar a exportacao tecnica.', EOP_TEXT_DOMAIN ); ?></p>
+                        </div>
+                    <?php endif; ?>
+
                     <div class="eop-pdf-admin__actions"><?php submit_button( __( 'Salvar configuracoes eletrônicas', EOP_TEXT_DOMAIN ), 'primary', 'submit', false ); ?></div>
                 </form>
             <?php elseif ( 'advanced' === $tab ) : ?>
@@ -566,16 +616,80 @@ $current_tab_label = isset( $tabs[ $tab ] ) ? $tabs[ $tab ] : __( 'PDF', EOP_TEX
                             </div>
                         </div>
                     </details>
+
+                    <details class="eop-pdf-admin__section" open>
+                        <summary><?php esc_html_e( 'Danger zone', EOP_TEXT_DOMAIN ); ?></summary>
+                        <?php if ( $danger_zone_enabled ) : ?>
+                            <div class="eop-pdf-admin__danger-grid">
+                                <div class="eop-pdf-admin__danger-card">
+                                    <h3><?php esc_html_e( 'Limpar cache do PDF', EOP_TEXT_DOMAIN ); ?></h3>
+                                    <p><?php esc_html_e( 'Remove PDFs em cache e artefatos temporarios do modulo. O proximo download sera regenerado do zero.', EOP_TEXT_DOMAIN ); ?></p>
+                                    <a class="button button-secondary" href="<?php echo esc_url( $purge_cache_url ); ?>"><?php esc_html_e( 'Limpar cache agora', EOP_TEXT_DOMAIN ); ?></a>
+                                </div>
+                                <div class="eop-pdf-admin__danger-card">
+                                    <h3><?php esc_html_e( 'Resetar contadores', EOP_TEXT_DOMAIN ); ?></h3>
+                                    <p><?php esc_html_e( 'Volta o proximo numero de pedido e proposta para 1. Nao altera documentos ja numerados.', EOP_TEXT_DOMAIN ); ?></p>
+                                    <a class="button button-secondary" href="<?php echo esc_url( $reset_counters_url ); ?>"><?php esc_html_e( 'Resetar contadores', EOP_TEXT_DOMAIN ); ?></a>
+                                </div>
+                            </div>
+                        <?php else : ?>
+                            <div class="eop-pdf-admin__notice">
+                                <p><?php esc_html_e( 'Libere a opcao Danger zone para exibir ferramentas destrutivas controladas por nonce.', EOP_TEXT_DOMAIN ); ?></p>
+                            </div>
+                        <?php endif; ?>
+                    </details>
+
                     <div class="eop-pdf-admin__actions"><?php submit_button( __( 'Salvar configuracoes avancadas', EOP_TEXT_DOMAIN ), 'primary', 'submit', false ); ?></div>
                 </form>
             <?php else : ?>
-                <div class="eop-pdf-admin__updates">
-                    <div class="eop-pdf-admin__notice">
-                        <p><?php esc_html_e( 'Esta aba concentra a evolucao do modulo PDF nativo para substituir a dependencia externa com paridade cada vez maior.', EOP_TEXT_DOMAIN ); ?></p>
+                <div class="eop-pdf-admin__documentation">
+                    <div class="eop-pdf-admin__notice eop-pdf-admin__notice--documentation">
+                        <p><?php esc_html_e( 'Esta documentacao fica disponivel dentro do modulo para explicar o que cada configuracao faz e qual efeito ela tem no PDF, nas URLs e no XML tecnico.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
+
+                    <?php foreach ( $documentation_sections as $section ) : ?>
+                        <section class="eop-pdf-admin__doc-section">
+                            <header class="eop-pdf-admin__doc-header">
+                                <h2><?php echo esc_html( $section['title'] ?? '' ); ?></h2>
+                                <?php if ( ! empty( $section['description'] ) ) : ?>
+                                    <p><?php echo esc_html( $section['description'] ); ?></p>
+                                <?php endif; ?>
+                            </header>
+
+                            <?php if ( ! empty( $section['fields'] ) ) : ?>
+                                <div class="eop-pdf-admin__doc-grid">
+                                    <?php foreach ( $section['fields'] as $field ) : ?>
+                                        <article class="eop-pdf-admin__doc-card">
+                                            <div class="eop-pdf-admin__doc-card-head">
+                                                <h3><?php echo esc_html( $field['label'] ?? '' ); ?></h3>
+                                                <?php if ( ! empty( $field['status'] ) ) : ?>
+                                                    <span class="eop-pdf-admin__doc-badge eop-pdf-admin__doc-badge--<?php echo esc_attr( $field['status'] ); ?>">
+                                                        <?php echo esc_html( 'experimental' === $field['status'] ? __( 'Experimental', EOP_TEXT_DOMAIN ) : __( 'Ativo', EOP_TEXT_DOMAIN ) ); ?>
+                                                    </span>
+                                                <?php endif; ?>
+                                            </div>
+
+                                            <?php if ( ! empty( $field['help'] ) ) : ?>
+                                                <p class="eop-pdf-admin__doc-text"><?php echo esc_html( $field['help'] ); ?></p>
+                                            <?php endif; ?>
+
+                                            <?php if ( ! empty( $field['effect'] ) ) : ?>
+                                                <p class="eop-pdf-admin__doc-effect"><strong><?php esc_html_e( 'Efeito real:', EOP_TEXT_DOMAIN ); ?></strong> <?php echo esc_html( $field['effect'] ); ?></p>
+                                            <?php endif; ?>
+
+                                            <?php if ( ! empty( $field['values'] ) && is_array( $field['values'] ) ) : ?>
+                                                <p class="eop-pdf-admin__doc-values"><strong><?php esc_html_e( 'Valores aceitos:', EOP_TEXT_DOMAIN ); ?></strong> <?php echo esc_html( implode( ', ', array_map( 'strval', $field['values'] ) ) ); ?></p>
+                                            <?php endif; ?>
+                                        </article>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </section>
+                    <?php endforeach; ?>
+
                     <div class="eop-pdf-admin__status-grid">
-                        <div class="eop-pdf-admin__status-card"><span><?php esc_html_e( 'Ja entregue', EOP_TEXT_DOMAIN ); ?></span><strong><?php esc_html_e( 'Paginas automaticas, links privados/publicos, numeracao basica, preview lateral e tabs de configuracao.', EOP_TEXT_DOMAIN ); ?></strong></div>
-                        <div class="eop-pdf-admin__status-card"><span><?php esc_html_e( 'Proxima camada', EOP_TEXT_DOMAIN ); ?></span><strong><?php esc_html_e( 'Acoes na lista de pedidos, anexos de e-mail, My Account e ferramentas avancadas.', EOP_TEXT_DOMAIN ); ?></strong></div>
+                        <div class="eop-pdf-admin__status-card"><span><?php esc_html_e( 'Leitura rapida', EOP_TEXT_DOMAIN ); ?></span><strong><?php esc_html_e( 'Use os tooltips ao lado dos labels para ajuda curta e esta aba para contexto completo.', EOP_TEXT_DOMAIN ); ?></strong></div>
+                        <div class="eop-pdf-admin__status-card"><span><?php esc_html_e( 'Operacao', EOP_TEXT_DOMAIN ); ?></span><strong><?php esc_html_e( 'Sempre valide com um pedido real no preview depois de mudar numeracao, acesso, colunas ou dados da loja.', EOP_TEXT_DOMAIN ); ?></strong></div>
                     </div>
                 </div>
             <?php endif; ?>
@@ -606,14 +720,12 @@ $current_tab_label = isset( $tabs[ $tab ] ) ? $tabs[ $tab ] : __( 'PDF', EOP_TEX
                     <?php else : ?>
                         <input type="hidden" name="page" value="<?php echo esc_attr( EOP_PDF_Admin_Page::get_tab_page_slug( $tab ) ); ?>" />
                     <?php endif; ?>
+                    <input type="hidden" name="document" value="<?php echo esc_attr( $document ); ?>" />
                     <button type="submit" class="button button-primary" formaction="<?php echo esc_url( $preview_pdf_url ); ?>" formmethod="get"<?php echo $preview_pdf_url ? '' : ' disabled'; ?>>PDF</button>
                     <div class="eop-pdf-admin__toolbar-selects">
                         <label>
-                            <span><?php esc_html_e( 'Documento', EOP_TEXT_DOMAIN ); ?></span>
-                            <select name="document">
-                                <option value="order" <?php selected( $document, 'order' ); ?>><?php esc_html_e( 'Pedido', EOP_TEXT_DOMAIN ); ?></option>
-                                <option value="proposal" <?php selected( $document, 'proposal' ); ?>><?php esc_html_e( 'Proposta', EOP_TEXT_DOMAIN ); ?></option>
-                            </select>
+                            <span><?php esc_html_e( 'Documento do preview', EOP_TEXT_DOMAIN ); ?></span>
+                            <strong class="eop-pdf-admin__toolbar-value"><?php echo esc_html( $preview_label ); ?></strong>
                         </label>
                         <label>
                             <span><?php echo esc_html( $preview_mode ); ?></span>
@@ -630,8 +742,13 @@ $current_tab_label = isset( $tabs[ $tab ] ) ? $tabs[ $tab ] : __( 'PDF', EOP_TEX
                 </form>
 
                 <div class="eop-pdf-admin__preview-body">
+                    <?php if ( $preview_notice ) : ?>
+                        <div class="eop-pdf-admin__notice eop-pdf-admin__notice--preview-mismatch">
+                            <p><?php printf( esc_html__( 'O pedido selecionado para preview gera %1$s, mas voce esta editando as configuracoes de %2$s.', EOP_TEXT_DOMAIN ), esc_html( $preview_label ), esc_html( $editing_label ) ); ?></p>
+                        </div>
+                    <?php endif; ?>
                     <?php if ( $preview_allowed ) : ?>
-                        <?php echo EOP_Document_Manager::get_preview_html( $preview_order, $document ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                        <?php echo EOP_Document_Manager::get_preview_html( $preview_order, $preview_document ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                     <?php elseif ( $preview_order instanceof WC_Order ) : ?>
                         <div class="eop-pdf-admin__empty-preview">
                             <strong><?php esc_html_e( 'Preview HTML desativado no modo avancado.', EOP_TEXT_DOMAIN ); ?></strong>

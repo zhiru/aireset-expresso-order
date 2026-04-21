@@ -256,6 +256,18 @@ class EOP_Admin_Page {
             'view_url_base' => self::get_view_url(),
             'i18n'          => array(
                 'search_product'   => __( 'Buscar produto por nome ou SKU...', EOP_TEXT_DOMAIN ),
+                'no_items'         => __( 'Nenhum produto adicionado.', EOP_TEXT_DOMAIN ),
+                'label_price'      => __( 'Preco', EOP_TEXT_DOMAIN ),
+                'label_quantity'   => __( 'Qtd', EOP_TEXT_DOMAIN ),
+                'label_discount'   => __( 'Desconto', EOP_TEXT_DOMAIN ),
+                'label_discounted_unit_price' => __( 'Valor c/ desconto', EOP_TEXT_DOMAIN ),
+                'label_subtotal'   => __( 'Subtotal', EOP_TEXT_DOMAIN ),
+                'default_discount_placeholder_percent' => __( '10', EOP_TEXT_DOMAIN ),
+                'default_discount_placeholder_fixed'   => __( '10,00', EOP_TEXT_DOMAIN ),
+                'default_discount_placeholder_both'    => __( '10 ou 10%', EOP_TEXT_DOMAIN ),
+                'default_discount_help_percent'        => __( 'Informe somente porcentagem (%).', EOP_TEXT_DOMAIN ),
+                'default_discount_help_fixed'          => __( 'Informe somente valor fixo (R$).', EOP_TEXT_DOMAIN ),
+                'default_discount_help_both'           => __( 'Aceita valor fixo ou porcentagem.', EOP_TEXT_DOMAIN ),
                 'no_results'       => __( 'Nenhum resultado', EOP_TEXT_DOMAIN ),
                 'confirm_remove'   => __( 'Remover este item?', EOP_TEXT_DOMAIN ),
                 'missing_products' => __( 'Adicione ao menos um produto.', EOP_TEXT_DOMAIN ),
@@ -358,14 +370,14 @@ class EOP_Admin_Page {
                 ),
             );
             $pdf_children[] = array(
-                'key'   => 'eop-view-pdf-update',
-                'label' => __( 'Atualizar', EOP_TEXT_DOMAIN ),
-                'icon'  => 'dashicons-update',
-                'url'   => class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_tab_url( 'update' ) : admin_url( 'admin.php?page=eop-pdf&tab=update' ),
+                'key'   => 'eop-view-pdf-documentation',
+                'label' => __( 'Documentacao', EOP_TEXT_DOMAIN ),
+                'icon'  => 'dashicons-editor-help',
+                'url'   => class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_tab_url( 'documentation' ) : admin_url( 'admin.php?page=eop-pdf&tab=documentation' ),
                 'query' => array(
                     'page'    => 'eop-pedido-expresso',
                     'view'    => 'pdf',
-                    'pdf_tab' => 'update',
+                    'pdf_tab' => 'documentation',
                 ),
             );
         }

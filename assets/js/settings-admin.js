@@ -89,9 +89,75 @@
         });
     }
 
+    function injectPdfHelpTooltips() {
+        var helpMap = (window.eop_settings_vars && eop_settings_vars.pdf_help_map) || {};
+        var statusLabels = (window.eop_settings_vars && eop_settings_vars.help_statuses) || {};
+        var buttonLabel = (window.eop_settings_vars && eop_settings_vars.help_label) || 'Ajuda da configuracao';
+
+        $.each(helpMap, function (fieldId, config) {
+            var $label = $('label[for="' + fieldId + '"]').first();
+            var $tooltip;
+            var $button;
+            var $bubble;
+            var statusText = config && config.status && statusLabels[config.status] ? statusLabels[config.status] : '';
+
+            if (!$label.length || $label.find('.eop-help-tip').length) {
+                return;
+            }
+
+            $tooltip = $('<span>', {
+                class: 'eop-help-tip'
+            });
+
+            $button = $('<button>', {
+                type: 'button',
+                class: 'eop-help-tip__button',
+                'aria-label': buttonLabel,
+                text: '?'
+            });
+
+            $bubble = $('<span>', {
+                class: 'eop-help-tip__bubble',
+                role: 'tooltip'
+            });
+
+            if (config && config.label) {
+                $('<strong>', {
+                    class: 'eop-help-tip__title',
+                    text: config.label
+                }).appendTo($bubble);
+            }
+
+            if (statusText) {
+                $('<span>', {
+                    class: 'eop-help-tip__status eop-help-tip__status--' + String(config.status || ''),
+                    text: statusText
+                }).appendTo($bubble);
+            }
+
+            if (config && config.help) {
+                $('<span>', {
+                    class: 'eop-help-tip__text',
+                    text: config.help
+                }).appendTo($bubble);
+            }
+
+            if (config && config.effect) {
+                $('<span>', {
+                    class: 'eop-help-tip__effect',
+                    text: config.effect
+                }).appendTo($bubble);
+            }
+
+            $tooltip.append($button, $bubble);
+            $label.append($tooltip);
+        });
+    }
+
     $(function () {
         hideExternalNotices();
         window.setTimeout(hideExternalNotices, 120);
+        injectPdfHelpTooltips();
 
         $('.eop-color-field').wpColorPicker();
 

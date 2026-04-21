@@ -17,6 +17,9 @@ class EOP_PDF_Admin_Page {
 
         add_action( 'admin_menu', array( __CLASS__, 'register_submenu' ) );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+        add_action( 'admin_post_eop_pdf_purge_cache', array( __CLASS__, 'handle_purge_cache' ) );
+        add_action( 'admin_post_eop_pdf_reset_counters', array( __CLASS__, 'handle_reset_counters' ) );
+        add_action( 'admin_post_eop_download_edoc_xml', array( __CLASS__, 'handle_download_edoc_xml' ) );
     }
 
     public static function register_submenu() {
@@ -115,6 +118,12 @@ class EOP_PDF_Admin_Page {
                 'select_logo'      => __( 'Selecionar logo', EOP_TEXT_DOMAIN ),
                 'change_logo'      => __( 'Trocar logo', EOP_TEXT_DOMAIN ),
                 'no_logo'          => __( 'Nenhum logo selecionado ainda.', EOP_TEXT_DOMAIN ),
+                'pdf_help_map'     => class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings::get_admin_tooltip_map() : array(),
+                'help_label'       => __( 'Ajuda da configuracao', EOP_TEXT_DOMAIN ),
+                'help_statuses'    => array(
+                    'active'       => __( 'Ativo', EOP_TEXT_DOMAIN ),
+                    'experimental' => __( 'Experimental', EOP_TEXT_DOMAIN ),
+                ),
             )
         );
     }
@@ -140,7 +149,7 @@ class EOP_PDF_Admin_Page {
     public static function get_tab_capability( $tab ) {
         $tab = self::normalize_tab( $tab );
 
-        return in_array( $tab, array( 'documents', 'edocuments', 'advanced', 'update' ), true ) ? 'manage_options' : 'edit_shop_orders';
+        return in_array( $tab, array( 'documents', 'edocuments', 'advanced' ), true ) ? 'manage_options' : 'edit_shop_orders';
     }
 
     public static function get_tabs() {
@@ -149,7 +158,7 @@ class EOP_PDF_Admin_Page {
             'documents'   => __( 'Documentos', EOP_TEXT_DOMAIN ),
             'edocuments'  => __( 'Documentos eletrônicos', EOP_TEXT_DOMAIN ),
             'advanced'    => __( 'Avançado', EOP_TEXT_DOMAIN ),
-            'update'      => __( 'Atualizar', EOP_TEXT_DOMAIN ),
+            'documentation' => __( 'Documentacao', EOP_TEXT_DOMAIN ),
         );
     }
 
@@ -266,5 +275,64 @@ class EOP_PDF_Admin_Page {
         $default_tab = self::normalize_tab( $default_tab );
         $embedded    = (bool) $embedded;
         include EOP_PLUGIN_DIR . 'templates/pdf-admin-page.php';
+    }
+
+    public static function handle_purge_cache() {
+        self::assert_admin_action_permissions( 'eop_pdf_purge_cache' );
+
+        if ( class_exists( 'EOP_Document_Manager' ) ) {
+            EOP_Document_Manager::purge_cached_documents_manually();
+        }
+
+        wp_safe_redirect( self::get_tab_url( 'advanced', array( 'eop_pdf_action' => 'cache_purged' ) ) );
+        exit;
+    }
+
+    public static function handle_reset_counters() {
+        self::assert_admin_action_permissions( 'eop_pdf_reset_counters' );
+
+        if ( class_exists( 'EOP_Document_Manager' ) ) {
+            EOP_Document_Manager::reset_document_counters();
+        }
+
+        wp_safe_redirect( self::get_tab_url( 'advanced', array( 'eop_pdf_action' => 'counters_reset' ) ) );
+        exit;
+    }
+
+    public static function handle_download_edoc_xml() {
+        self::assert_admin_action_permissions( 'eop_download_edoc_xml' );
+
+        if ( ! class_exists( 'EOP_Document_Manager' ) ) {
+            wp_die( esc_html__( 'Modulo XML indisponivel.', EOP_TEXT_DOMAIN ) );
+        }
+
+        $order_id      = absint( $_GET['order_id'] ?? 0 );
+        $document_type = isset( $_GET['document'] ) ? sanitize_key( wp_unslash( $_GET['document'] ) ) : '';
+        $order         = $order_id ? wc_get_order( $order_id ) : null;
+
+        if ( ! $order instanceof WC_Order ) {
+            wp_die( esc_html__( 'Pedido nao encontrado.', EOP_TEXT_DOMAIN ) );
+        }
+
+        $xml = EOP_Document_Manager::get_edocument_xml_preview( $order, $document_type );
+
+        if ( '' === $xml ) {
+            wp_die( esc_html__( 'XML indisponivel para este pedido.', EOP_TEXT_DOMAIN ) );
+        }
+
+        nocache_headers();
+        header( 'Content-Type: application/xml; charset=UTF-8' );
+        header( 'Content-Disposition: attachment; filename="' . EOP_Document_Manager::get_edocument_filename( $order, $document_type ) . '"' );
+
+        echo $xml; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        exit;
+    }
+
+    private static function assert_admin_action_permissions( $nonce_action ) {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
+        }
+
+        check_admin_referer( $nonce_action );
     }
 }
