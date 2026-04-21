@@ -17,7 +17,7 @@ $pluginFile = $root . DIRECTORY_SEPARATOR . $packageName . '.php';
 $pluginVersion = resolvePluginVersion($pluginFile);
 $distRoot = $root . DIRECTORY_SEPARATOR . 'dist';
 $packageRoot = $distRoot . DIRECTORY_SEPARATOR . $packageName;
-$zipPath = $root . DIRECTORY_SEPARATOR . $packageName . '.zip';
+$zipPath = $distRoot . DIRECTORY_SEPARATOR . $packageName . '.zip';
 
 if ($pluginVersion === '') {
     fwrite(STDERR, "Unable to resolve plugin version.\n");
@@ -34,11 +34,15 @@ $excludedTopLevel = [
 
 $excludedFiles = [
     '.gitignore',
+    'ADMIN_UI_BRAND.md',
     'AGENT.md',
-    'aireset-expresso-order.zip',
     'CHANGELOG.md',
     'package.json',
     'README.md',
+];
+
+$excludedRelativePaths = [
+    'assets/scss',
 ];
 
 $obfuscatedFiles = [
@@ -53,6 +57,7 @@ $obfuscatedFiles = [
 rrmdir($packageRoot);
 @mkdir($distRoot, 0777, true);
 @mkdir($packageRoot, 0777, true);
+removeLegacyVersionedArchives($distRoot, $packageName);
 
 $items = scandir($root);
 if ($items === false) {
@@ -77,7 +82,7 @@ foreach ($items as $item) {
     $destination = $packageRoot . DIRECTORY_SEPARATOR . $item;
 
     if (is_dir($source)) {
-        copyDirectory($source, $destination);
+        copyDirectory($source, $destination, $item, $excludedRelativePaths);
         continue;
     }
 
@@ -90,10 +95,6 @@ foreach ($obfuscatedFiles as $relativePath) {
         continue;
     }
 
-    if (containsInternalPhpTransitions($target)) {
-        continue;
-    }
-
     $obfuscated = obfuscatePhpFile($target);
     if ($obfuscated === '') {
         fwrite(STDERR, "Unable to obfuscate file: {$relativePath}\n");
@@ -103,7 +104,7 @@ foreach ($obfuscatedFiles as $relativePath) {
     file_put_contents($target, $obfuscated);
 }
 
-buildReleaseArchive($packageRoot, $zipPath, $packageName);
+buildReleaseArchive($packageRoot, $zipPath, $packageName, $root);
 
 fwrite(STDOUT, $packageRoot . PHP_EOL);
 fwrite(STDOUT, $zipPath . PHP_EOL);
@@ -122,35 +123,29 @@ function resolvePluginVersion(string $pluginFile): string
     return trim((string) $matches[1]);
 }
 
-function buildReleaseArchive(string $packageRoot, string $zipPath, string $packageName): void
+function removeLegacyVersionedArchives(string $distRoot, string $packageName): void
+{
+    $pattern = $distRoot . DIRECTORY_SEPARATOR . $packageName . '-*.zip';
+    $matches = glob($pattern);
+    if ($matches === false) {
+        return;
+    }
+
+    foreach ($matches as $archivePath) {
+        if (!is_file($archivePath)) {
+            continue;
+        }
+
+        if (!unlink($archivePath)) {
+            throw new RuntimeException("Unable to remove legacy versioned zip: {$archivePath}");
+        }
+    }
+}
+
+function buildReleaseArchive(string $packageRoot, string $zipPath, string $packageName, string $root = ''): void
 {
     if (is_file($zipPath) && !unlink($zipPath)) {
         throw new RuntimeException("Unable to replace existing zip: {$zipPath}");
-    }
-
-    if ('Windows' === PHP_OS_FAMILY) {
-        $powerShellCommand = <<<'PS'
-$ErrorActionPreference = 'Stop'
-$source = '__SOURCE__'
-$zip = '__ZIP__'
-Compress-Archive -Path $source -DestinationPath $zip -Force
-PS;
-
-        $powerShellCommand = str_replace(
-            ['__SOURCE__', '__ZIP__'],
-            [escapePowerShellLiteral($packageRoot), escapePowerShellLiteral($zipPath)],
-            $powerShellCommand
-        );
-
-        $encodedCommand = base64_encode(mb_convert_encoding($powerShellCommand, 'UTF-16LE', 'UTF-8'));
-        $command = 'powershell.exe -NoProfile -EncodedCommand ' . escapeshellarg($encodedCommand);
-        exec($command, $output, $exitCode);
-
-        if ($exitCode !== 0 || !is_file($zipPath)) {
-            throw new RuntimeException('Unable to create zip archive with PowerShell Compress-Archive.');
-        }
-
-        return;
     }
 
     if (class_exists('ZipArchive')) {
@@ -183,6 +178,52 @@ PS;
         return;
     }
 
+    if ('Windows' === PHP_OS_FAMILY) {
+        $rootPath = $root !== '' ? $root : dirname($packageRoot);
+        $relativeSource = ltrim(str_replace($rootPath, '', $packageRoot), DIRECTORY_SEPARATOR);
+        $relativeZip = ltrim(str_replace($rootPath, '', $zipPath), DIRECTORY_SEPARATOR);
+        $relativeSource = str_replace('\\', '/', $relativeSource);
+        $relativeZip = str_replace('\\', '/', $relativeZip);
+
+        $tempScript = tempnam(sys_get_temp_dir(), 'eop-release-');
+        if ($tempScript === false) {
+            throw new RuntimeException('Unable to create temporary PowerShell script.');
+        }
+
+        $ps1Path = $tempScript . '.ps1';
+        rename($tempScript, $ps1Path);
+
+        $powerShellScript = implode(PHP_EOL, [
+            "\$ErrorActionPreference = 'Stop'",
+            sprintf("Set-Location '%s'", escapePowerShellLiteral($rootPath)),
+            sprintf("\$sourcePath = '%s'", escapePowerShellLiteral($relativeSource)),
+            sprintf("\$zipPath = '%s'", escapePowerShellLiteral($relativeZip)),
+            'for ($attempt = 0; $attempt -lt 5; $attempt++) {',
+            '    try {',
+            '        if (Test-Path $zipPath) { Remove-Item $zipPath -Force }',
+            '        Compress-Archive -Path $sourcePath -DestinationPath $zipPath -Force',
+            '        exit 0',
+            '    } catch {',
+            '        if ($attempt -ge 4) { throw }',
+            '        Start-Sleep -Milliseconds 300',
+            '    }',
+            '}',
+            '',
+        ]);
+
+        file_put_contents($ps1Path, $powerShellScript);
+
+        $command = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File ' . escapeshellarg($ps1Path) . ' 2>&1';
+        exec($command, $output, $exitCode);
+        @unlink($ps1Path);
+
+        if ($exitCode !== 0 || !is_file($zipPath)) {
+            throw new RuntimeException('Unable to create zip archive with PowerShell Compress-Archive: ' . implode(PHP_EOL, $output));
+        }
+
+        return;
+    }
+
     throw new RuntimeException('ZipArchive extension is required to build the release zip on this environment.');
 }
 
@@ -191,8 +232,13 @@ function escapePowerShellLiteral(string $value): string
     return str_replace("'", "''", $value);
 }
 
-function copyDirectory(string $source, string $destination): void
+function copyDirectory(string $source, string $destination, string $relativePath = '', array $excludedRelativePaths = []): void
 {
+    $normalizedRelativePath = normalizeRelativePath($relativePath);
+    if ($normalizedRelativePath !== '' && in_array($normalizedRelativePath, $excludedRelativePaths, true)) {
+        return;
+    }
+
     if (!is_dir($destination) && !mkdir($destination, 0777, true) && !is_dir($destination)) {
         throw new RuntimeException("Unable to create directory: {$destination}");
     }
@@ -205,14 +251,26 @@ function copyDirectory(string $source, string $destination): void
 
         $sourcePath = $item->getPathname();
         $destinationPath = $destination . DIRECTORY_SEPARATOR . $item->getFilename();
+        $childRelativePath = $normalizedRelativePath === ''
+            ? $item->getFilename()
+            : $normalizedRelativePath . '/' . $item->getFilename();
 
         if ($item->isDir()) {
-            copyDirectory($sourcePath, $destinationPath);
+            copyDirectory($sourcePath, $destinationPath, $childRelativePath, $excludedRelativePaths);
+            continue;
+        }
+
+        if (in_array(normalizeRelativePath($childRelativePath), $excludedRelativePaths, true)) {
             continue;
         }
 
         copy($sourcePath, $destinationPath);
     }
+}
+
+function normalizeRelativePath(string $path): string
+{
+    return trim(str_replace('\\', '/', $path), '/');
 }
 
 function rrmdir(string $directory): void
@@ -245,17 +303,25 @@ function obfuscatePhpFile(string $path): string
         return '';
     }
 
-    $strippedSource = stripPhpTags($source);
-    if ($strippedSource === '') {
-        return '';
+    $payloadSource = '';
+
+    if (containsInternalPhpTransitions($path)) {
+        $payloadSource = trim($source);
+    } else {
+        $strippedSource = stripPhpTags($source);
+        if ($strippedSource === '') {
+            return '';
+        }
+
+        $minifiedSource = minifyPhpSource($strippedSource);
+        if ($minifiedSource === '') {
+            return '';
+        }
+
+        $payloadSource = '<?php ' . $minifiedSource;
     }
 
-    $minifiedSource = minifyPhpSource($strippedSource);
-    if ($minifiedSource === '') {
-        return '';
-    }
-
-    $innerPayload = base64_encode($minifiedSource);
+    $innerPayload = base64_encode($payloadSource);
     $innerLoader = buildInnerLoader($innerPayload);
     $outerPayload = base64_encode(gzcompress($innerLoader, 9));
 
@@ -301,14 +367,12 @@ function buildInnerLoader(string $innerPayload): string
     $decoderVar = randomVarName();
     $decoderSeedVar = randomVarName();
     $payloadVar = randomVarName();
-    $runnerVar = randomVarName();
 
     $lines = [
         '$' . $decoderSeedVar . '=' . var_export(base64_encode('base64_decode'), true) . ';',
         '$' . $decoderVar . '=base64_decode($' . $decoderSeedVar . ');',
         '$' . $payloadVar . '=' . var_export($innerPayload, true) . ';',
-        '$' . $runnerVar . '=function($__eop_code__){eval($__eop_code__);};',
-        '$' . $runnerVar . '(@$' . $decoderVar . '($' . $payloadVar . '));',
+        'eval("?>".@$' . $decoderVar . '($' . $payloadVar . '));',
     ];
 
     return implode('', addNoiseToStatements($lines));

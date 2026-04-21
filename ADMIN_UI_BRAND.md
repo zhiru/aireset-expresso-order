@@ -18,6 +18,14 @@ Padronizar menus, bordas, superficies e estados de navegacao entre plugins, mant
 - wrappers globais do SPA nao devem sobrescrever formularios ou containers de modulos que ja possuam design proprio validado
 - configuracoes, PDF e licenca devem manter seus cards internos e apenas receber o shell, espacamento e headers compartilhados
 
+## Regras de controles
+
+- campos de cor devem seguir o mesmo padrao visual do checkout, usando o `Coloris` com swatch circular pequeno dentro do proprio input
+- o wrapper `.clr-field` continua sendo o container visual principal do color picker; nao inserir botoes extras dentro dele alem do swatch nativo
+- quando houver acao de reset para cor padrao, ela deve ficar em um wrapper externo ao lado do campo, como `.eop-color-control`, sem empurrar ou deformar o input
+- o botao `Padrao` e complementar: deve restaurar `data-default-color`, mas nao pode alterar o layout base do picker nem competir com o botao nativo do `Coloris`
+- campos de cor do admin nao devem herdar automaticamente a mesma paleta aplicada a proposta publica ou ao frontend do cliente; sao controles administrativos
+
 ## Tokens de referencia
 
 - fundo da sidebar: `rgba(9, 21, 51, 0.98)` ate `rgba(15, 37, 87, 0.98)`
@@ -32,10 +40,12 @@ Padronizar menus, bordas, superficies e estados de navegacao entre plugins, mant
 - aplicar o padrao apenas no shell lateral, grupos, submenus e estados ativos
 - nao acoplar a paleta administrativa aos controles de cor da proposta do cliente
 - preservar o visual nativo de `.eop-settings-form`, `.eop-settings-card` e `.el-license-container`, evitando wrappers que redefinam borda, fundo ou sombra nesses modulos
+- manter os campos `.eop-color-field` com o mesmo comportamento do checkout: swatch interno em `.clr-field` e `Padrao` externo em `.eop-color-control`
 
 ## Referencias internas
 
 - Pedido Expresso: `assets/scss/admin/_spa-shell.scss`
+- Pedido Expresso controles: `assets/scss/admin/settings.scss` e `assets/js/settings-admin.js`
 - Checkout: `../aireset-checkout/backend/assets/scss/admin/partials/spa/_navigation.scss`
 
 Use este guia como referencia base ao replicar o shell administrativo em outros plugins Aireset.

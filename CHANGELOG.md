@@ -2,6 +2,12 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.45 - 2026-04-20
+
+- corrigido o empacotamento de release para gerar apenas o arquivo `aireset-expresso-order.zip` no formato esperado pelo WordPress
+- ajustada a exclusao de arquivos de desenvolvimento do pacote final, mantendo apenas os artefatos necessarios em runtime
+- corrigida a ofuscacao do `class-eop-license-manager.php`, incluindo suporte a arquivos com transicao interna entre PHP e HTML
+
 ## 1.1.44 - 2026-04-20
 
 - alinhado o campo de cor do Expresso Order ao mesmo padrao visual do checkout, preservando o swatch circular interno e a geometria correta do input

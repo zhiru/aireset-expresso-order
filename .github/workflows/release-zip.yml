@@ -55,19 +55,14 @@ jobs:
           }
           "
 
-      - name: Create plugin zip
-        run: |
-          cd dist
-          zip -r ../aireset-expresso-order.zip aireset-expresso-order
-
       - name: Upload zip to release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: aireset-expresso-order.zip
+          files: dist/aireset-expresso-order.zip
 
       - name: Upload zip as workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: aireset-expresso-order
-          path: aireset-expresso-order.zip
+          path: dist/aireset-expresso-order.zip
