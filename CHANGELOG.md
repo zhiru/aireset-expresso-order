@@ -2,11 +2,36 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.38 - 2026-04-21
+
+- a aba morta de atualizacao do modulo PDF foi substituida por documentacao interna completa, com textos de efeito real por configuracao e tooltips no formulario
+- configuracoes antes expostas sem efeito passaram a funcionar no runtime: politica de acesso do link, reset anual de numeracao, marcacao de impressao, logs, limpeza de cache, modo de teste e dados institucionais extras da loja
+- documentos eletronicos ganharam preview XML experimental no admin e exportacao manual, enquanto a danger zone passou a oferecer limpeza de cache e reset de contadores via nonce
+
+## 1.1.37 - 2026-04-20
+
+- adicionados campos globais de quantidade e desconto antes da busca de produtos no cadastro e na edicao de pedidos
+- cards de itens agora mostram o valor unitario com desconto e o fluxo SPA foi alinhado ao backend para desconto fixo por item
+
+## 1.1.36 - 2026-04-20
+
+- corrigido o fluxo de PDF para respeitar o tipo real do pedido e evitar abrir proposta para pedidos comuns e vice-versa
+- adicionada indicacao clara do documento em edicao na tela de configuracoes e aviso quando o preview usa um tipo diferente do que esta sendo editado
+
+## 1.1.35 - 2026-04-20
+
+- corrigida a invalidacao do cache dos PDFs quando configuracoes visuais e textos de colunas sao alterados
+- centralizados os defaults dos textos das colunas e adicionada indicacao visual de expandir/recolher no accordion do admin
+
 ## 1.1.33 - 2026-04-17
 
 - priorizada a geracao do PDF final a partir do mesmo HTML do preview, usando Dompdf carregado do plugin de referencia com fallback seguro
 - modulo PDF integrado ao shell SPA do Pedido Expresso com submenu lateral em accordion, tabs sem reload completo e preview recolhido em drawer lateral
 - proposta publica e downloads passaram a usar metadados visuais consistentes e nome de arquivo no formato `id-do-pedido.pdf`
+
+## 1.1.34 - 2026-04-18
+
+- adicionada a coluna configuravel de valor unitario com desconto e a personalizacao dos nomes das colunas no PDF e na proposta publica
 
 ## 1.1.32 - 2026-04-17
 

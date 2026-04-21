@@ -4,7 +4,7 @@ Plugin WordPress para operacao comercial com WooCommerce, focado em criacao rapi
 
 ## Versao atual
 
-`1.1.25`
+`1.1.38`
 
 ## Principais recursos
 
@@ -16,6 +16,18 @@ Plugin WordPress para operacao comercial com WooCommerce, focado em criacao rapi
 - controle de identidade visual da proposta e do painel
 - sistema de licenca integrado ao Elite Licenser
 - suporte ao perfil `vendedor_expresso`
+
+## Modulo PDF nativo
+
+O modulo PDF agora inclui uma central propria em `Aireset > Pedido Expresso > PDF` com:
+
+- configuracoes gerais da identidade da loja, layout e comportamento de download
+- configuracoes independentes para pedido e proposta
+- documentacao embutida dentro do admin e tooltips por campo
+- politica de acesso ao link por nonce, token ou dono do pedido
+- numeracao com reset anual opcional e marcacao de impressao
+- preview HTML do documento e exportacao XML experimental para UBL, CII e Peppol
+- danger zone com limpeza de cache e reset de contadores
 
 ## Requisitos
 
@@ -76,13 +88,11 @@ O plugin usa integracao proprietaria com Elite Licenser.
 
 O historico completo de alteracoes esta em [`CHANGELOG.md`](./CHANGELOG.md).
 
-Destaques recentes da serie `1.1.25`:
+Destaques recentes da serie `1.1.38`:
 
-- consolidacao do menu `Aireset > Pedido Expresso` com flyout proprio
-- ajuste do comportamento SPA no admin
-- integracao e refinamento visual do sistema de licenca
-- separacao entre core de licenca e integridade
-- reorganizacao da cadeia SCSS e compilacao do admin
+- documentacao completa do modulo PDF disponivel no admin e ajuda curta em tooltips
+- runtime do PDF alinhado com opcoes que antes estavam salvas mas nao afetavam o documento
+- exportacao XML experimental e ferramentas operacionais seguras para cache e numeracao
 
 ## Autor
 
