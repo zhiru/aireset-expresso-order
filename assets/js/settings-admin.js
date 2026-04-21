@@ -3,6 +3,7 @@
     'use strict';
 
     var mediaFrame = null;
+    var colorSwatches = ['#067bc2', '#84bcda', '#80e377', '#ecc30b', '#f37748', '#d56062'];
 
     function createPreviewMarkup(url) {
         return '<img src="' + url + '" alt="" />';
@@ -154,12 +155,92 @@
         });
     }
 
+    function setColorFieldValue($input, value) {
+        var nextValue = String(value || '');
+
+        $input.val(nextValue).trigger('input').trigger('change');
+
+        if ($input.parent('.clr-field').length) {
+            $input.parent('.clr-field').css('color', nextValue || 'transparent');
+        }
+    }
+
+    function mountColorDefaultButtons() {
+        var defaultLabel = (window.eop_settings_vars && eop_settings_vars.color_default) || 'Padrao';
+
+        $('.eop-color-field').each(function () {
+            var $input = $(this);
+            var defaultColor = String($input.data('default-color') || '');
+            var $pickerShell = $input.parent('.clr-field').length ? $input.parent('.clr-field') : $input;
+            var $control;
+
+            if (!$pickerShell.parent().hasClass('eop-color-control')) {
+                $pickerShell.wrap('<div class="eop-color-control"></div>');
+            }
+
+            $control = $pickerShell.parent();
+
+            if (defaultColor && !$control.find('.eop-color-default').length) {
+                $('<button>', {
+                    type: 'button',
+                    class: 'button button-secondary eop-color-default',
+                    text: defaultLabel,
+                    'data-default-color': defaultColor,
+                    'aria-label': defaultLabel
+                }).appendTo($control);
+            }
+        });
+    }
+
+    function initColorFields() {
+        var clearLabel = (window.eop_settings_vars && eop_settings_vars.color_clear) || 'Limpar';
+        var closeLabel = (window.eop_settings_vars && eop_settings_vars.color_close) || 'Fechar';
+
+        if (typeof window.Coloris !== 'undefined') {
+            window.Coloris({
+                el: '.eop-color-field'
+            });
+
+            window.Coloris.setInstance('.eop-color-field', {
+                theme: 'pill',
+                themeMode: 'dark',
+                formatToggle: true,
+                closeButton: true,
+                closeLabel: closeLabel,
+                clearButton: true,
+                clearLabel: clearLabel,
+                swatchesOnly: false,
+                swatches: colorSwatches
+            });
+
+            mountColorDefaultButtons();
+            return;
+        }
+
+        if ($.fn.wpColorPicker) {
+            $('.eop-color-field').wpColorPicker();
+        }
+    }
+
     $(function () {
         hideExternalNotices();
         window.setTimeout(hideExternalNotices, 120);
         injectPdfHelpTooltips();
+        initColorFields();
 
-        $('.eop-color-field').wpColorPicker();
+        $(document).on('click', '.eop-color-default', function (event) {
+            var $button = $(this);
+            var $input = $button.siblings('.clr-field').find('.eop-color-field').first();
+            var defaultColor = String($button.data('default-color') || '');
+
+            event.preventDefault();
+
+            if (!$input.length || !defaultColor) {
+                return;
+            }
+
+            setColorFieldValue($input, defaultColor);
+        });
 
         $('.eop-settings-switcher').on('click', function () {
             var $button = $(this);

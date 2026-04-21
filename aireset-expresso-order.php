@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Aireset — Expresso Order
  * Description: Pedido expresso para vendedores com busca de cliente, inclusao rapida de produtos e geracao de pedido no WooCommerce.
- * Version: 1.1.39
+ * Version: 1.1.43
  * Author: Aireset Agencia Web
  * Author URI: https://aireset.com.br
  * Requires Plugins: woocommerce
@@ -14,16 +14,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'EOP_VERSION', '1.1.39' );
+define( 'EOP_VERSION', '1.1.43' );
 define( 'EOP_PLUGIN_FILE', __FILE__ );
 define( 'EOP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EOP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'EOP_TEXT_DOMAIN', 'aireset-expresso-order' );
-
-
-require_once EOP_PLUGIN_DIR . 'includes/trait-eop-license-guard.php';
-require_once EOP_PLUGIN_DIR . 'includes/class-page-installer.php';
-require_once EOP_PLUGIN_DIR . 'includes/class-admin-page.php';
 
 /**
  * Activation: create role and required pages.
@@ -59,6 +54,11 @@ function eop_deactivate() {
 	remove_role( 'vendedor_expresso' );
 }
 register_deactivation_hook( __FILE__, 'eop_deactivate' );
+
+require_once EOP_PLUGIN_DIR . 'includes/trait-eop-license-guard.php';
+require_once EOP_PLUGIN_DIR . 'includes/class-page-installer.php';
+require_once EOP_PLUGIN_DIR . 'includes/class-admin-page.php';
+
 
 /* License gate */
 require_once EOP_PLUGIN_DIR . 'includes/class-eop-license-manager.php';

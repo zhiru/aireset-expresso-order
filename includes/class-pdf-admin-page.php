@@ -25,61 +25,61 @@ class EOP_PDF_Admin_Page {
     public static function register_submenu() {
         ensure_aireset_parent_menu();
 
-        self::$page_hook = add_submenu_page(
-            'aireset',
-            __( 'PDF', EOP_TEXT_DOMAIN ),
-            __( 'PDF', EOP_TEXT_DOMAIN ),
-            'edit_shop_orders',
-            'eop-pdf',
-            array( __CLASS__, 'render_documents_page' )
-        );
+        // self::$page_hook = add_submenu_page(
+        //     'aireset',
+        //     __( 'PDF', EOP_TEXT_DOMAIN ),
+        //     __( 'PDF', EOP_TEXT_DOMAIN ),
+        //     'edit_shop_orders',
+        //     'eop-pdf',
+        //     array( __CLASS__, 'render_documents_page' )
+        // );
 
-        self::$settings_hook = add_submenu_page(
-            'aireset',
-            __( 'Configuracoes do PDF', EOP_TEXT_DOMAIN ),
-            __( 'Configuracoes do PDF', EOP_TEXT_DOMAIN ),
-            'manage_options',
-            'eop-pdf-configuracoes',
-            array( __CLASS__, 'render_settings_page' )
-        );
+        // self::$settings_hook = add_submenu_page(
+        //     'aireset',
+        //     __( 'Configuracoes do PDF', EOP_TEXT_DOMAIN ),
+        //     __( 'Configuracoes do PDF', EOP_TEXT_DOMAIN ),
+        //     'manage_options',
+        //     'eop-pdf-configuracoes',
+        //     array( __CLASS__, 'render_settings_page' )
+        // );
 
-        foreach ( self::get_tabs() as $tab => $label ) {
-            $slug = self::get_tab_page_slug( $tab );
+        // foreach ( self::get_tabs() as $tab => $label ) {
+        //     $slug = self::get_tab_page_slug( $tab );
 
-            if ( 'eop-pdf' === $slug ) {
-                continue;
-            }
+        //     if ( 'eop-pdf' === $slug ) {
+        //         continue;
+        //     }
 
-            self::$tab_hooks[ $tab ] = add_submenu_page(
-                'aireset',
-                $label,
-                $label,
-                self::get_tab_capability( $tab ),
-                $slug,
-                function () use ( $tab ) {
-                    self::render_tab_page( $tab );
-                }
-            );
-        }
+        //     self::$tab_hooks[ $tab ] = add_submenu_page(
+        //         'aireset',
+        //         $label,
+        //         $label,
+        //         self::get_tab_capability( $tab ),
+        //         $slug,
+        //         function () use ( $tab ) {
+        //             self::render_tab_page( $tab );
+        //         }
+        //     );
+        // }
 
-        if ( ! self::$hidden_submenu_hooked ) {
-            self::$hidden_submenu_hooked = true;
+        // if ( ! self::$hidden_submenu_hooked ) {
+        //     self::$hidden_submenu_hooked = true;
 
-            add_action(
-                'admin_menu',
-                function () {
-                    remove_submenu_page( 'aireset', 'eop-pdf-configuracoes' );
-                    foreach ( self::get_tabs() as $tab => $label ) {
-                        $slug = self::get_tab_page_slug( $tab );
+        //     add_action(
+        //         'admin_menu',
+        //         function () {
+        //             remove_submenu_page( 'aireset', 'eop-pdf-configuracoes' );
+        //             foreach ( self::get_tabs() as $tab => $label ) {
+        //                 $slug = self::get_tab_page_slug( $tab );
 
-                        if ( 'eop-pdf' !== $slug ) {
-                            remove_submenu_page( 'aireset', $slug );
-                        }
-                    }
-                },
-                999
-            );
-        }
+        //                 if ( 'eop-pdf' !== $slug ) {
+        //                     remove_submenu_page( 'aireset', $slug );
+        //                 }
+        //             }
+        //         },
+        //         999
+        //     );
+        // }
     }
 
     public static function enqueue_assets( $hook ) {
@@ -93,16 +93,16 @@ class EOP_PDF_Admin_Page {
         }
 
         wp_enqueue_media();
-        wp_enqueue_style( 'wp-color-picker' );
-        wp_enqueue_script( 'wp-color-picker' );
+        wp_enqueue_style( 'eop-coloris', EOP_PLUGIN_URL . 'assets/css/coloris.min.css', array(), EOP_VERSION );
         wp_enqueue_style( 'eop-admin', EOP_PLUGIN_URL . 'assets/css/admin.css', array(), EOP_VERSION );
         wp_enqueue_style( 'eop-orders', EOP_PLUGIN_URL . 'assets/css/orders.css', array( 'eop-admin' ), EOP_VERSION );
-        wp_enqueue_style( 'eop-settings-admin', EOP_PLUGIN_URL . 'assets/css/settings-admin.css', array( 'eop-admin' ), EOP_VERSION );
+        wp_enqueue_style( 'eop-settings-admin', EOP_PLUGIN_URL . 'assets/css/settings-admin.css', array( 'eop-admin', 'eop-coloris' ), EOP_VERSION );
         wp_enqueue_style( 'eop-pdf-admin', EOP_PLUGIN_URL . 'assets/css/pdf-admin.css', array( 'eop-settings-admin' ), EOP_VERSION );
+        wp_enqueue_script( 'eop-coloris', EOP_PLUGIN_URL . 'assets/js/coloris.min.js', array(), EOP_VERSION, true );
         wp_enqueue_script(
             'eop-settings-admin',
             EOP_PLUGIN_URL . 'assets/js/settings-admin.js',
-            array( 'jquery', 'wp-color-picker', 'media-editor', 'media-upload' ),
+            array( 'jquery', 'eop-coloris', 'media-editor', 'media-upload' ),
             EOP_VERSION,
             true
         );
@@ -118,6 +118,9 @@ class EOP_PDF_Admin_Page {
                 'select_logo'      => __( 'Selecionar logo', EOP_TEXT_DOMAIN ),
                 'change_logo'      => __( 'Trocar logo', EOP_TEXT_DOMAIN ),
                 'no_logo'          => __( 'Nenhum logo selecionado ainda.', EOP_TEXT_DOMAIN ),
+                'color_default'    => __( 'Padrao', EOP_TEXT_DOMAIN ),
+                'color_clear'      => __( 'Limpar', EOP_TEXT_DOMAIN ),
+                'color_close'      => __( 'Fechar', EOP_TEXT_DOMAIN ),
                 'pdf_help_map'     => class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings::get_admin_tooltip_map() : array(),
                 'help_label'       => __( 'Ajuda da configuracao', EOP_TEXT_DOMAIN ),
                 'help_statuses'    => array(

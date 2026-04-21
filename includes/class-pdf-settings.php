@@ -23,7 +23,9 @@ class EOP_PDF_Settings {
 
     public static function get_all() {
         return self::apply_document_label_fallbacks(
-            self::apply_woocommerce_store_defaults( wp_parse_args( get_option( self::OPTION_KEY, array() ), self::get_defaults() ) )
+            self::apply_legacy_pdf_fallbacks(
+                self::apply_woocommerce_store_defaults( wp_parse_args( get_option( self::OPTION_KEY, array() ), self::get_defaults() ) )
+            )
         );
     }
 
@@ -84,7 +86,9 @@ class EOP_PDF_Settings {
 
     public static function get_output_signature( $settings = null ) {
         $settings = self::apply_document_label_fallbacks(
-            self::apply_woocommerce_store_defaults( wp_parse_args( is_array( $settings ) ? $settings : array(), self::get_defaults() ) )
+            self::apply_legacy_pdf_fallbacks(
+                self::apply_woocommerce_store_defaults( wp_parse_args( is_array( $settings ) ? $settings : array(), self::get_defaults() ) )
+            )
         );
 
         $signature_settings = array(
@@ -984,10 +988,93 @@ class EOP_PDF_Settings {
         $settings = is_array( $settings ) ? $settings : array();
 
         foreach ( self::get_woocommerce_store_defaults() as $key => $value ) {
-            $settings[ $key ] = $value;
+            if ( ! isset( $settings[ $key ] ) || '' === trim( (string) $settings[ $key ] ) ) {
+                $settings[ $key ] = $value;
+            }
         }
 
         return $settings;
+    }
+
+    private static function apply_legacy_pdf_fallbacks( $settings ) {
+        $settings = is_array( $settings ) ? $settings : array();
+        $legacy   = self::get_legacy_pdf_settings();
+        $defaults = self::get_defaults();
+        $woo      = self::get_woocommerce_store_defaults();
+
+        $legacy_logo = esc_url_raw( $legacy['brand_logo_url'] ?? '' );
+        if ( '' === trim( (string) ( $settings['shop_logo_url'] ?? '' ) ) && '' !== $legacy_logo ) {
+            $settings['shop_logo_url'] = $legacy_logo;
+        }
+
+        $legacy_name = sanitize_text_field( (string) ( $legacy['pdf_company_name'] ?? '' ) );
+        if ( '' !== $legacy_name ) {
+            $current_name = sanitize_text_field( (string) ( $settings['shop_name'] ?? '' ) );
+            $default_name = sanitize_text_field( (string) $defaults['shop_name'] );
+
+            if ( '' === $current_name || $current_name === $default_name ) {
+                $settings['shop_name'] = $legacy_name;
+            }
+        }
+
+        $legacy_document = sanitize_text_field( (string) ( $legacy['pdf_company_document'] ?? '' ) );
+        if ( '' === trim( (string) ( $settings['shop_vat_number'] ?? '' ) ) && '' !== $legacy_document ) {
+            $settings['shop_vat_number'] = $legacy_document;
+        }
+
+        $legacy_address = sanitize_textarea_field( (string) ( $legacy['pdf_company_address'] ?? '' ) );
+        if ( '' !== $legacy_address && self::address_is_using_woocommerce_defaults( $settings, $woo ) ) {
+            $address_lines = preg_split( '/\r\n|\r|\n/', $legacy_address );
+            $address_lines = array_values( array_filter( array_map( 'trim', (array) $address_lines ) ) );
+
+            if ( empty( $address_lines ) ) {
+                $address_lines = array( trim( preg_replace( '/\s+/', ' ', $legacy_address ) ) );
+            }
+
+            $settings['shop_address_line_1'] = $address_lines[0] ?? '';
+            $settings['shop_address_line_2'] = isset( $address_lines[1] ) ? implode( ', ', array_slice( $address_lines, 1 ) ) : '';
+            $settings['shop_city']           = '';
+            $settings['shop_state']          = '';
+            $settings['shop_postcode']       = '';
+            $settings['shop_country']        = '';
+        }
+
+        $legacy_footer = sanitize_textarea_field( (string) ( $legacy['pdf_footer_note'] ?? '' ) );
+        if ( '' !== $legacy_footer ) {
+            $current_footer = sanitize_textarea_field( (string) ( $settings['shop_footer'] ?? '' ) );
+            $default_footer = sanitize_textarea_field( (string) $defaults['shop_footer'] );
+
+            if ( '' === $current_footer || $current_footer === $default_footer ) {
+                $settings['shop_footer'] = $legacy_footer;
+            }
+        }
+
+        return $settings;
+    }
+
+    private static function get_legacy_pdf_settings() {
+        $legacy = get_option( 'eop_settings', array() );
+
+        if ( class_exists( 'EOP_Settings' ) ) {
+            return wp_parse_args( is_array( $legacy ) ? $legacy : array(), EOP_Settings::get_defaults() );
+        }
+
+        return is_array( $legacy ) ? $legacy : array();
+    }
+
+    private static function address_is_using_woocommerce_defaults( $settings, $woo_defaults ) {
+        $keys = array( 'shop_address_line_1', 'shop_address_line_2', 'shop_city', 'shop_state', 'shop_postcode', 'shop_country' );
+
+        foreach ( $keys as $key ) {
+            $current = trim( (string) ( $settings[ $key ] ?? '' ) );
+            $default = trim( (string) ( $woo_defaults[ $key ] ?? '' ) );
+
+            if ( $current !== $default ) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static function apply_document_label_fallbacks( $settings ) {

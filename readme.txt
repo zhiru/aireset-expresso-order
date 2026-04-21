@@ -3,7 +3,7 @@ Contributors: aireset
 Tags: woocommerce, pedido expresso, vendas, proposta, administrativo
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 1.1.39
+Stable tag: 1.1.43
 
 Pedido expresso para vendedores do WooCommerce: busca e selecao rapida de cliente e produto, geracao de pedido, proposta publica e PDF nativo com navegacao SPA no admin.
 
@@ -33,10 +33,15 @@ Basta ter o WooCommerce ativo e o plugin instalado; as configuracoes de pedido e
 
 == Upgrade Notice ==
 
-= 1.1.39 =
-* O fluxo de itens agora permite aplicar quantidade e desconto em massa, preserva melhor o modo de desconto ao editar pedidos e refina a exibicao do PDF correto por tipo de documento.
+= 1.1.43 =
+* O shell administrativo voltou a respeitar o visual nativo de configuracoes e licenca, a tela de licenca ganhou separacoes mais limpas e o padrao oficial de SPA e branding da Aireset foi documentado para novos plugins.
 
 == Changelog ==
+
+= 1.1.43 =
+* corrigido o shell administrativo para nao sobrescrever o visual nativo de configuracoes e licenca
+* separacoes da tela de licenca refinadas para uma leitura mais limpa
+* padrao oficial de SPA e branding da Aireset documentado para reutilizacao interna
 
 = 1.1.39 =
 * adicionadas acoes em massa de quantidade e desconto no cadastro, na edicao e no shortcode

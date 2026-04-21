@@ -4,7 +4,7 @@ Plugin WordPress para operacao comercial com WooCommerce, focado em criacao rapi
 
 ## Versao atual
 
-`1.1.39`
+`1.1.43`
 
 ## Principais recursos
 
@@ -43,6 +43,10 @@ O modulo PDF agora inclui uma central propria em `Aireset > Pedido Expresso > PD
 - [`assets/js/`](./assets/js): comportamento do admin, configuracoes e flyout
 - [`assets/scss/`](./assets/scss): fonte SCSS do frontend e do admin
 - [`assets/css/`](./assets/css): CSS compilado distribuido com o plugin
+
+## Identidade do admin
+
+O shell visual administrativo segue o padrao documentado em [`ADMIN_UI_BRAND.md`](./ADMIN_UI_BRAND.md), com hero proprio do plugin e navegacao lateral compartilhada com a linha Aireset.
 
 ## Desenvolvimento
 
@@ -88,7 +92,7 @@ O plugin usa integracao proprietaria com Elite Licenser.
 
 O historico completo de alteracoes esta em [`CHANGELOG.md`](./CHANGELOG.md).
 
-Destaques recentes da serie `1.1.39`:
+Destaques recentes da serie `1.1.40`:
 
 - acoes em massa para aplicar quantidade e desconto padrao aos itens no admin e no shortcode
 - valor unitario com desconto visivel nos cards e persistencia correta do modo de desconto ao recarregar pedidos
@@ -97,4 +101,4 @@ Destaques recentes da serie `1.1.39`:
 ## Autor
 
 Aireset Agencia Web  
-https://aireset.com.br
+[aireset.com.br](https://aireset.com.br)

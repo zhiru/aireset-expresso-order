@@ -127,14 +127,14 @@ class EOP_License_Manager {
 
 		remove_submenu_page( $this->slug, $this->license_page_slug );
 
-		add_submenu_page(
-			$this->slug,
-			__( 'Licenca', 'aireset-expresso-order' ),
-			__( 'Licenca', 'aireset-expresso-order' ),
-			'manage_options',
-			$this->license_page_slug,
-			array( $this, 'render_active_page' )
-		);
+		// add_submenu_page(
+		// 	$this->slug,
+		// 	__( 'Licenca', 'aireset-expresso-order' ),
+		// 	__( 'Licenca', 'aireset-expresso-order' ),
+		// 	'manage_options',
+		// 	$this->license_page_slug,
+		// 	array( $this, 'render_active_page' )
+		// );
 	}
 
 	public function inactive_menu() {

@@ -150,14 +150,14 @@ class EOP_Settings {
     }
 
     public static function register_submenu() {
-        self::$page_hook = add_submenu_page(
-            'aireset',
-            __( 'Configuracoes', EOP_TEXT_DOMAIN ),
-            __( 'Configuracoes', EOP_TEXT_DOMAIN ),
-            'manage_options',
-            'eop-configuracoes',
-            array( __CLASS__, 'render_page' )
-        );
+        // self::$page_hook = add_submenu_page(
+        //     'aireset',
+        //     __( 'Configuracoes', EOP_TEXT_DOMAIN ),
+        //     __( 'Configuracoes', EOP_TEXT_DOMAIN ),
+        //     'manage_options',
+        //     'eop-configuracoes',
+        //     array( __CLASS__, 'render_page' )
+        // );
     }
 
     public static function enqueue_assets( $hook_suffix ) {
@@ -171,12 +171,12 @@ class EOP_Settings {
             return;
         }
 
-        wp_enqueue_style( 'wp-color-picker' );
         wp_enqueue_media();
+        wp_enqueue_style( 'eop-coloris', EOP_PLUGIN_URL . 'assets/css/coloris.min.css', array(), EOP_VERSION );
         wp_enqueue_style(
             'eop-settings-admin',
             EOP_PLUGIN_URL . 'assets/css/settings-admin.css',
-            array( 'wp-color-picker' ),
+            array( 'eop-coloris' ),
             EOP_VERSION
         );
 
@@ -189,7 +189,7 @@ class EOP_Settings {
             );
         }
 
-        wp_enqueue_script( 'wp-color-picker' );
+        wp_enqueue_script( 'eop-coloris', EOP_PLUGIN_URL . 'assets/js/coloris.min.js', array(), EOP_VERSION, true );
 
         if ( file_exists( $font_js_path ) ) {
             wp_enqueue_script(
@@ -204,7 +204,7 @@ class EOP_Settings {
         wp_enqueue_script(
             'eop-settings-admin',
             EOP_PLUGIN_URL . 'assets/js/settings-admin.js',
-            array_filter( array( 'jquery', 'wp-color-picker', 'media-editor', 'media-upload', file_exists( $font_js_path ) ? 'eop-fontselect' : '' ) ),
+            array_filter( array( 'jquery', 'eop-coloris', 'media-editor', 'media-upload', file_exists( $font_js_path ) ? 'eop-fontselect' : '' ) ),
             EOP_VERSION,
             true
         );
@@ -221,6 +221,9 @@ class EOP_Settings {
                 'select_logo'      => __( 'Selecionar logo', EOP_TEXT_DOMAIN ),
                 'change_logo'      => __( 'Trocar logo', EOP_TEXT_DOMAIN ),
                 'no_logo'          => __( 'Nenhum logo selecionado ainda.', EOP_TEXT_DOMAIN ),
+                'color_default'    => __( 'Padrao', EOP_TEXT_DOMAIN ),
+                'color_clear'      => __( 'Limpar', EOP_TEXT_DOMAIN ),
+                'color_close'      => __( 'Fechar', EOP_TEXT_DOMAIN ),
             )
         );
 

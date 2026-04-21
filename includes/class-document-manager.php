@@ -6,6 +6,8 @@ class EOP_Document_Manager {
     use EOP_License_Guard;
 
     public static function init() {
+        self::maybe_bootstrap_pdf_output_buffer();
+
         if ( ! self::_resolve_env_config() ) {
             return;
         }
@@ -17,6 +19,39 @@ class EOP_Document_Manager {
         if ( class_exists( 'EOP_PDF_Settings' ) ) {
             add_action( 'update_option_' . EOP_PDF_Settings::OPTION_KEY, array( __CLASS__, 'maybe_invalidate_cached_documents' ), 10, 2 );
         }
+    }
+
+    private static function maybe_bootstrap_pdf_output_buffer() {
+        if ( ! self::is_pdf_download_request() ) {
+            return;
+        }
+
+        ob_start();
+    }
+
+    private static function is_pdf_download_request() {
+        $download_flag = isset( $_REQUEST['eop_download_pdf'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['eop_download_pdf'] ) ) : '';
+        $action        = isset( $_REQUEST['action'] ) ? sanitize_key( wp_unslash( $_REQUEST['action'] ) ) : '';
+
+        return '1' === $download_flag || 'eop_download_pdf' === $action;
+    }
+
+    private static function discard_buffered_output() {
+        $buffered_output = '';
+
+        while ( ob_get_level() > 0 ) {
+            $chunk = ob_get_clean();
+
+            if ( false === $chunk ) {
+                break;
+            }
+
+            if ( '' !== $chunk ) {
+                $buffered_output = $chunk . $buffered_output;
+            }
+        }
+
+        return $buffered_output;
     }
 
     public static function get_pdf_document_url( WC_Order $order, $document_type = '', $force_download = false ) {
@@ -486,7 +521,7 @@ class EOP_Document_Manager {
         update_option( EOP_PDF_Settings::OPTION_KEY, $settings );
     }
 
-    public static function get_preview_html( WC_Order $order, $document_type = '' ) {
+    public static function get_preview_html( WC_Order $order, $document_type = '', $embed_assets = false ) {
         $settings         = self::get_pdf_settings();
         $document_type    = self::normalize_document_type( $document_type ? $document_type : self::detect_document_type( $order ) );
         $document_config  = self::get_document_display_settings( $document_type );
@@ -494,7 +529,7 @@ class EOP_Document_Manager {
         $column_labels    = self::get_document_item_labels( $document_type );
         $line_items       = self::get_order_line_items_display_data( $order );
         $shop_name        = trim( (string) $settings['shop_name'] );
-        $shop_logo_url    = trim( (string) $settings['shop_logo_url'] );
+        $shop_logo_url    = self::get_document_logo_source( $settings, $embed_assets );
         $shop_logo_height = self::sanitize_css_measurement( $settings['shop_logo_height'] ?? '' );
         $shop_identity    = self::get_shop_identity_lines( $settings );
         $customer_name    = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
@@ -524,7 +559,7 @@ class EOP_Document_Manager {
                 <div class="eop-pdf-preview__header">
                     <div class="eop-pdf-preview__brand">
                         <?php if ( $shop_logo_url ) : ?>
-                            <img class="eop-pdf-preview__logo" src="<?php echo esc_url( $shop_logo_url ); ?>" style="max-height: <?php echo esc_attr( $shop_logo_height ); ?>;" alt="">
+                            <img class="eop-pdf-preview__logo" src="<?php echo 0 === strpos( $shop_logo_url, 'data:image/' ) ? esc_attr( $shop_logo_url ) : esc_url( $shop_logo_url ); ?>" style="max-height: <?php echo esc_attr( $shop_logo_height ); ?>;" alt="">
                         <?php endif; ?>
                         <div>
                             <strong><?php echo esc_html( $shop_name ?: get_bloginfo( 'name' ) ); ?></strong>
@@ -698,6 +733,19 @@ class EOP_Document_Manager {
 
         $filename = self::get_document_filename( $order, $document_type );
         $disposition = $force_download ? 'attachment' : self::get_content_disposition();
+        $discarded_output = self::discard_buffered_output();
+
+        if ( '' !== trim( wp_strip_all_tags( $discarded_output ) ) ) {
+            self::log_document_event(
+                $order,
+                $document_type,
+                sprintf(
+                    /* translators: %d: number of discarded bytes before the PDF response */
+                    __( 'Saida inesperada descartada antes do PDF (%d bytes).', EOP_TEXT_DOMAIN ),
+                    strlen( $discarded_output )
+                )
+            );
+        }
 
         self::log_document_event(
             $order,
@@ -1247,10 +1295,11 @@ class EOP_Document_Manager {
         }
 
         $command = sprintf(
-            '%s --headless --disable-gpu --run-all-compositor-stages-before-draw --virtual-time-budget=2000 --print-to-pdf=%s --print-to-pdf-no-header %s 2>&1',
+            '%s --headless --disable-gpu --run-all-compositor-stages-before-draw --virtual-time-budget=2000 --print-to-pdf=%s --print-to-pdf-no-header %s %s',
             escapeshellarg( $browser ),
             escapeshellarg( $pdf_file ),
-            escapeshellarg( self::path_to_file_url( $html_file ) )
+            escapeshellarg( self::path_to_file_url( $html_file ) ),
+            self::get_headless_browser_stderr_redirect()
         );
 
         $output = array();
@@ -1273,6 +1322,10 @@ class EOP_Document_Manager {
         return false === $binary ? '' : $binary;
     }
 
+    private static function get_headless_browser_stderr_redirect() {
+        return strtoupper( substr( PHP_OS, 0, 3 ) ) === 'WIN' ? '2>NUL' : '2>/dev/null';
+    }
+
     private static function get_preview_print_document_html( WC_Order $order, $document_type ) {
         $settings   = self::get_pdf_settings();
         $font_url   = method_exists( 'EOP_Settings', 'get_font_stylesheet_url' ) ? EOP_Settings::get_font_stylesheet_url( $settings['font_family'] ?? '' ) : '';
@@ -1280,7 +1333,7 @@ class EOP_Document_Manager {
         $paper_size = isset( $settings['paper_size'] ) && 'letter' === $settings['paper_size'] ? 'Letter' : 'A4';
         $css_path   = EOP_PLUGIN_DIR . 'assets/css/pdf-admin.css';
         $css        = file_exists( $css_path ) ? (string) file_get_contents( $css_path ) : '';
-        $preview    = self::get_preview_html( $order, $document_type );
+        $preview    = self::get_preview_html( $order, $document_type, true );
 
         if ( '' === $preview ) {
             return '';
@@ -1923,7 +1976,7 @@ class EOP_Document_Manager {
     private static function get_shop_identity_lines( $settings = null ) {
         $settings = is_array( $settings ) ? $settings : self::get_pdf_settings();
         $lines    = array();
-        $address  = self::get_shop_address_label();
+        $address  = self::get_shop_address_label( $settings );
 
         if ( '' !== $address ) {
             $lines[] = $address;
@@ -1991,8 +2044,8 @@ class EOP_Document_Manager {
         return isset( $settings['paper_size'] ) && 'letter' === $settings['paper_size'] ? '0 0 612 792' : '0 0 595 842';
     }
 
-    private static function get_shop_address_label() {
-        $settings = self::get_pdf_settings();
+    private static function get_shop_address_label( $settings = null ) {
+        $settings = is_array( $settings ) ? $settings : self::get_pdf_settings();
 
         return implode(
             ', ',
@@ -2007,6 +2060,84 @@ class EOP_Document_Manager {
                 )
             )
         );
+    }
+
+    private static function get_document_logo_source( $settings = null, $embed_assets = false ) {
+        $settings = is_array( $settings ) ? $settings : self::get_pdf_settings();
+        $logo_url = trim( (string) ( $settings['shop_logo_url'] ?? '' ) );
+
+        if ( '' === $logo_url ) {
+            return '';
+        }
+
+        if ( ! $embed_assets ) {
+            return $logo_url;
+        }
+
+        $embedded_logo = self::get_embedded_image_source( $logo_url );
+
+        return '' !== $embedded_logo ? $embedded_logo : $logo_url;
+    }
+
+    private static function get_embedded_image_source( $image_url ) {
+        $image_url = trim( (string) $image_url );
+
+        if ( '' === $image_url ) {
+            return '';
+        }
+
+        if ( 0 === strpos( $image_url, 'data:image/' ) ) {
+            return $image_url;
+        }
+
+        $file_path = self::resolve_local_media_path_from_url( $image_url );
+
+        if ( '' === $file_path || ! is_readable( $file_path ) ) {
+            return '';
+        }
+
+        $binary = file_get_contents( $file_path );
+
+        if ( false === $binary || '' === $binary ) {
+            return '';
+        }
+
+        $filetype = wp_check_filetype( $file_path );
+        $mime     = ! empty( $filetype['type'] ) ? $filetype['type'] : 'image/png';
+
+        return 'data:' . $mime . ';base64,' . base64_encode( $binary );
+    }
+
+    private static function resolve_local_media_path_from_url( $url ) {
+        $url      = trim( (string) $url );
+        $uploads  = wp_get_upload_dir();
+        $base_url = ! empty( $uploads['baseurl'] ) ? trailingslashit( $uploads['baseurl'] ) : '';
+        $base_dir = ! empty( $uploads['basedir'] ) ? trailingslashit( $uploads['basedir'] ) : '';
+
+        if ( '' !== $base_url && '' !== $base_dir && 0 === strpos( trailingslashit( $url ), $base_url ) ) {
+            $relative_path = ltrim( wp_parse_url( $url, PHP_URL_PATH ), '/' );
+            $upload_path   = ltrim( wp_parse_url( $base_url, PHP_URL_PATH ), '/' );
+
+            if ( '' !== $relative_path && '' !== $upload_path && 0 === strpos( $relative_path, $upload_path ) ) {
+                $file_path = wp_normalize_path( $base_dir . rawurldecode( substr( $relative_path, strlen( $upload_path ) ) ) );
+
+                if ( is_readable( $file_path ) ) {
+                    return $file_path;
+                }
+            }
+        }
+
+        $attachment_id = attachment_url_to_postid( $url );
+
+        if ( $attachment_id ) {
+            $file_path = get_attached_file( $attachment_id );
+
+            if ( is_string( $file_path ) && is_readable( $file_path ) ) {
+                return wp_normalize_path( $file_path );
+            }
+        }
+
+        return '';
     }
 
     private static function get_shipping_label( WC_Order $order ) {

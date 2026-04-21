@@ -2,6 +2,27 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.43 - 2026-04-21
+
+- corrigido o shell administrativo para preservar o visual nativo dos modulos de configuracoes e licenca, evitando que wrappers globais sobrescrevam cards, fundos e sombras ja validados
+- refinada a leitura visual da tela de licenca com separacoes mais limpas entre linhas e sem o efeito de caixas pesadas em cascata
+- documentado em `ADMIN_UI_BRAND.md` o padrao oficial de SPA e branding da Aireset, incluindo a regra de manter o shell compartilhado sem invadir o design interno de modulos especializados
+
+## 1.1.42 - 2026-04-20
+
+- removido o texto interno do box do brand no sidebar e os labels do menu passaram a ficar alinhados a esquerda
+- views principais do SPA ganharam header e acabamento de conteudo no mesmo idioma visual do checkout, com cards, grid e espacamentos mais consistentes
+
+## 1.1.41 - 2026-04-20
+
+- shell SPA do Pedido Expresso aproximado do checkout de forma mais fiel, com mesma estrutura visual de sidebar, bloco interno do brand, paddings, raios e breakpoints do menu
+- navegacao lateral recebeu icones, labels e submenu no mesmo padrao do checkout, mantendo apenas o hero proprio do Pedido Expresso
+
+## 1.1.40 - 2026-04-21
+
+- shell administrativo do Pedido Expresso alinhado a identidade visual mais sobria da Aireset, com menus laterais, bordas e submenus no mesmo idioma visual do checkout
+- documentado o padrao compartilhado do admin para preservar o hero proprio de cada plugin e reutilizar a mesma linguagem de navegacao
+
 ## 1.1.39 - 2026-04-20
 
 - adicionadas acoes em massa de quantidade e desconto no cadastro rapido, na edicao de pedidos e na interface por shortcode para acelerar o preenchimento dos itens

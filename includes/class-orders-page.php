@@ -14,14 +14,14 @@ class EOP_Orders_Page {
     }
 
     public static function register_submenu() {
-        self::$page_hook = add_submenu_page(
-            'aireset',
-            __( 'Pedidos', EOP_TEXT_DOMAIN ),
-            __( 'Pedidos', EOP_TEXT_DOMAIN ),
-            'edit_shop_orders',
-            'eop-pedidos',
-            array( __CLASS__, 'render_page' )
-        );
+        // self::$page_hook = add_submenu_page(
+        //     'aireset',
+        //     __( 'Pedidos', EOP_TEXT_DOMAIN ),
+        //     __( 'Pedidos', EOP_TEXT_DOMAIN ),
+        //     'edit_shop_orders',
+        //     'eop-pedidos',
+        //     array( __CLASS__, 'render_page' )
+        // );
     }
 
     public static function enqueue_assets( $hook ) {
