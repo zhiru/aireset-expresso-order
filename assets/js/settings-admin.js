@@ -155,43 +155,6 @@
         });
     }
 
-    function setColorFieldValue($input, value) {
-        var nextValue = String(value || '');
-
-        $input.val(nextValue).trigger('input').trigger('change');
-
-        if ($input.parent('.clr-field').length) {
-            $input.parent('.clr-field').css('color', nextValue || 'transparent');
-        }
-    }
-
-    function mountColorDefaultButtons() {
-        var defaultLabel = (window.eop_settings_vars && eop_settings_vars.color_default) || 'Padrao';
-
-        $('.eop-color-field').each(function () {
-            var $input = $(this);
-            var defaultColor = String($input.data('default-color') || '');
-            var $pickerShell = $input.parent('.clr-field').length ? $input.parent('.clr-field') : $input;
-            var $control;
-
-            if (!$pickerShell.parent().hasClass('eop-color-control')) {
-                $pickerShell.wrap('<div class="eop-color-control"></div>');
-            }
-
-            $control = $pickerShell.parent();
-
-            if (defaultColor && !$control.find('.eop-color-default').length) {
-                $('<button>', {
-                    type: 'button',
-                    class: 'button button-secondary eop-color-default',
-                    text: defaultLabel,
-                    'data-default-color': defaultColor,
-                    'aria-label': defaultLabel
-                }).appendTo($control);
-            }
-        });
-    }
-
     function initColorFields() {
         var clearLabel = (window.eop_settings_vars && eop_settings_vars.color_clear) || 'Limpar';
         var closeLabel = (window.eop_settings_vars && eop_settings_vars.color_close) || 'Fechar';
@@ -212,8 +175,6 @@
                 swatchesOnly: false,
                 swatches: colorSwatches
             });
-
-            mountColorDefaultButtons();
             return;
         }
 
@@ -222,15 +183,57 @@
         }
     }
 
+    function setColorFieldValue($input, value) {
+        var nextValue = String(value || '');
+
+        $input.val(nextValue).trigger('input').trigger('change');
+
+        if ($input.parent('.clr-field').length) {
+            $input.parent('.clr-field').css('color', nextValue || 'transparent');
+        }
+    }
+
+    function mountColorDefaultButtons() {
+        var defaultLabel = (window.eop_settings_vars && eop_settings_vars.color_default) || 'Padrao';
+
+        $('.eop-color-field').each(function () {
+            var $input = $(this);
+            var defaultColor = String($input.data('default-color') || '');
+            var $pickerShell = $input.parent('.clr-field').length ? $input.parent('.clr-field') : $input;
+            var $control;
+
+            if (!defaultColor) {
+                return;
+            }
+
+            if (!$pickerShell.parent().hasClass('eop-color-control')) {
+                $pickerShell.wrap('<div class="eop-color-control"></div>');
+            }
+
+            $control = $pickerShell.parent();
+
+            if (!$control.find('.eop-color-default').length) {
+                $('<button>', {
+                    type: 'button',
+                    class: 'button button-secondary eop-color-default',
+                    text: defaultLabel,
+                    'data-default-color': defaultColor,
+                    'aria-label': defaultLabel
+                }).appendTo($control);
+            }
+        });
+    }
+
     $(function () {
         hideExternalNotices();
         window.setTimeout(hideExternalNotices, 120);
         injectPdfHelpTooltips();
         initColorFields();
+        mountColorDefaultButtons();
 
         $(document).on('click', '.eop-color-default', function (event) {
             var $button = $(this);
-            var $input = $button.siblings('.clr-field').find('.eop-color-field').first();
+            var $input = $button.closest('.eop-color-control').find('.eop-color-field').first();
             var defaultColor = String($button.data('default-color') || '');
 
             event.preventDefault();

@@ -181,6 +181,46 @@ body.eop-settings-screen .error {
 .eop-settings-field.is-full {
   grid-column: 1/-1;
 }
+.eop-settings-field .eop-color-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.eop-settings-field .clr-field {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  color: #11162f;
+}
+.eop-settings-field .clr-field input {
+  width: 100%;
+  margin: 0;
+  padding-right: 44px;
+  color: #11162f !important;
+}
+.eop-settings-field .clr-field button {
+  right: 10px;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  margin-top: 0;
+  transform: translateY(-50%);
+  border-radius: 999px;
+}
+.eop-settings-field .eop-color-default.button.button-secondary {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border-color: #c9d6ff;
+  color: #17327c;
+  white-space: nowrap;
+  box-shadow: none;
+}
+.eop-settings-field .eop-color-default.button.button-secondary:hover, .eop-settings-field .eop-color-default.button.button-secondary:focus {
+  border-color: #8eabff;
+  color: #10265f;
+}
 
 .eop-settings-field__readonly {
   background: #f7f9fd !important;

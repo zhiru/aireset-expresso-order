@@ -216,6 +216,53 @@ body.eop-settings-screen {
   &.is-full {
     grid-column: 1 / -1;
   }
+
+  .eop-color-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .clr-field {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    color: #11162f;
+
+    input {
+      width: 100%;
+      margin: 0;
+      padding-right: 44px;
+      color: #11162f !important;
+    }
+
+    button {
+      right: 10px;
+      top: 50%;
+      width: 22px;
+      height: 22px;
+      margin-top: 0;
+      transform: translateY(-50%);
+      border-radius: 999px;
+    }
+  }
+
+  .eop-color-default.button.button-secondary {
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 12px;
+    border-color: #c9d6ff;
+    color: #17327c;
+    white-space: nowrap;
+    box-shadow: none;
+
+    &:hover,
+    &:focus {
+      border-color: #8eabff;
+      color: #10265f;
+    }
+  }
 }
 
 .eop-settings-field__readonly {

@@ -2,6 +2,11 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.44 - 2026-04-20
+
+- alinhado o campo de cor do Expresso Order ao mesmo padrao visual do checkout, preservando o swatch circular interno e a geometria correta do input
+- restaurado o botao `Padrao` ao lado dos controles de cor sem voltar ao layout quebrado que empurrava ou deformava o campo
+
 ## 1.1.43 - 2026-04-21
 
 - corrigido o shell administrativo para preservar o visual nativo dos modulos de configuracoes e licenca, evitando que wrappers globais sobrescrevam cards, fundos e sombras ja validados
