@@ -159,7 +159,7 @@ class EOP_Public_Proposal {
             .eop-proposal-item__body{min-width:0}
             .eop-proposal-item__name{margin:0 0 8px;font-size:22px;line-height:1.2}
             .eop-proposal-item__meta{display:flex;flex-wrap:wrap;gap:10px 16px;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:14px}
-            .eop-proposal-item__pill{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:999px;background:#f1f4ff;color:<?php echo esc_attr( $settings['primary_color'] ); ?>;font-weight:700;line-height:1.2}
+            .eop-proposal-item__pill{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:999px;background:#f1f4ff;color:<?php echo esc_attr( $settings['primary_color'] ); ?>;font-weight:700;line-height:1.2;white-space:nowrap}
             .eop-proposal-item__summary{display:grid;gap:6px;min-width:150px;justify-items:end;text-align:right}
             .eop-proposal-item__summary span{font-size:13px;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
             .eop-proposal-item__summary strong{font-size:28px;line-height:1;color:<?php echo esc_attr( $settings['proposal_text_color'] ); ?>}

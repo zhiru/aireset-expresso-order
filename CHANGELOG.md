@@ -2,6 +2,21 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.48 - 2026-04-23
+
+- ocultado o container de notices do shell quando estiver vazio, inclusive apos dispensar mensagens no admin e na tela de pedidos
+- reduzida a altura visual do header `.eop-admin-panel-head` para evitar hero excessivamente alto em views internas
+
+## 1.1.47 - 2026-04-23
+
+- corrigido o preview do PDF para renderizar o desconto em linha unica sem depender do bloco auxiliar em duas linhas
+- adicionada exibicao automatica de impostos nos totais do documento quando houver valor tributario, evitando diferenca entre soma das linhas e total final
+
+## 1.1.46 - 2026-04-23
+
+- ajustado o preview e o PDF nativo para manter porcentagem e valor do desconto na mesma linha
+- blindada a quebra de linha do simbolo da moeda com o valor no preview do PDF e na proposta publica
+
 ## 1.1.45 - 2026-04-20
 
 - corrigido o empacotamento de release para gerar apenas o arquivo `aireset-expresso-order.zip` no formato esperado pelo WordPress

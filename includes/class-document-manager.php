@@ -223,6 +223,7 @@ class EOP_Document_Manager {
             'show_billing'        => $settings[ $prefix . '_show_billing' ] ?? 'no',
             'show_notes'          => $settings[ $prefix . '_show_notes' ] ?? 'yes',
             'show_sku'            => $settings[ $prefix . '_show_sku' ] ?? 'yes',
+            'show_item_index'     => $settings[ $prefix . '_show_item_index' ] ?? 'yes',
             'show_quantity'       => $settings[ $prefix . '_show_quantity' ] ?? 'yes',
             'show_unit_price'     => $settings[ $prefix . '_show_unit_price' ] ?? 'yes',
             'show_discount'       => $settings[ $prefix . '_show_discount' ] ?? 'yes',
@@ -233,6 +234,53 @@ class EOP_Document_Manager {
             'show_total_discount' => $settings[ $prefix . '_show_total_discount' ] ?? 'yes',
             'show_total_total'    => $settings[ $prefix . '_show_total_total' ] ?? 'yes',
         );
+    }
+
+    public static function get_document_visual_settings( $document_type = 'order' ) {
+        $settings = self::get_pdf_settings();
+        $prefix   = 'proposal' === self::normalize_document_type( $document_type ) ? 'proposal' : 'order';
+        $defaults = class_exists( 'EOP_PDF_Settings' )
+            ? EOP_PDF_Settings::get_document_visual_defaults( $document_type )
+            : array(
+                'header_background_color' => '#111111',
+                'header_text_color'       => '#ffffff',
+                'body_text_color'         => '#172033',
+                'muted_text_color'        => '#5b6474',
+                'border_color'            => '#e3e8f1',
+                'title_font_size'         => '34',
+                'meta_font_size'          => '13',
+                'table_header_font_size'  => '12',
+                'table_body_font_size'    => '14',
+                'totals_font_size'        => '16',
+                'note_font_size'          => '13',
+            );
+
+        return array(
+            'header_background_color' => self::sanitize_pdf_hex_color( $settings[ $prefix . '_header_background_color' ] ?? $defaults['header_background_color'], $defaults['header_background_color'] ),
+            'header_text_color'       => self::sanitize_pdf_hex_color( $settings[ $prefix . '_header_text_color' ] ?? $defaults['header_text_color'], $defaults['header_text_color'] ),
+            'body_text_color'         => self::sanitize_pdf_hex_color( $settings[ $prefix . '_body_text_color' ] ?? $defaults['body_text_color'], $defaults['body_text_color'] ),
+            'muted_text_color'        => self::sanitize_pdf_hex_color( $settings[ $prefix . '_muted_text_color' ] ?? $defaults['muted_text_color'], $defaults['muted_text_color'] ),
+            'border_color'            => self::sanitize_pdf_hex_color( $settings[ $prefix . '_border_color' ] ?? $defaults['border_color'], $defaults['border_color'] ),
+            'title_font_size'         => self::sanitize_pdf_font_size( $settings[ $prefix . '_title_font_size' ] ?? $defaults['title_font_size'], $defaults['title_font_size'] ),
+            'meta_font_size'          => self::sanitize_pdf_font_size( $settings[ $prefix . '_meta_font_size' ] ?? $defaults['meta_font_size'], $defaults['meta_font_size'] ),
+            'table_header_font_size'  => self::sanitize_pdf_font_size( $settings[ $prefix . '_table_header_font_size' ] ?? $defaults['table_header_font_size'], $defaults['table_header_font_size'] ),
+            'table_body_font_size'    => self::sanitize_pdf_font_size( $settings[ $prefix . '_table_body_font_size' ] ?? $defaults['table_body_font_size'], $defaults['table_body_font_size'] ),
+            'totals_font_size'        => self::sanitize_pdf_font_size( $settings[ $prefix . '_totals_font_size' ] ?? $defaults['totals_font_size'], $defaults['totals_font_size'] ),
+            'note_font_size'          => self::sanitize_pdf_font_size( $settings[ $prefix . '_note_font_size' ] ?? $defaults['note_font_size'], $defaults['note_font_size'] ),
+        );
+    }
+
+    public static function get_document_discount_suffix( $document_type = 'order' ) {
+        $settings = self::get_pdf_settings();
+        $prefix   = 'proposal' === self::normalize_document_type( $document_type ) ? 'proposal' : 'order';
+        $default  = '/ un.';
+
+        if ( class_exists( 'EOP_PDF_Settings' ) ) {
+            $defaults = EOP_PDF_Settings::get_defaults();
+            $default  = (string) ( $defaults[ $prefix . '_discount_suffix' ] ?? $default );
+        }
+
+        return sanitize_text_field( (string) ( $settings[ $prefix . '_discount_suffix' ] ?? $default ) );
     }
 
     public static function get_document_item_labels( $document_type = 'order' ) {
@@ -264,11 +312,25 @@ class EOP_Document_Manager {
         $config  = self::get_document_display_settings( $document_type );
         $labels  = self::get_document_item_labels( $document_type );
         $columns = array();
+        $positions = class_exists( 'EOP_PDF_Settings' )
+            ? EOP_PDF_Settings::get_document_item_position_defaults( $document_type )
+            : array(
+                'quantity'              => '10',
+                'unit_price'            => '20',
+                'discount'              => '30',
+                'discounted_unit_price' => '40',
+                'line_total'            => '50',
+            );
+
+        foreach ( $positions as $key => $default_position ) {
+            $positions[ $key ] = max( 1, absint( self::get_pdf_settings()[ self::normalize_document_type( $document_type ) . '_' . $key . '_position' ] ?? $default_position ) );
+        }
 
         if ( 'yes' === $config['show_quantity'] ) {
             $columns[] = array(
                 'key'   => 'quantity',
                 'label' => $labels['quantity'],
+                'position' => $positions['quantity'],
             );
         }
 
@@ -276,6 +338,7 @@ class EOP_Document_Manager {
             $columns[] = array(
                 'key'   => 'unit_price',
                 'label' => $labels['unit_price'],
+                'position' => $positions['unit_price'],
             );
         }
 
@@ -283,6 +346,7 @@ class EOP_Document_Manager {
             $columns[] = array(
                 'key'   => 'discount',
                 'label' => $labels['discount'],
+                'position' => $positions['discount'],
             );
         }
 
@@ -290,6 +354,7 @@ class EOP_Document_Manager {
             $columns[] = array(
                 'key'   => 'discounted_unit_price',
                 'label' => $labels['discounted_unit_price'],
+                'position' => $positions['discounted_unit_price'],
             );
         }
 
@@ -297,8 +362,23 @@ class EOP_Document_Manager {
             $columns[] = array(
                 'key'   => 'line_total',
                 'label' => $labels['line_total'],
+                'position' => $positions['line_total'],
             );
         }
+
+        usort(
+            $columns,
+            function ( $left, $right ) {
+                $left_position  = absint( $left['position'] ?? 0 );
+                $right_position = absint( $right['position'] ?? 0 );
+
+                if ( $left_position === $right_position ) {
+                    return strcmp( (string) ( $left['key'] ?? '' ), (string) ( $right['key'] ?? '' ) );
+                }
+
+                return $left_position <=> $right_position;
+            }
+        );
 
         return $columns;
     }
@@ -323,6 +403,18 @@ class EOP_Document_Manager {
                 'label' => __( 'Frete', EOP_TEXT_DOMAIN ),
                 'raw'   => (float) $totals['shipping_total'],
                 'value' => wc_price( (float) $totals['shipping_total'] ),
+                'class' => '',
+            );
+        }
+
+        $tax_total = isset( $totals['tax_total'] ) ? (float) $totals['tax_total'] : 0.0;
+
+        if ( $tax_total > 0.0 ) {
+            $rows[] = array(
+                'key'   => 'tax',
+                'label' => __( 'Impostos', EOP_TEXT_DOMAIN ),
+                'raw'   => $tax_total,
+                'value' => wc_price( $tax_total ),
                 'class' => '',
             );
         }
@@ -525,9 +617,11 @@ class EOP_Document_Manager {
         $settings         = self::get_pdf_settings();
         $document_type    = self::normalize_document_type( $document_type ? $document_type : self::detect_document_type( $order ) );
         $document_config  = self::get_document_display_settings( $document_type );
+        $visual_settings  = self::get_document_visual_settings( $document_type );
         $visible_columns  = self::get_document_item_columns( $document_type );
         $column_labels    = self::get_document_item_labels( $document_type );
         $line_items       = self::get_order_line_items_display_data( $order );
+        $discount_suffix  = self::get_document_discount_suffix( $document_type );
         $shop_name        = trim( (string) $settings['shop_name'] );
         $shop_logo_url    = self::get_document_logo_source( $settings, $embed_assets );
         $shop_logo_height = self::sanitize_css_measurement( $settings['shop_logo_height'] ?? '' );
@@ -545,13 +639,30 @@ class EOP_Document_Manager {
         $show_billing     = 'yes' === $document_config['show_billing'];
         $show_notes       = 'yes' === $document_config['show_notes'];
         $show_sku         = 'yes' === $document_config['show_sku'];
+        $show_item_index  = 'yes' === $document_config['show_item_index'];
         $test_mode        = ! empty( $settings['test_mode'] ) && 'yes' === (string) $settings['test_mode'];
         $total_rows       = self::get_document_total_rows( $totals, $document_type );
         $billing_label    = self::get_billing_label( $order );
+        $preview_style    = implode(
+            '; ',
+            array(
+                '--eop-doc-header-bg: ' . $visual_settings['header_background_color'],
+                '--eop-doc-header-text: ' . $visual_settings['header_text_color'],
+                '--eop-doc-body-text: ' . $visual_settings['body_text_color'],
+                '--eop-doc-muted-text: ' . $visual_settings['muted_text_color'],
+                '--eop-doc-border-color: ' . $visual_settings['border_color'],
+                '--eop-doc-title-size: ' . absint( $visual_settings['title_font_size'] ) . 'px',
+                '--eop-doc-meta-size: ' . absint( $visual_settings['meta_font_size'] ) . 'px',
+                '--eop-doc-table-header-size: ' . absint( $visual_settings['table_header_font_size'] ) . 'px',
+                '--eop-doc-table-body-size: ' . absint( $visual_settings['table_body_font_size'] ) . 'px',
+                '--eop-doc-totals-size: ' . absint( $visual_settings['totals_font_size'] ) . 'px',
+                '--eop-doc-note-size: ' . absint( $visual_settings['note_font_size'] ) . 'px',
+            )
+        );
 
         ob_start();
         ?>
-        <div class="eop-pdf-preview eop-pdf-preview--<?php echo esc_attr( $template_name ); ?><?php echo $ink_saving ? ' is-ink-saving' : ''; ?>">
+        <div class="eop-pdf-preview eop-pdf-preview--<?php echo esc_attr( $template_name ); ?><?php echo $ink_saving ? ' is-ink-saving' : ''; ?>" style="<?php echo esc_attr( $preview_style ); ?>">
             <div class="eop-pdf-preview__sheet eop-pdf-preview__sheet--<?php echo esc_attr( strtolower( $paper_size ) ); ?>">
                 <?php if ( $test_mode ) : ?>
                     <div class="eop-pdf-preview__watermark"><?php esc_html_e( 'MODO DE TESTE', EOP_TEXT_DOMAIN ); ?></div>
@@ -604,19 +715,26 @@ class EOP_Document_Manager {
                 <table class="eop-pdf-preview__table">
                     <thead>
                         <tr>
+                            <?php if ( $show_item_index ) : ?>
+                                <th class="eop-pdf-preview__cell eop-pdf-preview__cell--item-index"><?php echo esc_html( $column_labels['item_index'] ); ?></th>
+                            <?php endif; ?>
                             <th><?php echo esc_html( $column_labels['product'] ); ?></th>
                             <?php foreach ( $visible_columns as $column ) : ?>
-                                <th><?php echo esc_html( $column['label'] ); ?></th>
+                                <th class="eop-pdf-preview__cell eop-pdf-preview__cell--<?php echo esc_attr( $column['key'] ); ?>"><?php echo esc_html( $column['label'] ); ?></th>
                             <?php endforeach; ?>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ( $line_items as $line_item ) : ?>
+                        <?php foreach ( $line_items as $index => $line_item ) : ?>
                             <?php
                             $item    = $line_item['item'];
                             $product = $line_item['product'];
+                            $discount_line = trim( wp_strip_all_tags( $discount_suffix ) );
                             ?>
                             <tr>
+                                <?php if ( $show_item_index ) : ?>
+                                    <td class="eop-pdf-preview__cell eop-pdf-preview__cell--item-index"><?php echo esc_html( $index + 1 ); ?></td>
+                                <?php endif; ?>
                                 <td>
                                     <strong><?php echo esc_html( $item->get_name() ); ?></strong>
                                     <?php if ( $show_sku && $product && $product->get_sku() ) : ?>
@@ -624,18 +742,25 @@ class EOP_Document_Manager {
                                     <?php endif; ?>
                                 </td>
                                 <?php foreach ( $visible_columns as $column ) : ?>
-                                    <td>
+                                    <td class="eop-pdf-preview__cell eop-pdf-preview__cell--<?php echo esc_attr( $column['key'] ); ?>">
                                         <?php if ( 'quantity' === $column['key'] ) : ?>
                                             <?php echo esc_html( $line_item['quantity'] ); ?>
                                         <?php elseif ( 'unit_price' === $column['key'] ) : ?>
-                                            <?php echo wp_kses_post( wc_price( $line_item['unit_price'] ) ); ?>
+                                            <span class="eop-pdf-preview__money"><?php echo wp_kses_post( wc_price( $line_item['unit_price'] ) ); ?></span>
                                         <?php elseif ( 'discount' === $column['key'] ) : ?>
-                                            <strong><?php echo esc_html( self::format_percentage( $line_item['discount_percent'] ) ); ?></strong>
-                                            <small><?php echo wp_kses_post( wc_price( $line_item['discount_per_unit'] ) ); ?> / <?php esc_html_e( 'un.', EOP_TEXT_DOMAIN ); ?></small>
+                                            <span class="eop-pdf-preview__discount-line">
+                                                <strong><?php echo esc_html( self::format_percentage( $line_item['discount_percent'] ) ); ?></strong>
+                                                <span class="eop-pdf-preview__discount-meta">
+                                                    <span class="eop-pdf-preview__money"><?php echo wp_kses_post( wc_price( $line_item['discount_per_unit'] ) ); ?></span>
+                                                    <?php if ( '' !== $discount_line ) : ?>
+                                                        <?php echo ' ' . esc_html( $discount_line ); ?>
+                                                    <?php endif; ?>
+                                                </span>
+                                            </span>
                                         <?php elseif ( 'discounted_unit_price' === $column['key'] ) : ?>
-                                            <?php echo wp_kses_post( wc_price( $line_item['discounted_unit_price'] ) ); ?>
+                                            <span class="eop-pdf-preview__money"><?php echo wp_kses_post( wc_price( $line_item['discounted_unit_price'] ) ); ?></span>
                                         <?php elseif ( 'line_total' === $column['key'] ) : ?>
-                                            <?php echo wp_kses_post( wc_price( $line_item['line_total'] ) ); ?>
+                                            <span class="eop-pdf-preview__money"><?php echo wp_kses_post( wc_price( $line_item['line_total'] ) ); ?></span>
                                         <?php endif; ?>
                                     </td>
                                 <?php endforeach; ?>
@@ -852,11 +977,16 @@ class EOP_Document_Manager {
         $page_right      = 549;
         $content_width   = $page_right - $page_left;
         $document_config = self::get_document_display_settings( $document_type );
+        $visual_settings = self::get_document_visual_settings( $document_type );
         $totals          = EOP_Order_Creator::sync_order_totals( $order );
         $line_items      = self::get_order_line_items_display_data( $order );
         $total_rows      = self::get_document_total_rows( $totals, $document_type );
         $columns         = self::get_document_item_columns( $document_type );
+        $column_keys     = array_values( array_filter( wp_list_pluck( $columns, 'key' ) ) );
+        $column_lookup   = array_fill_keys( $column_keys, true );
+        $column_positions = self::get_pdf_table_positions( $column_keys );
         $column_labels   = self::get_document_item_labels( $document_type );
+        $discount_suffix = self::get_document_discount_suffix( $document_type );
         $date            = $order->get_date_created();
         $document_number = self::get_document_number( $order, $document_type, false );
         $company_name    = trim( (string) $settings['shop_name'] );
@@ -864,17 +994,28 @@ class EOP_Document_Manager {
         $footer_note     = trim( (string) $settings['shop_footer'] );
         $customer_name   = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
         $show_sku        = 'yes' === $document_config['show_sku'];
+        $show_item_index = 'yes' === $document_config['show_item_index'];
         $show_notes      = 'yes' === $document_config['show_notes'];
         $billing_label   = self::get_billing_label( $order );
         $test_mode       = ! empty( $settings['test_mode'] ) && 'yes' === (string) $settings['test_mode'];
-        $show_line_total = false;
-
-        foreach ( $columns as $column ) {
-            if ( isset( $column['key'] ) && 'line_total' === $column['key'] ) {
-                $show_line_total = true;
-                break;
-            }
-        }
+        $title_font_size = self::scale_pdf_font_size( $visual_settings['title_font_size'], 18 );
+        $meta_font_size  = self::scale_pdf_font_size( $visual_settings['meta_font_size'], 9 );
+        $table_header_font_size = self::scale_pdf_font_size( $visual_settings['table_header_font_size'], 8 );
+        $table_body_font_size   = self::scale_pdf_font_size( $visual_settings['table_body_font_size'], 9 );
+        $totals_font_size       = self::scale_pdf_font_size( $visual_settings['totals_font_size'], 11 );
+        $note_font_size         = self::scale_pdf_font_size( $visual_settings['note_font_size'], 9 );
+        $company_font_size      = max( 12, $meta_font_size + 5 );
+        $summary_label_size     = max( 8, $meta_font_size - 1 );
+        $summary_value_size     = max( 10, $meta_font_size + 1 );
+        $discount_secondary_size = max( 8, $table_body_font_size - 1 );
+        $header_background_color = $visual_settings['header_background_color'];
+        $header_text_color       = $visual_settings['header_text_color'];
+        $body_text_color         = $visual_settings['body_text_color'];
+        $muted_text_color        = $visual_settings['muted_text_color'];
+        $border_color            = $visual_settings['border_color'];
+        $product_wrap_length     = $show_item_index ? 20 : 24;
+        $item_index_center       = $page_left + 16;
+        $product_x               = $show_item_index ? $page_left + 36 : $page_left + 12;
 
         $start_page = function () use ( &$pages, &$content, &$y ) {
             if ( '' !== $content ) {
@@ -898,10 +1039,10 @@ class EOP_Document_Manager {
             return strlen( self::escape_pdf_text( $text ) ) * $size * $factor;
         };
 
-        $draw_line = function ( $x1, $x2, $line_y, $gray = 0.82, $width = 1 ) use ( &$content ) {
+        $draw_line = function ( $x1, $x2, $line_y, $color = '#d0d7e4', $width = 1 ) use ( &$content ) {
             $content .= sprintf(
-                "q %s G %s w %s %s m %s %s l S Q\n",
-                self::pdf_number( $gray ),
+                "q %s %s w %s %s m %s %s l S Q\n",
+                self::get_pdf_stroke_color_operator( $color ),
                 self::pdf_number( $width ),
                 self::pdf_number( $x1 ),
                 self::pdf_number( $line_y ),
@@ -910,10 +1051,10 @@ class EOP_Document_Manager {
             );
         };
 
-        $fill_rect = function ( $x, $top, $width, $height, $gray = 0.08 ) use ( &$content ) {
+        $fill_rect = function ( $x, $top, $width, $height, $color = '#111111' ) use ( &$content ) {
             $content .= sprintf(
-                "q %s g %s %s %s %s re f Q\n",
-                self::pdf_number( $gray ),
+                "q %s %s %s %s %s re f Q\n",
+                self::get_pdf_fill_color_operator( $color ),
                 self::pdf_number( $x ),
                 self::pdf_number( $top - $height ),
                 self::pdf_number( $width ),
@@ -921,7 +1062,7 @@ class EOP_Document_Manager {
             );
         };
 
-        $add_text_at = function ( $text, $x, $line_y, $font = 'F1', $size = 11, $align = 'left', $gray = 0.12 ) use ( &$content, $estimate_text_width ) {
+        $add_text_at = function ( $text, $x, $line_y, $font = 'F1', $size = 11, $align = 'left', $color = '#172033' ) use ( &$content, $estimate_text_width ) {
             $text = trim( wp_strip_all_tags( (string) $text ) );
 
             if ( '' === $text ) {
@@ -937,8 +1078,8 @@ class EOP_Document_Manager {
             }
 
             $content .= sprintf(
-                "q %s g BT /%s %s Tf 1 0 0 1 %s %s Tm (%s) Tj ET Q\n",
-                self::pdf_number( $gray ),
+                "q %s BT /%s %s Tf 1 0 0 1 %s %s Tm (%s) Tj ET Q\n",
+                self::get_pdf_text_color_operator( $color ),
                 $font,
                 self::pdf_number( $size ),
                 self::pdf_number( $x ),
@@ -981,19 +1122,19 @@ class EOP_Document_Manager {
 
         $ensure_space( 220 );
 
-        $add_text_at( $company_name ?: get_bloginfo( 'name' ), $page_left, $y, 'F2', 20, 'left', 0.08 );
+        $add_text_at( $company_name ?: get_bloginfo( 'name' ), $page_left, $y, 'F2', $company_font_size, 'left', $body_text_color );
 
         foreach ( $company_lines as $line_index => $company_line ) {
-            $add_text_at( $company_line, $page_left, $y - 24 - ( $line_index * 14 ), 'F1', 11, 'left', 0.45 );
+            $add_text_at( $company_line, $page_left, $y - 24 - ( $line_index * 14 ), 'F1', $meta_font_size, 'left', $muted_text_color );
         }
 
-        $add_text_at( $document_heading, $page_right, $y + 2, 'F2', 25, 'right', 0.08 );
+        $add_text_at( $document_heading, $page_right, $y + 2, 'F2', $title_font_size, 'right', $body_text_color );
         if ( $test_mode ) {
-            $add_text_at( __( 'MODO DE TESTE', EOP_TEXT_DOMAIN ), $page_right, $y - 16, 'F2', 12, 'right', 0.35 );
+            $add_text_at( __( 'MODO DE TESTE', EOP_TEXT_DOMAIN ), $page_right, $y - 16, 'F2', max( 10, $meta_font_size ), 'right', '#c93535' );
         }
-        $add_text_at( sprintf( __( 'Numero do documento: %s', EOP_TEXT_DOMAIN ), $document_number ), $page_right, $y - 24, 'F1', 11, 'right', 0.36 );
-        $add_text_at( sprintf( __( 'Data: %s', EOP_TEXT_DOMAIN ), $date ? $date->date_i18n( 'd/m/Y' ) : '—' ), $page_right, $y - 40, 'F1', 11, 'right', 0.36 );
-        $add_text_at( sprintf( __( 'Pedido WooCommerce: #%s', EOP_TEXT_DOMAIN ), $order->get_id() ), $page_right, $y - 56, 'F1', 11, 'right', 0.36 );
+        $add_text_at( sprintf( __( 'Numero do documento: %s', EOP_TEXT_DOMAIN ), $document_number ), $page_right, $y - 24, 'F1', $meta_font_size, 'right', $muted_text_color );
+        $add_text_at( sprintf( __( 'Data: %s', EOP_TEXT_DOMAIN ), $date ? $date->date_i18n( 'd/m/Y' ) : '—' ), $page_right, $y - 40, 'F1', $meta_font_size, 'right', $muted_text_color );
+        $add_text_at( sprintf( __( 'Pedido WooCommerce: #%s', EOP_TEXT_DOMAIN ), $order->get_id() ), $page_right, $y - 56, 'F1', $meta_font_size, 'right', $muted_text_color );
 
         $y -= max( 98, 70 + ( count( $company_lines ) * 14 ) );
 
@@ -1008,13 +1149,13 @@ class EOP_Document_Manager {
                 $line_y     = $y;
                 $block_rows = 1 + count( $block['extra'] );
 
-                $add_text_at( strtoupper( $block['label'] ), $block_x, $line_y, 'F2', 10, 'left', 0.42 );
+                $add_text_at( strtoupper( $block['label'] ), $block_x, $line_y, 'F2', $summary_label_size, 'left', $muted_text_color );
                 $line_y -= 22;
-                $add_text_at( $block['value'], $block_x, $line_y, 'F2', 14, 'left', 0.12 );
+                $add_text_at( $block['value'], $block_x, $line_y, 'F2', $summary_value_size, 'left', $body_text_color );
                 $line_y -= 16;
 
                 foreach ( $block['extra'] as $extra_line ) {
-                    $add_text_at( $extra_line, $block_x, $line_y, 'F1', 10, 'left', 0.45 );
+                    $add_text_at( $extra_line, $block_x, $line_y, 'F1', $meta_font_size, 'left', $muted_text_color );
                     $line_y -= 14;
                 }
 
@@ -1025,65 +1166,69 @@ class EOP_Document_Manager {
         }
 
         $header_top    = $y;
-        $header_height = 44;
-        $fill_rect( $page_left, $header_top, $content_width, $header_height, 0.08 );
-        $add_text_at( $column_labels['product'], $page_left + 12, $header_top - 21, 'F2', 9, 'left', 1 );
+        $header_height = max( 40, 32 + ( $table_header_font_size * 1.4 ) );
+        $fill_rect( $page_left, $header_top, $content_width, $header_height, $header_background_color );
 
-        $column_positions = array(
-            'quantity'              => 240,
-            'unit_price'            => 315,
-            'discount'              => 390,
-            'discounted_unit_price' => 470,
-        );
+        if ( $show_item_index ) {
+            $add_text_at( $column_labels['item_index'], $item_index_center, $header_top - 21, 'F2', $table_header_font_size, 'center', $header_text_color );
+        }
 
-        $render_column_header = function ( $label, $x ) use ( $header_top, $add_text_at ) {
+        $add_text_at( $column_labels['product'], $product_x, $header_top - 21, 'F2', $table_header_font_size, 'left', $header_text_color );
+
+        $render_column_header = function ( $label, $x ) use ( $header_top, $add_text_at, $table_header_font_size, $header_text_color ) {
             $lines      = array_slice( self::wrap_text( $label, 16 ), 0, 3 );
             $line_count = count( $lines );
             $start_gap  = 21 - max( 0, $line_count - 1 ) * 5;
 
             foreach ( $lines as $line_index => $line ) {
-                $add_text_at( $line, $x, $header_top - $start_gap - ( $line_index * 11 ), 'F2', 8, 'center', 1 );
+                $add_text_at( $line, $x, $header_top - $start_gap - ( $line_index * 11 ), 'F2', max( 7, $table_header_font_size - 1 ), 'center', $header_text_color );
             }
         };
 
         foreach ( $columns as $column ) {
-            if ( 'line_total' === ( $column['key'] ?? '' ) ) {
-                $render_column_header( $column['label'], 520 );
-                continue;
-            }
-
-            if ( isset( $column_positions[ $column['key'] ] ) ) {
+            if ( isset( $column_positions[ $column['key'] ?? '' ] ) ) {
                 $render_column_header( $column['label'], $column_positions[ $column['key'] ] );
             }
         }
 
         $y = $header_top - $header_height - 18;
 
-        foreach ( $line_items as $line_item ) {
+        foreach ( $line_items as $index => $line_item ) {
             $product      = $line_item['product'];
             $product_name = $line_item['item']->get_name();
-            $name_lines   = self::wrap_text( $product_name, 24 );
+            $name_lines   = self::wrap_text( $product_name, $product_wrap_length );
             $meta_lines   = array();
 
-            if ( array_filter( $columns, function ( $column ) { return isset( $column['key'] ) && 'quantity' === $column['key']; } ) ) {
+            if ( isset( $column_lookup['quantity'] ) ) {
                 $meta_lines['quantity'] = (string) $line_item['quantity'];
             }
 
-            if ( array_filter( $columns, function ( $column ) { return isset( $column['key'] ) && 'unit_price' === $column['key']; } ) ) {
+            if ( isset( $column_lookup['unit_price'] ) ) {
                 $meta_lines['unit_price'] = self::format_money( $line_item['unit_price'] );
             }
 
-            if ( array_filter( $columns, function ( $column ) { return isset( $column['key'] ) && 'discount' === $column['key']; } ) ) {
-                $meta_lines['discount_main'] = self::format_percentage( $line_item['discount_percent'] );
-                $meta_lines['discount_sub']  = self::format_money( $line_item['discount_per_unit'] ) . '/' . __( 'un.', EOP_TEXT_DOMAIN );
+            if ( isset( $column_lookup['discount'] ) ) {
+                $discount_parts = array(
+                    self::format_percentage( $line_item['discount_percent'] ),
+                    trim( self::format_money( $line_item['discount_per_unit'] ) . ( '' !== $discount_suffix ? ' ' . $discount_suffix : '' ) ),
+                );
+                $discount_parts = array_values( array_filter( $discount_parts, 'strlen' ) );
+
+                if ( ! empty( $discount_parts ) ) {
+                    $meta_lines['discount'] = implode( ' ', $discount_parts );
+                }
             }
 
-            if ( array_filter( $columns, function ( $column ) { return isset( $column['key'] ) && 'discounted_unit_price' === $column['key']; } ) ) {
+            if ( isset( $column_lookup['discounted_unit_price'] ) ) {
                 $meta_lines['discounted_unit_price'] = self::format_money( $line_item['discounted_unit_price'] );
             }
 
+            if ( isset( $column_lookup['line_total'] ) ) {
+                $meta_lines['line_total'] = self::format_money( $line_item['line_total'] );
+            }
+
             $sku_line   = $show_sku && $product && $product->get_sku() ? sprintf( __( 'SKU: %s', EOP_TEXT_DOMAIN ), $product->get_sku() ) : '';
-            $row_height = max( 26, count( $name_lines ) * 13 + ( '' !== $sku_line ? 14 : 0 ), isset( $meta_lines['discount_sub'] ) ? 26 : 14 ) + 14;
+            $row_height = max( 26, count( $name_lines ) * ( $table_body_font_size + 3 ) + ( '' !== $sku_line ? $meta_font_size + 4 : 0 ), $table_body_font_size ) + 14;
 
             $ensure_space( $row_height + 18 );
 
@@ -1091,40 +1236,54 @@ class EOP_Document_Manager {
             $line_y  = $row_top;
 
             foreach ( $name_lines as $name_line ) {
-                $add_text_at( $name_line, $page_left + 12, $line_y, 'F2', 10, 'left', 0.12 );
-                $line_y -= 13;
+                $add_text_at( $name_line, $product_x, $line_y, 'F2', $table_body_font_size, 'left', $body_text_color );
+                $line_y -= $table_body_font_size + 3;
             }
 
             if ( '' !== $sku_line ) {
-                $add_text_at( $sku_line, $page_left + 12, $line_y - 1, 'F1', 9, 'left', 0.5 );
+                $add_text_at( $sku_line, $product_x, $line_y - 1, 'F1', $meta_font_size, 'left', $muted_text_color );
             }
 
-            if ( isset( $meta_lines['quantity'] ) ) {
-                $add_text_at( $meta_lines['quantity'], 240, $row_top, 'F1', 10, 'center', 0.12 );
+            if ( $show_item_index ) {
+                $add_text_at( (string) ( $index + 1 ), $item_index_center, $row_top, 'F2', $table_body_font_size, 'center', $body_text_color );
             }
 
-            if ( isset( $meta_lines['unit_price'] ) ) {
-                $add_text_at( $meta_lines['unit_price'], 315, $row_top, 'F1', 10, 'center', 0.12 );
-            }
+            foreach ( $columns as $column ) {
+                $column_key = $column['key'] ?? '';
+                $column_x   = $column_positions[ $column_key ] ?? null;
 
-            if ( isset( $meta_lines['discount_main'] ) ) {
-                $add_text_at( $meta_lines['discount_main'], 390, $row_top, 'F2', 10, 'center', 0.12 );
-            }
+                if ( null === $column_x ) {
+                    continue;
+                }
 
-            if ( isset( $meta_lines['discount_sub'] ) ) {
-                $add_text_at( $meta_lines['discount_sub'], 390, $row_top - 16, 'F1', 9, 'center', 0.5 );
-            }
+                if ( 'quantity' === $column_key && isset( $meta_lines['quantity'] ) ) {
+                    $add_text_at( $meta_lines['quantity'], $column_x, $row_top, 'F1', $table_body_font_size, 'center', $body_text_color );
+                    continue;
+                }
 
-            if ( isset( $meta_lines['discounted_unit_price'] ) ) {
-                $add_text_at( $meta_lines['discounted_unit_price'], 470, $row_top, 'F1', 10, 'center', 0.12 );
-            }
+                if ( 'unit_price' === $column_key && isset( $meta_lines['unit_price'] ) ) {
+                    $add_text_at( $meta_lines['unit_price'], $column_x, $row_top, 'F1', $table_body_font_size, 'center', $body_text_color );
+                    continue;
+                }
 
-            if ( $show_line_total ) {
-                $add_text_at( self::format_money( $line_item['line_total'] ), $page_right - 8, $row_top, 'F2', 10, 'right', 0.12 );
+                if ( 'discount' === $column_key && isset( $meta_lines['discount'] ) ) {
+                    $add_text_at( $meta_lines['discount'], $column_x, $row_top, 'F2', $discount_secondary_size, 'center', $body_text_color );
+
+                    continue;
+                }
+
+                if ( 'discounted_unit_price' === $column_key && isset( $meta_lines['discounted_unit_price'] ) ) {
+                    $add_text_at( $meta_lines['discounted_unit_price'], $column_x, $row_top, 'F1', $table_body_font_size, 'center', $body_text_color );
+                    continue;
+                }
+
+                if ( 'line_total' === $column_key && isset( $meta_lines['line_total'] ) ) {
+                    $add_text_at( $meta_lines['line_total'], $column_x, $row_top, 'F2', $table_body_font_size, 'center', $body_text_color );
+                }
             }
 
             $row_bottom = $row_top - $row_height;
-            $draw_line( $page_left, $page_right, $row_bottom, 0.9, 0.8 );
+            $draw_line( $page_left, $page_right, $row_bottom, $border_color, 0.8 );
             $y = $row_bottom - 12;
         }
 
@@ -1135,12 +1294,12 @@ class EOP_Document_Manager {
                 $is_grand = 'is-grand' === $row['class'];
 
                 if ( $is_grand ) {
-                    $draw_line( 360, $page_right, $totals_y + 10, 0.12, 1.2 );
+                    $draw_line( 360, $page_right, $totals_y + 10, $body_text_color, 1.2 );
                 }
 
-                $add_text_at( $is_grand ? __( 'Total', EOP_TEXT_DOMAIN ) : $row['label'], 360, $totals_y, $is_grand ? 'F2' : 'F1', $is_grand ? 15 : 11, 'left', 0.12 );
-                $add_text_at( self::format_money( $row['raw'] ?? 0 ), $page_right, $totals_y, 'F2', $is_grand ? 15 : 11, 'right', 0.12 );
-                $totals_y -= $is_grand ? 24 : 18;
+                $add_text_at( $is_grand ? __( 'Total', EOP_TEXT_DOMAIN ) : $row['label'], 360, $totals_y, $is_grand ? 'F2' : 'F1', $is_grand ? $totals_font_size + 3 : $totals_font_size, 'left', $body_text_color );
+                $add_text_at( self::format_money( $row['raw'] ?? 0 ), $page_right, $totals_y, 'F2', $is_grand ? $totals_font_size + 3 : $totals_font_size, 'right', $body_text_color );
+                $totals_y -= $is_grand ? ( $totals_font_size + 9 ) : ( $totals_font_size + 5 );
             }
 
             $y = $totals_y - 8;
@@ -1148,17 +1307,17 @@ class EOP_Document_Manager {
 
         if ( 'proposal' === $document_type ) {
             $confirmation = 'yes' === $order->get_meta( '_eop_proposal_confirmed', true ) ? __( 'Situacao da proposta: Confirmada', EOP_TEXT_DOMAIN ) : __( 'Situacao da proposta: Aguardando confirmacao', EOP_TEXT_DOMAIN );
-            $add_text_at( $confirmation, $page_left, $y, 'F1', 10, 'left', 0.22 );
+            $add_text_at( $confirmation, $page_left, $y, 'F1', $note_font_size, 'left', $muted_text_color );
             $y -= 18;
         }
 
         $notes = trim( (string) $order->get_customer_note() );
         if ( $show_notes && '' !== $notes ) {
-            $add_text_at( __( 'Observacoes', EOP_TEXT_DOMAIN ), $page_left, $y, 'F2', 12, 'left', 0.12 );
+            $add_text_at( __( 'Observacoes', EOP_TEXT_DOMAIN ), $page_left, $y, 'F2', max( 10, $note_font_size + 1 ), 'left', $body_text_color );
             $y -= 16;
 
             foreach ( self::wrap_text( $notes, 78 ) as $note_line ) {
-                $add_text_at( $note_line, $page_left, $y, 'F1', 10, 'left', 0.22 );
+                $add_text_at( $note_line, $page_left, $y, 'F1', $note_font_size, 'left', $muted_text_color );
                 $y -= 14;
             }
         }
@@ -1167,7 +1326,7 @@ class EOP_Document_Manager {
             $y -= 4;
 
             foreach ( self::wrap_text( $footer_note, 82 ) as $footer_line ) {
-                $add_text_at( $footer_line, $page_left, $y, 'F1', 9, 'left', 0.45 );
+                $add_text_at( $footer_line, $page_left, $y, 'F1', $note_font_size, 'left', $muted_text_color );
                 $y -= 12;
             }
         }
@@ -1588,6 +1747,70 @@ class EOP_Document_Manager {
         $decimals = abs( $value - round( $value ) ) < 0.01 ? 0 : 2;
 
         return number_format_i18n( $value, $decimals ) . '%';
+    }
+
+    private static function sanitize_pdf_font_size( $value, $default = 12 ) {
+        $size     = absint( $value );
+        $fallback = max( 8, min( 72, absint( $default ) ) );
+
+        if ( $size < 8 || $size > 72 ) {
+            $size = $fallback;
+        }
+
+        return $size;
+    }
+
+    private static function scale_pdf_font_size( $value, $minimum = 8 ) {
+        $size = self::sanitize_pdf_font_size( $value, $minimum );
+
+        return max( absint( $minimum ), (int) round( $size * 0.78 ) );
+    }
+
+    private static function sanitize_pdf_hex_color( $value, $default = '#111111' ) {
+        $color    = sanitize_hex_color( (string) $value );
+        $fallback = sanitize_hex_color( (string) $default );
+
+        return $color ? $color : ( $fallback ? $fallback : '#111111' );
+    }
+
+    private static function get_pdf_color_components( $color ) {
+        $color = ltrim( self::sanitize_pdf_hex_color( $color ), '#' );
+
+        if ( 3 === strlen( $color ) ) {
+            $color = preg_replace( '/(.)/', '$1$1', $color );
+        }
+
+        return array(
+            hexdec( substr( $color, 0, 2 ) ) / 255,
+            hexdec( substr( $color, 2, 2 ) ) / 255,
+            hexdec( substr( $color, 4, 2 ) ) / 255,
+        );
+    }
+
+    private static function get_pdf_fill_color_operator( $color ) {
+        $components = self::get_pdf_color_components( $color );
+
+        return sprintf(
+            '%s %s %s rg',
+            self::pdf_number( $components[0] ),
+            self::pdf_number( $components[1] ),
+            self::pdf_number( $components[2] )
+        );
+    }
+
+    private static function get_pdf_stroke_color_operator( $color ) {
+        $components = self::get_pdf_color_components( $color );
+
+        return sprintf(
+            '%s %s %s RG',
+            self::pdf_number( $components[0] ),
+            self::pdf_number( $components[1] ),
+            self::pdf_number( $components[2] )
+        );
+    }
+
+    private static function get_pdf_text_color_operator( $color ) {
+        return self::get_pdf_fill_color_operator( $color );
     }
 
     private static function escape_pdf_text( $text ) {

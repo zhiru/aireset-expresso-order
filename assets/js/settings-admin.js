@@ -3,14 +3,24 @@
     'use strict';
 
     var mediaFrame = null;
+    var mediaUploaderBound = false;
+    var colorisConfigured = false;
     var colorSwatches = ['#067bc2', '#84bcda', '#80e377', '#ecc30b', '#f37748', '#d56062'];
+
+    function getSettingsVar(key, fallback) {
+        if (window.eop_settings_vars && Object.prototype.hasOwnProperty.call(window.eop_settings_vars, key)) {
+            return window.eop_settings_vars[key];
+        }
+
+        return fallback;
+    }
 
     function createPreviewMarkup(url) {
         return '<img src="' + url + '" alt="" />';
     }
 
     function createEmptyMarkup() {
-        var emptyText = (window.eop_settings_vars && eop_settings_vars.no_logo) || 'Nenhum logo selecionado ainda.';
+        var emptyText = getSettingsVar('no_logo', 'Nenhum logo selecionado ainda.');
         return '<span class="eop-settings-media__empty">' + emptyText + '</span>';
     }
 
@@ -28,10 +38,16 @@
             .toggleClass('has-image', hasUrl)
             .html(hasUrl ? createPreviewMarkup(url) : createEmptyMarkup());
         $removeButton.toggleClass('is-hidden', !hasUrl);
-        $selectButton.text(hasUrl ? eop_settings_vars.change_logo : eop_settings_vars.select_logo);
+        $selectButton.text(hasUrl ? getSettingsVar('change_logo', 'Trocar logo') : getSettingsVar('select_logo', 'Selecionar logo'));
     }
 
     function bindMediaUploader() {
+        if (mediaUploaderBound) {
+            return;
+        }
+
+        mediaUploaderBound = true;
+
         $(document).on('click', '[data-media-select]', function (event) {
             var $button = $(this);
             var $wrap = $button.closest('.eop-settings-media');
@@ -43,9 +59,9 @@
             }
 
             mediaFrame = wp.media({
-                title: eop_settings_vars.media_title,
+                title: getSettingsVar('media_title', 'Selecionar logo'),
                 button: {
-                    text: eop_settings_vars.media_button
+                    text: getSettingsVar('media_button', 'Usar esta imagem')
                 },
                 multiple: false,
                 library: {
@@ -90,13 +106,14 @@
         });
     }
 
-    function injectPdfHelpTooltips() {
+    function injectPdfHelpTooltips($scope) {
         var helpMap = (window.eop_settings_vars && eop_settings_vars.pdf_help_map) || {};
         var statusLabels = (window.eop_settings_vars && eop_settings_vars.help_statuses) || {};
         var buttonLabel = (window.eop_settings_vars && eop_settings_vars.help_label) || 'Ajuda da configuracao';
+        var $root = $scope && $scope.length ? $scope : $(document);
 
         $.each(helpMap, function (fieldId, config) {
-            var $label = $('label[for="' + fieldId + '"]').first();
+            var $label = $root.find('label[for="' + fieldId + '"]').first();
             var $tooltip;
             var $button;
             var $bubble;
@@ -155,31 +172,63 @@
         });
     }
 
-    function initColorFields() {
+    function initColorFields($scope) {
         var clearLabel = (window.eop_settings_vars && eop_settings_vars.color_clear) || 'Limpar';
         var closeLabel = (window.eop_settings_vars && eop_settings_vars.color_close) || 'Fechar';
+        var $root = $scope && $scope.length ? $scope : $(document);
+        var $fields = $root.find('.eop-color-field');
+
+        if (!$fields.length) {
+            return;
+        }
 
         if (typeof window.Coloris !== 'undefined') {
-            window.Coloris({
-                el: '.eop-color-field'
+            if (!colorisConfigured) {
+                window.Coloris({
+                    el: '.eop-color-field'
+                });
+
+                window.Coloris.setInstance('.eop-color-field', {
+                    theme: 'pill',
+                    themeMode: 'dark',
+                    formatToggle: true,
+                    closeButton: true,
+                    closeLabel: closeLabel,
+                    clearButton: true,
+                    clearLabel: clearLabel,
+                    swatchesOnly: false,
+                    swatches: colorSwatches
+                });
+
+                colorisConfigured = true;
+            }
+
+            if (typeof window.Coloris.wrap === 'function') {
+                window.Coloris.wrap('.eop-color-field');
+            }
+
+            $fields.each(function () {
+                var $input = $(this);
+                var $wrapper = $input.parent('.clr-field');
+
+                if ($wrapper.length) {
+                    $wrapper.css('color', $input.val() || 'transparent');
+                }
             });
 
-            window.Coloris.setInstance('.eop-color-field', {
-                theme: 'pill',
-                themeMode: 'dark',
-                formatToggle: true,
-                closeButton: true,
-                closeLabel: closeLabel,
-                clearButton: true,
-                clearLabel: clearLabel,
-                swatchesOnly: false,
-                swatches: colorSwatches
-            });
             return;
         }
 
         if ($.fn.wpColorPicker) {
-            $('.eop-color-field').wpColorPicker();
+            $fields.each(function () {
+                var $input = $(this);
+
+                if ($input.hasClass('wp-color-picker')) {
+                    return;
+                }
+
+                $input.wpColorPicker();
+            });
         }
     }
 
@@ -193,10 +242,11 @@
         }
     }
 
-    function mountColorDefaultButtons() {
+    function mountColorDefaultButtons($scope) {
         var defaultLabel = (window.eop_settings_vars && eop_settings_vars.color_default) || 'Padrao';
+        var $root = $scope && $scope.length ? $scope : $(document);
 
-        $('.eop-color-field').each(function () {
+        $root.find('.eop-color-field').each(function () {
             var $input = $(this);
             var defaultColor = String($input.data('default-color') || '');
             var $pickerShell = $input.parent('.clr-field').length ? $input.parent('.clr-field') : $input;
@@ -224,12 +274,18 @@
         });
     }
 
-    $(function () {
+    function initSettingsUi(scope) {
+        var $scope = scope && scope.jquery ? scope : $(scope || document);
+
         hideExternalNotices();
+        injectPdfHelpTooltips($scope);
+        initColorFields($scope);
+        mountColorDefaultButtons($scope);
+    }
+
+    $(function () {
+        initSettingsUi($(document));
         window.setTimeout(hideExternalNotices, 120);
-        injectPdfHelpTooltips();
-        initColorFields();
-        mountColorDefaultButtons();
 
         $(document).on('click', '.eop-color-default', function (event) {
             var $button = $(this);
@@ -272,8 +328,10 @@
             });
         }
 
-        if (window.wp && wp.media && window.eop_settings_vars) {
-            bindMediaUploader();
-        }
+        bindMediaUploader();
+
+        $(document).on('eop:settings-ui:init', function (event, scope) {
+            initSettingsUi(scope || document);
+        });
     });
 })(jQuery);

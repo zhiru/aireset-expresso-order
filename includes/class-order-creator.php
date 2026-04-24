@@ -55,8 +55,9 @@ class EOP_Order_Creator {
 
         $cart_tax     = (float) $order->get_cart_tax();
         $shipping_tax = (float) $order->get_shipping_tax();
+        $tax_total    = round( max( 0, $cart_tax + $shipping_tax ), wc_get_price_decimals() );
         $discount     = round( $item_discount + $fee_discount_total, wc_get_price_decimals() );
-        $grand_total  = round( max( 0, $items_total + $fees_total + $shipping_total + $cart_tax + $shipping_tax ), wc_get_price_decimals() );
+        $grand_total  = round( max( 0, $items_total + $fees_total + $shipping_total + $tax_total ), wc_get_price_decimals() );
 
         $needs_save = false;
 
@@ -84,6 +85,7 @@ class EOP_Order_Creator {
             'items_total'    => $items_total,
             'shipping_total' => $shipping_total,
             'fees_total'     => $fees_total,
+            'tax_total'      => $tax_total,
             'discount_total' => $discount,
             'grand_total'    => $grand_total,
         );

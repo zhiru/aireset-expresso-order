@@ -347,6 +347,13 @@ $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings:
                         <summary><?php esc_html_e( 'Colunas do detalhamento', EOP_TEXT_DOMAIN ); ?></summary>
                         <div class="eop-pdf-admin__grid">
                             <div class="eop-settings-field">
+                                <label for="eop_doc_show_item_index"><?php esc_html_e( 'Exibir coluna de item sequencial', EOP_TEXT_DOMAIN ); ?></label>
+                                <select id="eop_doc_show_item_index" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_show_item_index]">
+                                    <option value="yes" <?php selected( $pdf_settings[ $document . '_show_item_index' ], 'yes' ); ?>><?php esc_html_e( 'Sim', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="no" <?php selected( $pdf_settings[ $document . '_show_item_index' ], 'no' ); ?>><?php esc_html_e( 'Nao', EOP_TEXT_DOMAIN ); ?></option>
+                                </select>
+                            </div>
+                            <div class="eop-settings-field">
                                 <label for="eop_doc_show_sku"><?php esc_html_e( 'Exibir SKU do produto', EOP_TEXT_DOMAIN ); ?></label>
                                 <select id="eop_doc_show_sku" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_show_sku]">
                                     <option value="yes" <?php selected( $pdf_settings[ $document . '_show_sku' ], 'yes' ); ?>><?php esc_html_e( 'Sim', EOP_TEXT_DOMAIN ); ?></option>
@@ -394,6 +401,10 @@ $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings:
                         <summary><?php esc_html_e( 'Textos das colunas', EOP_TEXT_DOMAIN ); ?></summary>
                         <div class="eop-pdf-admin__grid">
                             <div class="eop-settings-field">
+                                <label for="eop_doc_item_index_label"><?php esc_html_e( 'Texto da coluna de item sequencial', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_item_index_label" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_item_index_label]" value="<?php echo esc_attr( $pdf_settings[ $document . '_item_index_label' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
                                 <label for="eop_doc_product_label"><?php esc_html_e( 'Texto da coluna de produto', EOP_TEXT_DOMAIN ); ?></label>
                                 <input id="eop_doc_product_label" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_product_label]" value="<?php echo esc_attr( $pdf_settings[ $document . '_product_label' ] ); ?>" />
                             </div>
@@ -410,12 +421,93 @@ $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings:
                                 <input id="eop_doc_discount_label" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discount_label]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discount_label' ] ); ?>" />
                             </div>
                             <div class="eop-settings-field">
+                                <label for="eop_doc_discount_suffix"><?php esc_html_e( 'Texto complementar do desconto por unidade', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_discount_suffix" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discount_suffix]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discount_suffix' ] ); ?>" placeholder="/ un." />
+                            </div>
+                            <div class="eop-settings-field">
                                 <label for="eop_doc_discounted_unit_price_label"><?php esc_html_e( 'Texto da coluna de valor unitario com desconto', EOP_TEXT_DOMAIN ); ?></label>
                                 <input id="eop_doc_discounted_unit_price_label" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discounted_unit_price_label]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discounted_unit_price_label' ] ); ?>" />
                             </div>
                             <div class="eop-settings-field">
                                 <label for="eop_doc_line_total_label"><?php esc_html_e( 'Texto da coluna de total do item', EOP_TEXT_DOMAIN ); ?></label>
                                 <input id="eop_doc_line_total_label" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_line_total_label]" value="<?php echo esc_attr( $pdf_settings[ $document . '_line_total_label' ] ); ?>" />
+                            </div>
+                        </div>
+                    </details>
+                    <details class="eop-pdf-admin__section" open>
+                        <summary><?php esc_html_e( 'Ordem das colunas', EOP_TEXT_DOMAIN ); ?></summary>
+                        <div class="eop-pdf-admin__section-note">
+                            <p><?php esc_html_e( 'Use numeros menores para trazer a coluna mais para a esquerda. A coluna de item sequencial fica sempre no inicio quando ativada.', EOP_TEXT_DOMAIN ); ?></p>
+                        </div>
+                        <div class="eop-pdf-admin__grid">
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_quantity_position"><?php esc_html_e( 'Posicao da coluna de quantidade', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_quantity_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_quantity_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_quantity_position' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_unit_price_position"><?php esc_html_e( 'Posicao da coluna de valor unitario', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_unit_price_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_unit_price_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_unit_price_position' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_discount_position"><?php esc_html_e( 'Posicao da coluna de desconto', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_discount_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discount_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discount_position' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_discounted_unit_price_position"><?php esc_html_e( 'Posicao da coluna de valor unitario com desconto', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_discounted_unit_price_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discounted_unit_price_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discounted_unit_price_position' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_line_total_position"><?php esc_html_e( 'Posicao da coluna de total do item', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_line_total_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_line_total_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_line_total_position' ] ); ?>" />
+                            </div>
+                        </div>
+                    </details>
+                    <details class="eop-pdf-admin__section" open>
+                        <summary><?php esc_html_e( 'Visual do documento', EOP_TEXT_DOMAIN ); ?></summary>
+                        <div class="eop-pdf-admin__grid">
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_header_background_color"><?php esc_html_e( 'Cor de fundo do cabecalho da tabela', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_header_background_color" type="text" class="eop-color-field" data-default-color="#111111" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_header_background_color]" value="<?php echo esc_attr( $pdf_settings[ $document . '_header_background_color' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_header_text_color"><?php esc_html_e( 'Cor do texto do cabecalho da tabela', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_header_text_color" type="text" class="eop-color-field" data-default-color="#ffffff" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_header_text_color]" value="<?php echo esc_attr( $pdf_settings[ $document . '_header_text_color' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_body_text_color"><?php esc_html_e( 'Cor principal do texto', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_body_text_color" type="text" class="eop-color-field" data-default-color="#172033" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_body_text_color]" value="<?php echo esc_attr( $pdf_settings[ $document . '_body_text_color' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_muted_text_color"><?php esc_html_e( 'Cor dos textos auxiliares', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_muted_text_color" type="text" class="eop-color-field" data-default-color="#5b6474" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_muted_text_color]" value="<?php echo esc_attr( $pdf_settings[ $document . '_muted_text_color' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_border_color"><?php esc_html_e( 'Cor das bordas e divisorias', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_border_color" type="text" class="eop-color-field" data-default-color="#e3e8f1" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_border_color]" value="<?php echo esc_attr( $pdf_settings[ $document . '_border_color' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_title_font_size"><?php esc_html_e( 'Tamanho do titulo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_title_font_size" type="number" min="8" max="72" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_title_font_size]" value="<?php echo esc_attr( $pdf_settings[ $document . '_title_font_size' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_meta_font_size"><?php esc_html_e( 'Tamanho dos textos de apoio', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_meta_font_size" type="number" min="8" max="72" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_meta_font_size]" value="<?php echo esc_attr( $pdf_settings[ $document . '_meta_font_size' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_table_header_font_size"><?php esc_html_e( 'Tamanho da fonte do cabecalho da tabela', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_table_header_font_size" type="number" min="8" max="72" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_table_header_font_size]" value="<?php echo esc_attr( $pdf_settings[ $document . '_table_header_font_size' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_table_body_font_size"><?php esc_html_e( 'Tamanho da fonte do corpo da tabela', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_table_body_font_size" type="number" min="8" max="72" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_table_body_font_size]" value="<?php echo esc_attr( $pdf_settings[ $document . '_table_body_font_size' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_totals_font_size"><?php esc_html_e( 'Tamanho da fonte dos totais', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_totals_font_size" type="number" min="8" max="72" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_totals_font_size]" value="<?php echo esc_attr( $pdf_settings[ $document . '_totals_font_size' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_note_font_size"><?php esc_html_e( 'Tamanho da fonte das observacoes e rodape', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_note_font_size" type="number" min="8" max="72" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_note_font_size]" value="<?php echo esc_attr( $pdf_settings[ $document . '_note_font_size' ] ); ?>" />
                             </div>
                         </div>
                     </details>

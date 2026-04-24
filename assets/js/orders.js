@@ -136,12 +136,37 @@
         return digits.slice(0, 5) + '-' + digits.slice(5);
     }
 
+    function syncNoticeVisibility() {
+        var $notices = $('#eop-notices');
+
+        if (!$notices.length) {
+            return;
+        }
+
+        var hasVisibleNotice = $notices.children('.notice:visible, div.notice:visible').length > 0;
+        var hasTextContent = $.trim($notices.text()).length > 0;
+        var shouldShow = hasVisibleNotice || hasTextContent;
+
+        $notices.prop('hidden', !shouldShow);
+
+        if (!shouldShow) {
+            $notices.empty();
+        }
+    }
+
     function showNotice(message, type) {
         var cls = type === 'error' ? 'notice-error' : 'notice-success';
         var html = '<div class="notice ' + cls + ' is-dismissible"><p>' + $('<span>').text(message).html() + '</p></div>';
         $('#eop-notices').html(html);
+        syncNoticeVisibility();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+
+    $(document).on('click', '#eop-notices .notice-dismiss', function () {
+        window.setTimeout(syncNoticeVisibility, 180);
+    });
+
+    syncNoticeVisibility();
 
     /* ========================================
      *  Discount helpers (same as admin.js)

@@ -29,11 +29,9 @@ $pdf_preview_args    = array(
     <div class="eop-admin-spa__layout">
         <aside class="eop-admin-spa__sidebar">
             <div class="eop-admin-spa__brand">
-                <?php if ( ! empty( $settings['brand_logo_url'] ) ) : ?>
-                    <div class="eop-admin-spa__brand-mark">
-                        <img src="<?php echo esc_url( $settings['brand_logo_url'] ); ?>" alt="<?php echo esc_attr( $settings['panel_title'] ); ?>" />
-                    </div>
-                <?php endif; ?>
+                <div class="eop-admin-spa__brand-mark">
+                    <img src="<?php echo esc_url( EOP_PLUGIN_URL . 'assets/images/logo-aireset.png' ); ?>" alt="Pedido Expresso - Aireset" />
+                </div>
                 <div class="eop-admin-spa__brand-copy">
                     <h1><?php echo esc_html( $settings['panel_title'] ); ?></h1>
                     <?php if ( ! empty( $settings['panel_subtitle'] ) ) : ?>

@@ -44,12 +44,45 @@ class EOP_PDF_Settings {
         $defaults      = self::get_defaults();
 
         return array(
+            'item_index'            => (string) $defaults[ $document_type . '_item_index_label' ],
             'product'               => (string) $defaults[ $document_type . '_product_label' ],
             'quantity'              => (string) $defaults[ $document_type . '_quantity_label' ],
             'unit_price'            => (string) $defaults[ $document_type . '_unit_price_label' ],
             'discount'              => (string) $defaults[ $document_type . '_discount_label' ],
             'discounted_unit_price' => (string) $defaults[ $document_type . '_discounted_unit_price_label' ],
             'line_total'            => (string) $defaults[ $document_type . '_line_total_label' ],
+        );
+    }
+
+    public static function get_document_item_position_defaults( $document_type = 'order' ) {
+        $document_type = 'proposal' === sanitize_key( (string) $document_type ) ? 'proposal' : 'order';
+        $defaults      = self::get_defaults();
+
+        return array(
+            'quantity'              => (string) $defaults[ $document_type . '_quantity_position' ],
+            'unit_price'            => (string) $defaults[ $document_type . '_unit_price_position' ],
+            'discount'              => (string) $defaults[ $document_type . '_discount_position' ],
+            'discounted_unit_price' => (string) $defaults[ $document_type . '_discounted_unit_price_position' ],
+            'line_total'            => (string) $defaults[ $document_type . '_line_total_position' ],
+        );
+    }
+
+    public static function get_document_visual_defaults( $document_type = 'order' ) {
+        $document_type = 'proposal' === sanitize_key( (string) $document_type ) ? 'proposal' : 'order';
+        $defaults      = self::get_defaults();
+
+        return array(
+            'header_background_color' => (string) $defaults[ $document_type . '_header_background_color' ],
+            'header_text_color'       => (string) $defaults[ $document_type . '_header_text_color' ],
+            'body_text_color'         => (string) $defaults[ $document_type . '_body_text_color' ],
+            'muted_text_color'        => (string) $defaults[ $document_type . '_muted_text_color' ],
+            'border_color'            => (string) $defaults[ $document_type . '_border_color' ],
+            'title_font_size'         => (string) $defaults[ $document_type . '_title_font_size' ],
+            'meta_font_size'          => (string) $defaults[ $document_type . '_meta_font_size' ],
+            'table_header_font_size'  => (string) $defaults[ $document_type . '_table_header_font_size' ],
+            'table_body_font_size'    => (string) $defaults[ $document_type . '_table_body_font_size' ],
+            'totals_font_size'        => (string) $defaults[ $document_type . '_totals_font_size' ],
+            'note_font_size'          => (string) $defaults[ $document_type . '_note_font_size' ],
         );
     }
 
@@ -127,17 +160,36 @@ class EOP_PDF_Settings {
                     'show_phone',
                     'show_notes',
                     'show_sku',
+                    'show_item_index',
                     'show_quantity',
                     'show_unit_price',
                     'show_discount',
                     'show_discounted_unit_price',
                     'show_line_total',
+                    'item_index_label',
                     'product_label',
                     'quantity_label',
                     'unit_price_label',
                     'discount_label',
+                    'discount_suffix',
                     'discounted_unit_price_label',
                     'line_total_label',
+                    'quantity_position',
+                    'unit_price_position',
+                    'discount_position',
+                    'discounted_unit_price_position',
+                    'line_total_position',
+                    'header_background_color',
+                    'header_text_color',
+                    'body_text_color',
+                    'muted_text_color',
+                    'border_color',
+                    'title_font_size',
+                    'meta_font_size',
+                    'table_header_font_size',
+                    'table_body_font_size',
+                    'totals_font_size',
+                    'note_font_size',
                     'show_total_subtotal',
                     'show_total_shipping',
                     'show_total_discount',
@@ -774,17 +826,36 @@ class EOP_PDF_Settings {
             'order_show_phone'          => 'yes',
             'order_show_notes'          => 'yes',
             'order_show_sku'            => 'yes',
+            'order_show_item_index'     => 'yes',
             'order_show_quantity'       => 'yes',
             'order_show_unit_price'     => 'yes',
             'order_show_discount'       => 'yes',
             'order_show_discounted_unit_price' => 'yes',
             'order_show_line_total'     => 'yes',
+            'order_item_index_label'    => __( 'Item', EOP_TEXT_DOMAIN ),
             'order_product_label'       => __( 'Produto', EOP_TEXT_DOMAIN ),
             'order_quantity_label'      => __( 'Quantidade', EOP_TEXT_DOMAIN ),
             'order_unit_price_label'    => __( 'Valor unitario', EOP_TEXT_DOMAIN ),
             'order_discount_label'      => __( 'Desconto aplicado', EOP_TEXT_DOMAIN ),
+            'order_discount_suffix'     => '/ un.',
             'order_discounted_unit_price_label' => __( 'Valor unitario com desconto', EOP_TEXT_DOMAIN ),
             'order_line_total_label'    => __( 'Total', EOP_TEXT_DOMAIN ),
+            'order_quantity_position'   => '10',
+            'order_unit_price_position' => '20',
+            'order_discount_position'   => '30',
+            'order_discounted_unit_price_position' => '40',
+            'order_line_total_position' => '50',
+            'order_header_background_color' => '#111111',
+            'order_header_text_color'   => '#ffffff',
+            'order_body_text_color'     => '#172033',
+            'order_muted_text_color'    => '#5b6474',
+            'order_border_color'        => '#e3e8f1',
+            'order_title_font_size'     => '34',
+            'order_meta_font_size'      => '13',
+            'order_table_header_font_size' => '12',
+            'order_table_body_font_size' => '14',
+            'order_totals_font_size'    => '16',
+            'order_note_font_size'      => '13',
             'order_show_total_subtotal' => 'yes',
             'order_show_total_shipping' => 'yes',
             'order_show_total_discount' => 'yes',
@@ -805,17 +876,36 @@ class EOP_PDF_Settings {
             'proposal_show_phone'       => 'yes',
             'proposal_show_notes'       => 'yes',
             'proposal_show_sku'         => 'yes',
+            'proposal_show_item_index'  => 'yes',
             'proposal_show_quantity'    => 'yes',
             'proposal_show_unit_price'  => 'yes',
             'proposal_show_discount'    => 'yes',
             'proposal_show_discounted_unit_price' => 'yes',
             'proposal_show_line_total'  => 'yes',
+            'proposal_item_index_label' => __( 'Item', EOP_TEXT_DOMAIN ),
             'proposal_product_label'    => __( 'Produto', EOP_TEXT_DOMAIN ),
             'proposal_quantity_label'   => __( 'Quantidade', EOP_TEXT_DOMAIN ),
             'proposal_unit_price_label' => __( 'Valor unitario', EOP_TEXT_DOMAIN ),
             'proposal_discount_label'   => __( 'Desconto aplicado', EOP_TEXT_DOMAIN ),
+            'proposal_discount_suffix'  => '/ un.',
             'proposal_discounted_unit_price_label' => __( 'Valor unitario com desconto', EOP_TEXT_DOMAIN ),
             'proposal_line_total_label' => __( 'Total', EOP_TEXT_DOMAIN ),
+            'proposal_quantity_position' => '10',
+            'proposal_unit_price_position' => '20',
+            'proposal_discount_position' => '30',
+            'proposal_discounted_unit_price_position' => '40',
+            'proposal_line_total_position' => '50',
+            'proposal_header_background_color' => '#111111',
+            'proposal_header_text_color' => '#ffffff',
+            'proposal_body_text_color'   => '#172033',
+            'proposal_muted_text_color'  => '#5b6474',
+            'proposal_border_color'      => '#e3e8f1',
+            'proposal_title_font_size'   => '34',
+            'proposal_meta_font_size'    => '13',
+            'proposal_table_header_font_size' => '12',
+            'proposal_table_body_font_size' => '14',
+            'proposal_totals_font_size'  => '16',
+            'proposal_note_font_size'    => '13',
             'proposal_show_total_subtotal' => 'yes',
             'proposal_show_total_shipping' => 'yes',
             'proposal_show_total_discount' => 'yes',
@@ -885,17 +975,36 @@ class EOP_PDF_Settings {
             'order_show_phone'          => self::sanitize_toggle( $input['order_show_phone'] ?? $defaults['order_show_phone'] ),
             'order_show_notes'          => self::sanitize_toggle( $input['order_show_notes'] ?? $defaults['order_show_notes'] ),
             'order_show_sku'            => self::sanitize_toggle( $input['order_show_sku'] ?? $defaults['order_show_sku'] ),
+            'order_show_item_index'     => self::sanitize_toggle( $input['order_show_item_index'] ?? $defaults['order_show_item_index'] ),
             'order_show_quantity'       => self::sanitize_toggle( $input['order_show_quantity'] ?? $defaults['order_show_quantity'] ),
             'order_show_unit_price'     => self::sanitize_toggle( $input['order_show_unit_price'] ?? $defaults['order_show_unit_price'] ),
             'order_show_discount'       => self::sanitize_toggle( $input['order_show_discount'] ?? $defaults['order_show_discount'] ),
             'order_show_discounted_unit_price' => self::sanitize_toggle( $input['order_show_discounted_unit_price'] ?? $defaults['order_show_discounted_unit_price'] ),
             'order_show_line_total'     => self::sanitize_toggle( $input['order_show_line_total'] ?? $defaults['order_show_line_total'] ),
+            'order_item_index_label'    => self::sanitize_label( $input['order_item_index_label'] ?? $defaults['order_item_index_label'], $defaults['order_item_index_label'] ),
             'order_product_label'       => self::sanitize_label( $input['order_product_label'] ?? $defaults['order_product_label'], $defaults['order_product_label'] ),
             'order_quantity_label'      => self::sanitize_label( $input['order_quantity_label'] ?? $defaults['order_quantity_label'], $defaults['order_quantity_label'] ),
             'order_unit_price_label'    => self::sanitize_label( $input['order_unit_price_label'] ?? $defaults['order_unit_price_label'], $defaults['order_unit_price_label'] ),
             'order_discount_label'      => self::sanitize_label( $input['order_discount_label'] ?? $defaults['order_discount_label'], $defaults['order_discount_label'] ),
+            'order_discount_suffix'     => sanitize_text_field( $input['order_discount_suffix'] ?? $defaults['order_discount_suffix'] ),
             'order_discounted_unit_price_label' => self::sanitize_label( $input['order_discounted_unit_price_label'] ?? $defaults['order_discounted_unit_price_label'], $defaults['order_discounted_unit_price_label'] ),
             'order_line_total_label'    => self::sanitize_label( $input['order_line_total_label'] ?? $defaults['order_line_total_label'], $defaults['order_line_total_label'] ),
+            'order_quantity_position'   => self::sanitize_column_position_value( $input['order_quantity_position'] ?? $defaults['order_quantity_position'], $defaults['order_quantity_position'] ),
+            'order_unit_price_position' => self::sanitize_column_position_value( $input['order_unit_price_position'] ?? $defaults['order_unit_price_position'], $defaults['order_unit_price_position'] ),
+            'order_discount_position'   => self::sanitize_column_position_value( $input['order_discount_position'] ?? $defaults['order_discount_position'], $defaults['order_discount_position'] ),
+            'order_discounted_unit_price_position' => self::sanitize_column_position_value( $input['order_discounted_unit_price_position'] ?? $defaults['order_discounted_unit_price_position'], $defaults['order_discounted_unit_price_position'] ),
+            'order_line_total_position' => self::sanitize_column_position_value( $input['order_line_total_position'] ?? $defaults['order_line_total_position'], $defaults['order_line_total_position'] ),
+            'order_header_background_color' => self::sanitize_hex_color_value( $input['order_header_background_color'] ?? $defaults['order_header_background_color'], $defaults['order_header_background_color'] ),
+            'order_header_text_color'   => self::sanitize_hex_color_value( $input['order_header_text_color'] ?? $defaults['order_header_text_color'], $defaults['order_header_text_color'] ),
+            'order_body_text_color'     => self::sanitize_hex_color_value( $input['order_body_text_color'] ?? $defaults['order_body_text_color'], $defaults['order_body_text_color'] ),
+            'order_muted_text_color'    => self::sanitize_hex_color_value( $input['order_muted_text_color'] ?? $defaults['order_muted_text_color'], $defaults['order_muted_text_color'] ),
+            'order_border_color'        => self::sanitize_hex_color_value( $input['order_border_color'] ?? $defaults['order_border_color'], $defaults['order_border_color'] ),
+            'order_title_font_size'     => self::sanitize_font_size_value( $input['order_title_font_size'] ?? $defaults['order_title_font_size'], $defaults['order_title_font_size'] ),
+            'order_meta_font_size'      => self::sanitize_font_size_value( $input['order_meta_font_size'] ?? $defaults['order_meta_font_size'], $defaults['order_meta_font_size'] ),
+            'order_table_header_font_size' => self::sanitize_font_size_value( $input['order_table_header_font_size'] ?? $defaults['order_table_header_font_size'], $defaults['order_table_header_font_size'] ),
+            'order_table_body_font_size' => self::sanitize_font_size_value( $input['order_table_body_font_size'] ?? $defaults['order_table_body_font_size'], $defaults['order_table_body_font_size'] ),
+            'order_totals_font_size'    => self::sanitize_font_size_value( $input['order_totals_font_size'] ?? $defaults['order_totals_font_size'], $defaults['order_totals_font_size'] ),
+            'order_note_font_size'      => self::sanitize_font_size_value( $input['order_note_font_size'] ?? $defaults['order_note_font_size'], $defaults['order_note_font_size'] ),
             'order_show_total_subtotal' => self::sanitize_toggle( $input['order_show_total_subtotal'] ?? $defaults['order_show_total_subtotal'] ),
             'order_show_total_shipping' => self::sanitize_toggle( $input['order_show_total_shipping'] ?? $defaults['order_show_total_shipping'] ),
             'order_show_total_discount' => self::sanitize_toggle( $input['order_show_total_discount'] ?? $defaults['order_show_total_discount'] ),
@@ -916,17 +1025,36 @@ class EOP_PDF_Settings {
             'proposal_show_phone'       => self::sanitize_toggle( $input['proposal_show_phone'] ?? $defaults['proposal_show_phone'] ),
             'proposal_show_notes'       => self::sanitize_toggle( $input['proposal_show_notes'] ?? $defaults['proposal_show_notes'] ),
             'proposal_show_sku'         => self::sanitize_toggle( $input['proposal_show_sku'] ?? $defaults['proposal_show_sku'] ),
+            'proposal_show_item_index'  => self::sanitize_toggle( $input['proposal_show_item_index'] ?? $defaults['proposal_show_item_index'] ),
             'proposal_show_quantity'    => self::sanitize_toggle( $input['proposal_show_quantity'] ?? $defaults['proposal_show_quantity'] ),
             'proposal_show_unit_price'  => self::sanitize_toggle( $input['proposal_show_unit_price'] ?? $defaults['proposal_show_unit_price'] ),
             'proposal_show_discount'    => self::sanitize_toggle( $input['proposal_show_discount'] ?? $defaults['proposal_show_discount'] ),
             'proposal_show_discounted_unit_price' => self::sanitize_toggle( $input['proposal_show_discounted_unit_price'] ?? $defaults['proposal_show_discounted_unit_price'] ),
             'proposal_show_line_total'  => self::sanitize_toggle( $input['proposal_show_line_total'] ?? $defaults['proposal_show_line_total'] ),
+            'proposal_item_index_label' => self::sanitize_label( $input['proposal_item_index_label'] ?? $defaults['proposal_item_index_label'], $defaults['proposal_item_index_label'] ),
             'proposal_product_label'    => self::sanitize_label( $input['proposal_product_label'] ?? $defaults['proposal_product_label'], $defaults['proposal_product_label'] ),
             'proposal_quantity_label'   => self::sanitize_label( $input['proposal_quantity_label'] ?? $defaults['proposal_quantity_label'], $defaults['proposal_quantity_label'] ),
             'proposal_unit_price_label' => self::sanitize_label( $input['proposal_unit_price_label'] ?? $defaults['proposal_unit_price_label'], $defaults['proposal_unit_price_label'] ),
             'proposal_discount_label'   => self::sanitize_label( $input['proposal_discount_label'] ?? $defaults['proposal_discount_label'], $defaults['proposal_discount_label'] ),
+            'proposal_discount_suffix'  => sanitize_text_field( $input['proposal_discount_suffix'] ?? $defaults['proposal_discount_suffix'] ),
             'proposal_discounted_unit_price_label' => self::sanitize_label( $input['proposal_discounted_unit_price_label'] ?? $defaults['proposal_discounted_unit_price_label'], $defaults['proposal_discounted_unit_price_label'] ),
             'proposal_line_total_label' => self::sanitize_label( $input['proposal_line_total_label'] ?? $defaults['proposal_line_total_label'], $defaults['proposal_line_total_label'] ),
+            'proposal_quantity_position' => self::sanitize_column_position_value( $input['proposal_quantity_position'] ?? $defaults['proposal_quantity_position'], $defaults['proposal_quantity_position'] ),
+            'proposal_unit_price_position' => self::sanitize_column_position_value( $input['proposal_unit_price_position'] ?? $defaults['proposal_unit_price_position'], $defaults['proposal_unit_price_position'] ),
+            'proposal_discount_position' => self::sanitize_column_position_value( $input['proposal_discount_position'] ?? $defaults['proposal_discount_position'], $defaults['proposal_discount_position'] ),
+            'proposal_discounted_unit_price_position' => self::sanitize_column_position_value( $input['proposal_discounted_unit_price_position'] ?? $defaults['proposal_discounted_unit_price_position'], $defaults['proposal_discounted_unit_price_position'] ),
+            'proposal_line_total_position' => self::sanitize_column_position_value( $input['proposal_line_total_position'] ?? $defaults['proposal_line_total_position'], $defaults['proposal_line_total_position'] ),
+            'proposal_header_background_color' => self::sanitize_hex_color_value( $input['proposal_header_background_color'] ?? $defaults['proposal_header_background_color'], $defaults['proposal_header_background_color'] ),
+            'proposal_header_text_color' => self::sanitize_hex_color_value( $input['proposal_header_text_color'] ?? $defaults['proposal_header_text_color'], $defaults['proposal_header_text_color'] ),
+            'proposal_body_text_color'   => self::sanitize_hex_color_value( $input['proposal_body_text_color'] ?? $defaults['proposal_body_text_color'], $defaults['proposal_body_text_color'] ),
+            'proposal_muted_text_color'  => self::sanitize_hex_color_value( $input['proposal_muted_text_color'] ?? $defaults['proposal_muted_text_color'], $defaults['proposal_muted_text_color'] ),
+            'proposal_border_color'      => self::sanitize_hex_color_value( $input['proposal_border_color'] ?? $defaults['proposal_border_color'], $defaults['proposal_border_color'] ),
+            'proposal_title_font_size'   => self::sanitize_font_size_value( $input['proposal_title_font_size'] ?? $defaults['proposal_title_font_size'], $defaults['proposal_title_font_size'] ),
+            'proposal_meta_font_size'    => self::sanitize_font_size_value( $input['proposal_meta_font_size'] ?? $defaults['proposal_meta_font_size'], $defaults['proposal_meta_font_size'] ),
+            'proposal_table_header_font_size' => self::sanitize_font_size_value( $input['proposal_table_header_font_size'] ?? $defaults['proposal_table_header_font_size'], $defaults['proposal_table_header_font_size'] ),
+            'proposal_table_body_font_size' => self::sanitize_font_size_value( $input['proposal_table_body_font_size'] ?? $defaults['proposal_table_body_font_size'], $defaults['proposal_table_body_font_size'] ),
+            'proposal_totals_font_size'  => self::sanitize_font_size_value( $input['proposal_totals_font_size'] ?? $defaults['proposal_totals_font_size'], $defaults['proposal_totals_font_size'] ),
+            'proposal_note_font_size'    => self::sanitize_font_size_value( $input['proposal_note_font_size'] ?? $defaults['proposal_note_font_size'], $defaults['proposal_note_font_size'] ),
             'proposal_show_total_subtotal' => self::sanitize_toggle( $input['proposal_show_total_subtotal'] ?? $defaults['proposal_show_total_subtotal'] ),
             'proposal_show_total_shipping' => self::sanitize_toggle( $input['proposal_show_total_shipping'] ?? $defaults['proposal_show_total_shipping'] ),
             'proposal_show_total_discount' => self::sanitize_toggle( $input['proposal_show_total_discount'] ?? $defaults['proposal_show_total_discount'] ),
@@ -1080,6 +1208,7 @@ class EOP_PDF_Settings {
     private static function apply_document_label_fallbacks( $settings ) {
         $settings = is_array( $settings ) ? $settings : array();
         $label_keys = array(
+            'item_index_label',
             'product_label',
             'quantity_label',
             'unit_price_label',
@@ -1142,5 +1271,34 @@ class EOP_PDF_Settings {
         }
 
         return $label;
+    }
+
+    private static function sanitize_hex_color_value( $value, $default ) {
+        $color    = sanitize_hex_color( (string) $value );
+        $fallback = sanitize_hex_color( (string) $default );
+
+        return $color ? $color : ( $fallback ? $fallback : '#111111' );
+    }
+
+    private static function sanitize_font_size_value( $value, $default ) {
+        $size     = absint( $value );
+        $fallback = max( 8, min( 72, absint( $default ) ) );
+
+        if ( $size < 8 || $size > 72 ) {
+            $size = $fallback;
+        }
+
+        return (string) $size;
+    }
+
+    private static function sanitize_column_position_value( $value, $default ) {
+        $position = absint( $value );
+        $fallback = max( 1, min( 99, absint( $default ) ) );
+
+        if ( $position < 1 || $position > 99 ) {
+            $position = $fallback;
+        }
+
+        return (string) $position;
     }
 }
