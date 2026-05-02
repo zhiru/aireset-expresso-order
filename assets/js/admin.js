@@ -703,11 +703,11 @@
             html += '<div class="eop-order-card__actions">';
 
             if (order.public_url) {
-                html += '<a class="eop-btn eop-btn-primary eop-order-edit-spa" href="' + escapeHtml(order.public_url) + '" target="_blank">' + escapeHtml(i18n.orders_public || 'Link do cliente') + '</a>';
+                html += '<a class="eop-btn eop-btn-primary" href="' + escapeHtml(order.public_url) + '" target="_blank" rel="noopener">' + escapeHtml(i18n.orders_public || 'Link do cliente') + '</a>';
             }
 
             if (order.pdf_url) {
-                html += '<a class="eop-btn eop-btn-primary eop-order-edit-spa" href="' + escapeHtml(order.pdf_url) + '" target="_blank">' + escapeHtml(i18n.orders_pdf || 'PDF') + '</a>';
+                html += '<a class="eop-btn eop-btn-primary" href="' + escapeHtml(order.pdf_url) + '" target="_blank" rel="noopener">' + escapeHtml(i18n.orders_pdf || 'PDF') + '</a>';
             }
 
             html += '<button type="button" class="eop-btn eop-btn-primary eop-order-edit-spa" data-order-id="' + escapeHtml(order.id) + '">' + escapeHtml(i18n.orders_edit || 'Editar aqui') + '</button>';
@@ -1785,7 +1785,13 @@
     syncPdfSettingsFormSnapshot($(document));
 
     $(document).on('click', '.eop-order-edit-spa', function () {
-        loadOrderForEditing($(this).data('order-id'));
+        var orderId = parseInt($(this).data('order-id'), 10) || 0;
+
+        if (!orderId) {
+            return;
+        }
+
+        loadOrderForEditing(orderId);
     });
 
     $('#eop-orders-refresh').on('click', function () {

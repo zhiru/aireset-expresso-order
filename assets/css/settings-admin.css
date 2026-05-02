@@ -235,6 +235,10 @@ body.eop-settings-screen .error {
   line-height: 1.5;
 }
 
+.eop-settings-binary-source {
+  display: none !important;
+}
+
 .eop-settings-media {
   display: grid;
   grid-template-columns: 160px minmax(0, 1fr);

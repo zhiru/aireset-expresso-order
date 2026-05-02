@@ -717,16 +717,80 @@ class EOP_Post_Confirmation_Flow {
 		$title    = self::get_stage_title( $stage, $settings );
 		$steps    = self::get_progress_steps( $order, $state );
 		$stats    = self::get_status_cards( $order, $state );
+		$heading_note = 'contract' === $stage
+			? __( 'A proposta ja foi confirmada. Agora basta registrar o aceite do contrato para liberar as proximas etapas.', EOP_TEXT_DOMAIN )
+			: __( 'Conclua a etapa atual para o fluxo continuar sem precisar voltar para esta proposta depois.', EOP_TEXT_DOMAIN );
 
 		ob_start();
 		?>
+		<style>
+			.eop-post-flow{margin-top:26px;padding:26px;border:1px solid rgba(219,226,255,.86);border-radius:30px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(246,248,255,.96));box-shadow:0 24px 56px rgba(23,32,51,.08)}
+			.eop-post-flow__layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:22px;align-items:start}
+			.eop-post-flow__main,.eop-post-flow__sidebar{display:grid;gap:18px;align-content:start}
+			.eop-post-flow__sidebar{position:sticky;top:18px}
+			.eop-post-flow__heading,.eop-post-flow__stage-intro,.eop-post-flow__contract,.eop-post-flow__upload-card,.eop-post-flow__acceptance-card,.eop-post-flow__panel,.eop-post-flow__product-card,.eop-post-flow__completion-item{border:1px solid rgba(219,226,255,.86);border-radius:24px;background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(246,248,255,.94));box-shadow:0 14px 30px rgba(23,32,51,.06)}
+			.eop-post-flow__heading{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding:24px}
+			.eop-post-flow__heading-copy{display:grid;gap:10px;max-width:62ch}
+			.eop-post-flow__eyebrow{display:block;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+			.eop-post-flow__title{margin:0;font-size:34px;line-height:1.02;letter-spacing:-.05em;color:<?php echo esc_attr( $settings['proposal_text_color'] ); ?>}
+			.eop-post-flow__heading-note{margin:0;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:15px;line-height:1.6}
+			.eop-post-flow__badge{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:999px;background:#eef4ff;color:<?php echo esc_attr( $settings['primary_color'] ); ?>;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+			.eop-post-flow__stage-intro{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;padding:22px}
+			.eop-post-flow__stage-copy{display:grid;gap:10px}
+			.eop-post-flow__text{margin:0;color:<?php echo esc_attr( $settings['proposal_text_color'] ); ?>;font-size:30px;line-height:1.04;letter-spacing:-.05em;font-weight:800}
+			.eop-post-flow__helper{margin:0;max-width:64ch;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:15px;line-height:1.65}
+			.eop-post-flow__stage-pills{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;max-width:320px}
+			.eop-post-flow__stage-pill{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;border-radius:999px;background:#edf2ff;color:<?php echo esc_attr( $settings['primary_color'] ); ?>;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;text-align:center}
+			.eop-post-flow__stage-pill.is-muted{background:#f5f7fb;color:<?php echo esc_attr( $settings['proposal_text_color'] ); ?>}
+			.eop-post-flow__contract,.eop-post-flow__acceptance-card,.eop-post-flow__panel{padding:22px}
+			.eop-post-flow__contract{line-height:1.75}
+			.eop-post-flow__contract h1,.eop-post-flow__contract h2,.eop-post-flow__contract h3{margin:0 0 12px;font-size:22px;line-height:1.15;letter-spacing:-.03em}
+			.eop-post-flow__contract p{margin:0 0 12px}
+			.eop-post-flow__contract p:last-child{margin-bottom:0}
+			.eop-post-flow__documents-grid,.eop-post-flow__products-grid,.eop-post-flow__completion-grid,.eop-post-flow__stats-grid,.eop-post-flow__progress-list{display:grid;gap:12px}
+			.eop-post-flow__documents-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+			.eop-post-flow__actions{display:flex;flex-wrap:wrap;gap:12px}
+			.eop-post-flow__actions .eop-proposal-button{flex:1 1 180px}
+			.eop-post-flow__upload-card{display:grid;gap:10px;padding:18px}
+			.eop-post-flow__upload-card strong{font-size:18px;line-height:1.14;letter-spacing:-.03em}
+			.eop-post-flow__upload-card small{color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:13px;line-height:1.55}
+			.eop-post-flow__acceptance-card{display:grid;gap:16px;background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(241,244,255,.97))}
+			.eop-post-flow__acceptance-head{display:grid;gap:6px}
+			.eop-post-flow__acceptance-head strong{font-size:24px;line-height:1.05;letter-spacing:-.04em}
+			.eop-post-flow__acceptance-head small{color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:14px;line-height:1.55}
+			.eop-post-flow__form{display:grid;gap:16px}
+			.eop-post-flow__field{display:grid;gap:8px}
+			.eop-post-flow__field span{color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+			.eop-post-flow__field input,.eop-post-flow__field textarea{width:100%;min-height:58px;padding:16px 18px;border:1px solid rgba(219,226,255,.88);border-radius:18px;background:#fff;color:<?php echo esc_attr( $settings['proposal_text_color'] ); ?>;font:inherit;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+			.eop-post-flow__field input:focus,.eop-post-flow__field textarea:focus{outline:none;border-color:<?php echo esc_attr( $settings['primary_color'] ); ?>;box-shadow:0 0 0 5px rgba(0,3,75,.08);transform:translateY(-1px)}
+			.eop-post-flow__checkbox{display:flex;gap:12px;align-items:flex-start;padding:16px 18px;border-radius:18px;background:#f8faff;border:1px solid rgba(219,226,255,.82);font-weight:700;line-height:1.5}
+			.eop-post-flow__checkbox input{margin-top:4px;accent-color:<?php echo esc_attr( $settings['primary_color'] ); ?>;transform:scale(1.08)}
+			.eop-post-flow__form--acceptance .eop-proposal-button{width:100%;min-height:58px;font-size:16px}
+			.eop-post-flow__panel-label{display:block;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+			.eop-post-flow__panel-note{margin:8px 0 0;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:13px;line-height:1.55}
+			.eop-post-flow__progress-item{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:start;padding:14px;border-radius:18px;background:#f8faff;border:1px solid transparent}
+			.eop-post-flow__progress-item strong{display:block;font-size:14px;line-height:1.3}
+			.eop-post-flow__progress-item small{display:block;margin-top:4px;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:12px;line-height:1.45}
+			.eop-post-flow__progress-item.is-current{background:#eef4ff;border-color:rgba(0,3,75,.1);box-shadow:0 10px 22px rgba(0,3,75,.06)}
+			.eop-post-flow__progress-item.is-completed{background:#f3fbf4}
+			.eop-post-flow__progress-index{display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:15px;background:#e6ebf9;color:<?php echo esc_attr( $settings['primary_color'] ); ?>;font-size:14px;font-weight:900}
+			.eop-post-flow__progress-item.is-completed .eop-post-flow__progress-index{background:#dff3e3;color:#227547}
+			.eop-post-flow__progress-item.is-current .eop-post-flow__progress-index{background:<?php echo esc_attr( $settings['primary_color'] ); ?>;color:#fff}
+			.eop-post-flow__stat-card{padding:14px 16px;border-radius:18px;background:#f8faff;border:1px solid rgba(219,226,255,.84)}
+			.eop-post-flow__stat-card span{display:block;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+			.eop-post-flow__stat-card strong{display:block;margin-top:7px;font-size:24px;line-height:1;letter-spacing:-.05em}
+			.eop-post-flow__stat-card small{display:block;margin-top:6px;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:12px;line-height:1.45}
+			@media (max-width: 960px){.eop-post-flow__layout{grid-template-columns:1fr}.eop-post-flow__sidebar{position:static}.eop-post-flow__stage-intro{grid-template-columns:1fr}.eop-post-flow__stage-pills{justify-content:flex-start;max-width:none}}
+			@media (max-width: 720px){.eop-post-flow{padding:18px;border-radius:24px}.eop-post-flow__heading,.eop-post-flow__stage-intro,.eop-post-flow__contract,.eop-post-flow__acceptance-card,.eop-post-flow__panel{padding:18px}.eop-post-flow__heading{flex-direction:column}.eop-post-flow__title{font-size:28px}.eop-post-flow__text{font-size:24px}.eop-post-flow__actions .eop-proposal-button{flex-basis:100%}}
+		</style>
 		<div class="eop-post-flow eop-post-flow--stage-<?php echo esc_attr( $stage ); ?>">
 			<div class="eop-post-flow__layout">
 				<div class="eop-post-flow__main">
 					<div class="eop-post-flow__heading">
-						<div>
+						<div class="eop-post-flow__heading-copy">
 							<span class="eop-post-flow__eyebrow"><?php esc_html_e( 'Etapa complementar do pedido', EOP_TEXT_DOMAIN ); ?></span>
 							<h2 class="eop-post-flow__title"><?php echo esc_html( $title ); ?></h2>
+							<p class="eop-post-flow__heading-note"><?php echo esc_html( $heading_note ); ?></p>
 						</div>
 						<span class="eop-post-flow__badge"><?php echo esc_html( strtoupper( self::get_stage_label( $stage ) ) ); ?></span>
 					</div>
@@ -757,8 +821,10 @@ class EOP_Post_Confirmation_Flow {
 					<?php endif; ?>
 				</div>
 				<aside class="eop-post-flow__sidebar">
-					<?php self::render_progress_panel( $steps ); ?>
-					<?php self::render_status_cards_panel( $stats ); ?>
+					<?php self::render_progress_panel( $steps, $stage ); ?>
+					<?php if ( 'contract' !== $stage ) : ?>
+						<?php self::render_status_cards_panel( $stats ); ?>
+					<?php endif; ?>
 				</aside>
 			</div>
 		</div>
@@ -973,13 +1039,19 @@ class EOP_Post_Confirmation_Flow {
 		}
 	}
 
-	private static function render_progress_panel( $steps ) {
+	private static function render_progress_panel( $steps, $current_stage = '' ) {
 		if ( empty( $steps ) ) {
 			return;
 		}
+
+		$panel_label = 'contract' === $current_stage ? __( 'Contrato e proximas etapas', EOP_TEXT_DOMAIN ) : __( 'Progresso da jornada', EOP_TEXT_DOMAIN );
+		$panel_note  = 'contract' === $current_stage ? __( 'Depois do aceite, o restante do fluxo aparece em sequencia para o cliente.', EOP_TEXT_DOMAIN ) : '';
 		?>
 		<div class="eop-post-flow__panel eop-post-flow__panel--progress">
-			<span class="eop-post-flow__panel-label"><?php esc_html_e( 'Progresso da jornada', EOP_TEXT_DOMAIN ); ?></span>
+			<span class="eop-post-flow__panel-label"><?php echo esc_html( $panel_label ); ?></span>
+			<?php if ( '' !== $panel_note ) : ?>
+				<p class="eop-post-flow__panel-note"><?php echo esc_html( $panel_note ); ?></p>
+			<?php endif; ?>
 			<div class="eop-post-flow__progress-list">
 				<?php foreach ( $steps as $index => $step ) : ?>
 					<div class="eop-post-flow__progress-item is-<?php echo esc_attr( $step['status'] ); ?>">
@@ -1027,8 +1099,8 @@ class EOP_Post_Confirmation_Flow {
 		?>
 		<div class="eop-post-flow__stage-intro">
 			<div class="eop-post-flow__stage-copy">
-				<p class="eop-post-flow__text"><?php echo esc_html( $settings['post_confirmation_contract_title'] ); ?></p>
-				<p class="eop-post-flow__helper"><?php esc_html_e( 'Leia com calma. Assim que o aceite for registrado, as proximas etapas serao liberadas automaticamente.', EOP_TEXT_DOMAIN ); ?></p>
+				<p class="eop-post-flow__text"><?php esc_html_e( 'Leia o contrato e confirme o aceite.', EOP_TEXT_DOMAIN ); ?></p>
+				<p class="eop-post-flow__helper"><?php esc_html_e( 'Esta e a unica etapa ativa agora. Assim que o aceite for registrado, envio de anexo e personalizacao ficam disponiveis automaticamente.', EOP_TEXT_DOMAIN ); ?></p>
 			</div>
 			<div class="eop-post-flow__stage-pills">
 				<?php if ( ! empty( $signature_documents ) ) : ?>
@@ -1037,6 +1109,9 @@ class EOP_Post_Confirmation_Flow {
 				<span class="eop-post-flow__stage-pill is-muted"><?php esc_html_e( 'Aceite com registro de data e IP', EOP_TEXT_DOMAIN ); ?></span>
 			</div>
 		</div>
+		<?php if ( '' !== trim( wp_strip_all_tags( $contract_text ) ) ) : ?>
+			<div class="eop-post-flow__contract"><?php echo wp_kses_post( wpautop( $contract_text ) ); ?></div>
+		<?php endif; ?>
 		<?php if ( ! empty( $signature_documents ) ) : ?>
 			<div class="eop-post-flow__documents-grid">
 				<?php foreach ( $signature_documents as $document ) : ?>
@@ -1051,13 +1126,10 @@ class EOP_Post_Confirmation_Flow {
 				<?php endforeach; ?>
 			</div>
 		<?php endif; ?>
-		<?php if ( empty( $signature_documents ) && '' !== trim( wp_strip_all_tags( $contract_text ) ) ) : ?>
-			<div class="eop-post-flow__contract"><?php echo wp_kses_post( wpautop( $contract_text ) ); ?></div>
-		<?php endif; ?>
 		<div class="eop-post-flow__acceptance-card">
 			<div class="eop-post-flow__acceptance-head">
-				<strong><?php esc_html_e( 'Registrar aceite', EOP_TEXT_DOMAIN ); ?></strong>
-				<small><?php esc_html_e( 'Preencha o nome do responsavel e confirme para liberar o envio do anexo e a personalizacao dos produtos.', EOP_TEXT_DOMAIN ); ?></small>
+				<strong><?php esc_html_e( 'Confirmar e continuar', EOP_TEXT_DOMAIN ); ?></strong>
+				<small><?php esc_html_e( 'Informe o nome do responsavel e confirme o aceite para desbloquear as proximas etapas da jornada.', EOP_TEXT_DOMAIN ); ?></small>
 			</div>
 			<form method="post" class="eop-post-flow__form eop-post-flow__form--acceptance">
 				<?php wp_nonce_field( 'eop_post_confirmation_contract', 'eop_post_confirmation_nonce' ); ?>

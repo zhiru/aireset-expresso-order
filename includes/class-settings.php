@@ -1041,7 +1041,7 @@ class EOP_Settings {
                         </section>
                         <?php endif; ?>
                 </div>
-                <div class="eop-settings-submit">
+                <div class="eop-settings-submit eop-admin-submitbar">
                     <?php submit_button( __( 'Salvar alteracoes', EOP_TEXT_DOMAIN ), 'primary large', 'submit', false ); ?>
                 </div>
             </form>

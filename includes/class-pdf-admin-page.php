@@ -162,11 +162,11 @@ class EOP_PDF_Admin_Page {
             'order-settings' => __( 'Configuracoes do Pedido', EOP_TEXT_DOMAIN ),
             'order-columns' => __( 'Colunas do Pedido', EOP_TEXT_DOMAIN ),
             'order-texts'   => __( 'Textos do Pedido', EOP_TEXT_DOMAIN ),
-            'order-style'   => __( 'Estilo/Visual do Pedido', EOP_TEXT_DOMAIN ),
+            'order-style'   => __( 'Visual do Pedido', EOP_TEXT_DOMAIN ),
             'proposal-settings' => __( 'Configuracoes da Proposta', EOP_TEXT_DOMAIN ),
             'proposal-columns'  => __( 'Colunas da Proposta', EOP_TEXT_DOMAIN ),
             'proposal-texts'    => __( 'Textos da Proposta', EOP_TEXT_DOMAIN ),
-            'proposal-style'    => __( 'Estilo/Visual da Proposta', EOP_TEXT_DOMAIN ),
+            'proposal-style'    => __( 'Visual da Proposta', EOP_TEXT_DOMAIN ),
             'edocuments'    => __( 'Documentos eletronicos', EOP_TEXT_DOMAIN ),
             'advanced'      => __( 'Avancado', EOP_TEXT_DOMAIN ),
             'documentation' => __( 'Documentacao', EOP_TEXT_DOMAIN ),
@@ -316,6 +316,7 @@ class EOP_PDF_Admin_Page {
     private static function render_page( $default_tab, $embedded = false ) {
         $default_tab = self::normalize_tab( $default_tab );
         $embedded    = (bool) $embedded;
+        $tab         = $default_tab;
         include EOP_PLUGIN_DIR . 'templates/pdf-admin-page.php';
     }
 

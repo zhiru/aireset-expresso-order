@@ -7,7 +7,12 @@ $embedded        = ! empty( $embedded );
 $default_tab     = isset( $default_tab ) ? (string) $default_tab : 'display';
 $font_css        = method_exists( 'EOP_Settings', 'get_font_css_family' ) ? EOP_Settings::get_font_css_family( $plugin_settings['font_family'] ) : "'Segoe UI', sans-serif";
 $tabs            = EOP_PDF_Admin_Page::get_accessible_tabs();
-$tab             = EOP_PDF_Admin_Page::normalize_tab( EOP_PDF_Admin_Page::get_current_tab(), $default_tab );
+
+if ( isset( $tab ) ) {
+    $tab = EOP_PDF_Admin_Page::normalize_tab( $tab, $default_tab );
+} else {
+    $tab = EOP_PDF_Admin_Page::normalize_tab( EOP_PDF_Admin_Page::get_current_tab(), $default_tab );
+}
 
 $document_tab_contexts = array(
     'order-settings' => array(
@@ -87,6 +92,7 @@ $current_tab_label = isset( $tabs[ $tab ] ) ? $tabs[ $tab ] : __( 'PDF', EOP_TEX
 $woo_general_url = admin_url( 'admin.php?page=wc-settings&tab=general' );
 $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings::get_documentation_sections() : array();
 $current_view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'pdf';
+$show_context_chrome = ! $embedded;
 ?>
 <style>
     .eop-pdf-admin {
@@ -135,6 +141,7 @@ $current_view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view']
                 <form method="post" action="options.php" class="eop-pdf-admin__form">
                     <?php settings_fields( 'eop_pdf_settings_group' ); ?>
 
+                    <?php if ( $show_context_chrome ) : ?>
                     <div class="eop-pdf-admin__notice">
                         <p>
                             <?php
@@ -144,6 +151,7 @@ $current_view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view']
                             ?>
                         </p>
                     </div>
+                    <?php endif; ?>
 
                     <?php if ( 'display' === $tab ) : ?>
                     <details class="eop-pdf-admin__section" open>
@@ -291,12 +299,13 @@ $current_view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view']
                     </details>
                     <?php endif; ?>
 
-                    <div class="eop-pdf-admin__actions"><?php submit_button( 'store' === $tab ? __( 'Salvar informacoes da loja', EOP_TEXT_DOMAIN ) : __( 'Salvar configuracoes de exibicao', EOP_TEXT_DOMAIN ), 'primary', 'submit', false ); ?></div>
+                    <div class="eop-pdf-admin__actions eop-admin-submitbar"><?php submit_button( 'store' === $tab ? __( 'Salvar informacoes da loja', EOP_TEXT_DOMAIN ) : __( 'Salvar configuracoes de exibicao', EOP_TEXT_DOMAIN ), 'primary', 'submit', false ); ?></div>
                 </form>
             <?php elseif ( $is_document_tab ) : ?>
                 <form method="post" action="options.php" class="eop-pdf-admin__form">
                     <?php settings_fields( 'eop_pdf_settings_group' ); ?>
 
+                    <?php if ( $show_context_chrome ) : ?>
                     <div class="eop-pdf-admin__document-switcher" aria-label="<?php esc_attr_e( 'Documento em configuracao', EOP_TEXT_DOMAIN ); ?>">
                         <a class="eop-pdf-admin__document-pill<?php echo 'order' === $document ? ' is-active' : ''; ?>" href="<?php echo esc_url( EOP_PDF_Admin_Page::get_tab_url( 'order' === $document ? $tab : $document_pair_tab, array( 'preview_order' => $preview_order ? $preview_order->get_id() : 0 ) ) ); ?>"><?php esc_html_e( 'Pedido', EOP_TEXT_DOMAIN ); ?></a>
                         <a class="eop-pdf-admin__document-pill<?php echo 'proposal' === $document ? ' is-active' : ''; ?>" href="<?php echo esc_url( EOP_PDF_Admin_Page::get_tab_url( 'proposal' === $document ? $tab : $document_pair_tab, array( 'preview_order' => $preview_order ? $preview_order->get_id() : 0 ) ) ); ?>"><?php esc_html_e( 'Proposta', EOP_TEXT_DOMAIN ); ?></a>
@@ -305,6 +314,7 @@ $current_view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view']
                     <div class="eop-pdf-admin__notice eop-pdf-admin__notice--document-context">
                         <p><?php printf( esc_html__( 'Voce esta editando as configuracoes de %s. Pedido e proposta possuem textos e opcoes independentes.', EOP_TEXT_DOMAIN ), esc_html( $editing_label ) ); ?></p>
                     </div>
+                    <?php endif; ?>
 
                     <?php if ( 'settings' === $document_section ) : ?>
                     <details class="eop-pdf-admin__section" open>
@@ -613,7 +623,7 @@ $current_view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view']
                         </div>
                     </details>
                     <?php endif; ?>
-                    <div class="eop-pdf-admin__actions"><?php submit_button( __( 'Salvar configuracoes do documento', EOP_TEXT_DOMAIN ), 'primary', 'submit', false ); ?></div>
+                    <div class="eop-pdf-admin__actions eop-admin-submitbar"><?php submit_button( __( 'Salvar configuracoes do documento', EOP_TEXT_DOMAIN ), 'primary', 'submit', false ); ?></div>
                 </form>
             <?php elseif ( 'edocuments' === $tab ) : ?>
                 <form method="post" action="options.php" class="eop-pdf-admin__form">
@@ -695,7 +705,7 @@ $current_view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view']
                         </div>
                     <?php endif; ?>
 
-                    <div class="eop-pdf-admin__actions"><?php submit_button( __( 'Salvar configuracoes eletrônicas', EOP_TEXT_DOMAIN ), 'primary', 'submit', false ); ?></div>
+                    <div class="eop-pdf-admin__actions eop-admin-submitbar"><?php submit_button( __( 'Salvar configuracoes eletrônicas', EOP_TEXT_DOMAIN ), 'primary', 'submit', false ); ?></div>
                 </form>
             <?php elseif ( 'advanced' === $tab ) : ?>
                 <form method="post" action="options.php" class="eop-pdf-admin__form">
@@ -800,7 +810,7 @@ $current_view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view']
                         <?php endif; ?>
                     </details>
 
-                    <div class="eop-pdf-admin__actions"><?php submit_button( __( 'Salvar configuracoes avancadas', EOP_TEXT_DOMAIN ), 'primary', 'submit', false ); ?></div>
+                    <div class="eop-pdf-admin__actions eop-admin-submitbar"><?php submit_button( __( 'Salvar configuracoes avancadas', EOP_TEXT_DOMAIN ), 'primary', 'submit', false ); ?></div>
                 </form>
             <?php else : ?>
                 <div class="eop-pdf-admin__documentation">

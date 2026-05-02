@@ -8,6 +8,12 @@ Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser regi
 - reativada a integracao da proposta publica com a etapa complementar apos a confirmacao, evitando cair direto apenas nos botoes finais quando o fluxo estiver habilitado
 - devolvidos os campos de configuracao do fluxo complementar no admin e o resumo visual do progresso voltou para a edicao de pedidos e para a listagem interna
 
+## 1.1.57 - 2026-05-02
+
+- reorganizado o shell SPA do admin com headers mais compactos, menus internos mais granulares e rodape fixo de salvamento para reduzir o excesso visual nas configuracoes
+- o modulo PDF embutido passou a respeitar a aba correta em cada view, remover o chrome redundante no topo e manter os formularios mais curtos ao navegar entre configuracoes
+- convertidos os selects binarios do settings para switches visuais e refinada a proposta publica confirmada com resumo lateral, hierarquia melhor e etapa contratual mais clara
+
 ## 1.1.55 - 2026-05-01
 
 - adicionados filtros da listagem da SPA para isolar pedidos com fluxo complementar ativo, pendente ou concluido

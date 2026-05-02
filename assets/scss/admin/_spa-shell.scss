@@ -150,6 +150,7 @@ body.eop-admin-spa-screen {
     min-width: 0;
     display: grid;
     gap: 12px;
+    align-content: start;
   }
 
   &__foot {
@@ -308,12 +309,12 @@ body.eop-admin-spa-screen {
 .eop-admin-view-header,
 .eop-admin-panel-head {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 18px 22px;
+  padding: 12px 18px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
+  border-radius: 16px;
   background: linear-gradient(135deg, rgba(9, 21, 51, 0.98) 0%, rgba(15, 37, 87, 0.96) 58%, rgba(29, 167, 161, 0.92) 100%);
   box-shadow: 0 18px 40px rgba(15, 37, 87, 0.16);
 }
@@ -321,7 +322,7 @@ body.eop-admin-spa-screen {
 .eop-admin-view-copy {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .eop-admin-view-title-row {
@@ -334,7 +335,7 @@ body.eop-admin-spa-screen {
 .eop-admin-view-kicker {
   display: inline-flex;
   width: fit-content;
-  padding: 5px 10px;
+  padding: 4px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.88);
@@ -350,9 +351,9 @@ body.eop-admin-spa-screen {
   gap: 10px;
   margin: 0;
   color: #fff;
-  font-size: 26px;
+  font-size: 18px;
   font-weight: 700;
-  line-height: 1.08;
+  line-height: 1.14;
   letter-spacing: -0.03em;
 }
 
@@ -360,8 +361,8 @@ body.eop-admin-spa-screen {
   margin: 0;
   max-width: 70ch;
   color: rgba(255, 255, 255, 0.86);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .eop-admin-panel-head {
@@ -373,9 +374,9 @@ body.eop-admin-spa-screen {
     gap: 10px;
     margin: 0;
     color: #fff;
-    font-size: 26px;
+    font-size: 18px;
     font-weight: 700;
-    line-height: 1.08;
+    line-height: 1.14;
     letter-spacing: -0.03em;
   }
 
@@ -383,14 +384,15 @@ body.eop-admin-spa-screen {
     margin: 0;
     max-width: 70ch;
     color: rgba(255, 255, 255, 0.86);
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: 13px;
+    line-height: 1.45;
   }
 }
 
 .eop-admin-view-main {
   display: grid;
   gap: 14px;
+  align-content: start;
   container-type: inline-size;
   container-name: eop-admin-content;
 }
@@ -400,6 +402,8 @@ body.eop-admin-spa-screen {
   border-radius: 24px;
   background: linear-gradient(180deg, #fff 0%, #f8faff 100%);
   box-shadow: 0 18px 40px rgba(15, 37, 87, 0.08);
+  height: auto;
+  align-self: start;
 }
 
 .eop-admin-view-main .eop-card {
@@ -432,6 +436,57 @@ body.eop-admin-spa-screen {
 .eop-orders-browser {
   display: grid;
   gap: 14px;
+  align-content: start;
+}
+
+.eop-admin-submitbar {
+  position: fixed;
+  right: 28px;
+  bottom: 24px;
+  z-index: 120;
+  width: min(360px, calc(100vw - 36px));
+  margin: 0;
+  padding: 10px;
+  border: 1px solid rgba(214, 222, 253, 0.92);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 20px 48px rgba(0, 3, 75, 0.18);
+  backdrop-filter: blur(16px);
+
+  .button-primary,
+  .button,
+  input[type="submit"].button-primary,
+  input[type="submit"].button {
+    width: 100%;
+    min-height: 58px;
+    padding: 0 24px;
+    border: 0;
+    border-radius: 18px;
+    background: linear-gradient(135deg, var(--eop-primary, #00034b) 0%, #050a76 100%);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 800;
+    box-shadow: 0 18px 34px rgba(0, 3, 75, 0.24);
+  }
+
+  .button-primary:hover,
+  .button-primary:focus,
+  .button:hover,
+  .button:focus,
+  input[type="submit"].button-primary:hover,
+  input[type="submit"].button-primary:focus,
+  input[type="submit"].button:hover,
+  input[type="submit"].button:focus {
+    background: linear-gradient(135deg, var(--eop-primary, #00034b) 0%, #050a76 100%);
+    color: #fff;
+  }
+}
+
+.eop-admin-view-main,
+.eop-settings-page--embedded .eop-settings-form,
+.eop-pdf-admin__sidebar,
+.eop-admin-license-shell form {
+  padding-bottom: 128px;
 }
 
 .eop-editing-banner {
@@ -724,7 +779,7 @@ body.eop-admin-spa-screen {
 
   .eop-admin-view-header,
   .eop-admin-panel-head {
-    padding: 20px;
+    padding: 14px 16px;
     border-radius: 12px;
     align-items: stretch;
   }
@@ -735,6 +790,22 @@ body.eop-admin-spa-screen {
 
   .eop-admin-view-main .eop-card {
     padding: 20px;
+  }
+
+  .eop-admin-submitbar {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: auto;
+    padding: 8px;
+
+    .button-primary,
+    .button,
+    input[type="submit"].button-primary,
+    input[type="submit"].button {
+      min-height: 54px;
+      font-size: 15px;
+    }
   }
 
   .eop-admin-spa-nav__submenu-item {

@@ -439,6 +439,84 @@
         }
     }
 
+    function isBinaryToggleSelect($select) {
+        var values = [];
+
+        if (!$select.length || $select.prop('multiple') || $select.data('eopBinarySwitch')) {
+            return false;
+        }
+
+        $select.find('option').each(function () {
+            values.push(String($(this).attr('value') || '').toLowerCase());
+        });
+
+        if (values.length !== 2) {
+            return false;
+        }
+
+        values.sort();
+
+        return values[0] === 'no' && values[1] === 'yes';
+    }
+
+    function syncBinarySelectSwitch($button, $select, $status) {
+        var isEnabled = String($select.val() || 'no') === 'yes';
+
+        $button.toggleClass('is-enabled', isEnabled);
+        $button.attr('aria-checked', isEnabled ? 'true' : 'false');
+        $status.text(isEnabled ? 'Ativado' : 'Desativado');
+    }
+
+    function enhanceBinarySelect($select) {
+        var fieldLabel;
+        var $field;
+        var $shell;
+        var $button;
+        var $status;
+
+        if (!isBinaryToggleSelect($select)) {
+            return;
+        }
+
+        $field = $select.closest('.eop-settings-field');
+        fieldLabel = $.trim($field.find('label, > span').first().text()) || 'Alternar configuracao';
+
+        $shell = $('<div class="eop-settings-switch-shell eop-settings-switch-shell--select"></div>');
+        $button = $(
+            '<button type="button" class="eop-settings-switcher" role="switch" aria-checked="false">' +
+                '<span class="eop-settings-switcher__label eop-settings-switcher__label--off">Off</span>' +
+                '<span class="eop-settings-switcher__thumb" aria-hidden="true"></span>' +
+                '<span class="eop-settings-switcher__label eop-settings-switcher__label--on">On</span>' +
+            '</button>'
+        );
+        $status = $('<span class="eop-settings-switcher__status" aria-live="polite"></span>');
+
+        $button.attr('aria-label', fieldLabel);
+        $shell.append($button, $status);
+        $select.after($shell);
+        $select.addClass('eop-settings-binary-source').attr('aria-hidden', 'true').data('eopBinarySwitch', true);
+
+        syncBinarySelectSwitch($button, $select, $status);
+
+        $button.on('click', function () {
+            var nextValue = String($select.val() || 'no') === 'yes' ? 'no' : 'yes';
+
+            $select.val(nextValue).trigger('change');
+        });
+
+        $select.on('change', function () {
+            syncBinarySelectSwitch($button, $select, $status);
+        });
+    }
+
+    function initBinarySwitches(scope) {
+        var $scope = scope && scope.jquery ? scope : $(scope || document);
+
+        $scope.find('select').each(function () {
+            enhanceBinarySelect($(this));
+        });
+    }
+
     function mountColorDefaultButtons($scope) {
         var defaultLabel = (window.eop_settings_vars && eop_settings_vars.color_default) || 'Padrao';
         var $root = $scope && $scope.length ? $scope : $(document);
@@ -480,6 +558,7 @@
         mountColorDefaultButtons($scope);
         initLockedProductsSelector($scope);
         initSignatureEditors($scope);
+        initBinarySwitches($scope);
         $scope.find('[data-signature-document]').each(function () {
             updateSignatureDocumentPanels($(this));
         });

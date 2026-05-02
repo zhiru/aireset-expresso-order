@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Aireset — Expresso Order
  * Description: Pedido expresso para vendedores com busca de cliente, inclusao rapida de produtos e geracao de pedido no WooCommerce.
- * Version: 1.1.56
+ * Version: 1.1.57
  * Author: Aireset Agencia Web
  * Author URI: https://aireset.com.br
  * Requires Plugins: woocommerce
@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'EOP_VERSION', '1.1.56' );
+define( 'EOP_VERSION', '1.1.57' );
 define( 'EOP_PLUGIN_FILE', __FILE__ );
 define( 'EOP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EOP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

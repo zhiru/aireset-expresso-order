@@ -170,7 +170,7 @@ class EOP_Admin_Page {
             $args = array();
 
             if ( 'pdf' === $view ) {
-                $args['pdf_tab'] = class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_current_tab() : 'general';
+                $args['pdf_tab'] = class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_current_tab() : 'display';
             }
 
             $urls[ $view ] = self::get_view_url( $view, $args );
@@ -400,66 +400,29 @@ class EOP_Admin_Page {
         $current_page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
         $pdf_children = array(
             array(
-                'key'   => 'eop-view-pdf-general',
-                'label' => __( 'Geral', EOP_TEXT_DOMAIN ),
+                'key'   => 'eop-view-pdf-display',
+                'label' => __( 'Configuracoes de exibicao', EOP_TEXT_DOMAIN ),
                 'icon'  => 'dashicons-admin-home',
-                'url'   => class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_tab_url( 'general' ) : admin_url( 'admin.php?page=eop-pdf&tab=general' ),
+                'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'display' ) ),
                 'query' => array(
                     'page'    => 'eop-pedido-expresso',
                     'view'    => 'pdf',
-                    'pdf_tab' => 'general',
+                    'pdf_tab' => 'display',
                 ),
             ),
         );
 
-        if ( current_user_can( 'manage_options' ) ) {
-            $pdf_children[] = array(
-                'key'   => 'eop-view-pdf-documents',
-                'label' => __( 'Documentos', EOP_TEXT_DOMAIN ),
-                'icon'  => 'dashicons-media-text',
-                'url'   => class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_tab_url( 'documents' ) : admin_url( 'admin.php?page=eop-pdf&tab=documents' ),
-                'query' => array(
-                    'page'    => 'eop-pedido-expresso',
-                    'view'    => 'pdf',
-                    'pdf_tab' => 'documents',
-                ),
-            );
-            $pdf_children[] = array(
-                'key'   => 'eop-view-pdf-edocuments',
-                'label' => __( 'Documentos eletronicos', EOP_TEXT_DOMAIN ),
-                'icon'  => 'dashicons-media-spreadsheet',
-                'url'   => class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_tab_url( 'edocuments' ) : admin_url( 'admin.php?page=eop-pdf&tab=edocuments' ),
-                'query' => array(
-                    'page'    => 'eop-pedido-expresso',
-                    'view'    => 'pdf',
-                    'pdf_tab' => 'edocuments',
-                ),
-            );
-            $pdf_children[] = array(
-                'key'   => 'eop-view-pdf-advanced',
-                'label' => __( 'Avancado', EOP_TEXT_DOMAIN ),
-                'icon'  => 'dashicons-admin-tools',
-                'url'   => class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_tab_url( 'advanced' ) : admin_url( 'admin.php?page=eop-pdf&tab=advanced' ),
-                'query' => array(
-                    'page'    => 'eop-pedido-expresso',
-                    'view'    => 'pdf',
-                    'pdf_tab' => 'advanced',
-                ),
-            );
-            $pdf_children[] = array(
-                'key'   => 'eop-view-pdf-documentation',
-                'label' => __( 'Documentacao', EOP_TEXT_DOMAIN ),
-                'icon'  => 'dashicons-editor-help',
-                'url'   => class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_tab_url( 'documentation' ) : admin_url( 'admin.php?page=eop-pdf&tab=documentation' ),
-                'query' => array(
-                    'page'    => 'eop-pedido-expresso',
-                    'view'    => 'pdf',
-                    'pdf_tab' => 'documentation',
-                ),
-            );
-        }
-
         $items = array(
+            array(
+                'key'   => 'eop-view-new-order',
+                'label' => __( 'Novo pedido', EOP_TEXT_DOMAIN ),
+                'icon'  => 'dashicons-cart',
+                'url'   => self::get_view_url( 'new-order' ),
+                'query' => array(
+                    'page' => 'eop-pedido-expresso',
+                    'view' => 'new-order',
+                ),
+            ),
             array(
                 'key'   => 'eop-view-orders',
                 'label' => __( 'Pedidos', EOP_TEXT_DOMAIN ),
@@ -474,69 +437,241 @@ class EOP_Admin_Page {
                 'key'   => 'eop-view-pdf',
                 'label' => __( 'PDF', EOP_TEXT_DOMAIN ),
                 'icon'  => 'dashicons-media-document',
-                'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'general' ) ),
+                'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'display' ) ),
                 'query' => array(
                     'page'    => 'eop-pedido-expresso',
                     'view'    => 'pdf',
-                    'pdf_tab' => 'general',
+                    'pdf_tab' => 'display',
                 ),
                 'children' => $pdf_children,
             ),
         );
 
         if ( current_user_can( 'manage_options' ) ) {
-            array_unshift(
-                $items,
+            $general_children = array(
                 array(
-                    'key'   => 'eop-view-settings',
-                    'label' => __( 'Configuracoes gerais', EOP_TEXT_DOMAIN ),
-                    'icon'  => 'dashicons-admin-generic',
-                    'url'   => self::get_view_url( 'settings' ),
+                    'key'   => 'eop-view-settings-store-info',
+                    'label' => __( 'Informacoes sobre a loja', EOP_TEXT_DOMAIN ),
+                    'icon'  => 'dashicons-store',
+                    'url'   => self::get_view_url( 'settings-store-info' ),
                     'query' => array(
                         'page' => 'eop-pedido-expresso',
-                        'view' => 'settings',
+                        'view' => 'settings-store-info',
                     ),
-                )
-            );
-
-            array_splice(
-                $items,
-                1,
-                0,
+                ),
                 array(
-                    array(
-                        'key'   => 'eop-view-settings-styles',
-                        'label' => __( 'Estilos e identidade', EOP_TEXT_DOMAIN ),
-                        'icon'  => 'dashicons-art',
-                        'url'   => self::get_view_url( 'settings-styles' ),
-                        'query' => array(
-                            'page' => 'eop-pedido-expresso',
-                            'view' => 'settings-styles',
-                        ),
+                    'key'   => 'eop-view-settings-general-config',
+                    'label' => __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ),
+                    'icon'  => 'dashicons-admin-settings',
+                    'url'   => self::get_view_url( 'settings-general-config' ),
+                    'query' => array(
+                        'page' => 'eop-pedido-expresso',
+                        'view' => 'settings-general-config',
                     ),
-                    array(
-                        'key'   => 'eop-view-settings-texts',
-                        'label' => __( 'Textos e mensagens', EOP_TEXT_DOMAIN ),
-                        'icon'  => 'dashicons-edit-large',
-                        'url'   => self::get_view_url( 'settings-texts' ),
-                        'query' => array(
-                            'page' => 'eop-pedido-expresso',
-                            'view' => 'settings-texts',
-                        ),
+                ),
+                array(
+                    'key'   => 'eop-view-settings-confirmation-flow',
+                    'label' => __( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ),
+                    'icon'  => 'dashicons-yes-alt',
+                    'url'   => self::get_view_url( 'settings-confirmation-flow' ),
+                    'query' => array(
+                        'page' => 'eop-pedido-expresso',
+                        'view' => 'settings-confirmation-flow',
                     ),
-                )
-            );
-
-            $items[] = array(
-                'key'   => 'eop-view-license',
-                'label' => __( 'Licenca', EOP_TEXT_DOMAIN ),
-                'icon'  => 'dashicons-admin-network',
-                'url'   => self::get_view_url( 'license' ),
-                'query' => array(
-                    'page' => 'eop-pedido-expresso',
-                    'view' => 'license',
+                ),
+                array(
+                    'key'   => 'eop-view-settings-order-link-style',
+                    'label' => __( 'Estilo do Link do Pedido', EOP_TEXT_DOMAIN ),
+                    'icon'  => 'dashicons-art',
+                    'url'   => self::get_view_url( 'settings-order-link-style' ),
+                    'query' => array(
+                        'page' => 'eop-pedido-expresso',
+                        'view' => 'settings-order-link-style',
+                    ),
+                ),
+                array(
+                    'key'   => 'eop-view-settings-proposal-link-style',
+                    'label' => __( 'Estilo do Link de Proposta', EOP_TEXT_DOMAIN ),
+                    'icon'  => 'dashicons-format-image',
+                    'url'   => self::get_view_url( 'settings-proposal-link-style' ),
+                    'query' => array(
+                        'page' => 'eop-pedido-expresso',
+                        'view' => 'settings-proposal-link-style',
+                    ),
+                ),
+                array(
+                    'key'   => 'eop-view-settings-texts',
+                    'label' => __( 'Textos', EOP_TEXT_DOMAIN ),
+                    'icon'  => 'dashicons-edit-large',
+                    'url'   => self::get_view_url( 'settings-texts' ),
+                    'query' => array(
+                        'page' => 'eop-pedido-expresso',
+                        'view' => 'settings-texts',
+                    ),
                 ),
             );
+
+            $pdf_children = array_merge(
+                $pdf_children,
+                array(
+                    array(
+                        'key'   => 'eop-view-pdf-order-settings',
+                        'label' => __( 'Configuracoes do Pedido', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-media-text',
+                        'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'order-settings' ) ),
+                        'query' => array(
+                            'page'    => 'eop-pedido-expresso',
+                            'view'    => 'pdf',
+                            'pdf_tab' => 'order-settings',
+                        ),
+                    ),
+                    array(
+                        'key'   => 'eop-view-pdf-order-columns',
+                        'label' => __( 'Colunas do Pedido', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-editor-table',
+                        'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'order-columns' ) ),
+                        'query' => array(
+                            'page'    => 'eop-pedido-expresso',
+                            'view'    => 'pdf',
+                            'pdf_tab' => 'order-columns',
+                        ),
+                    ),
+                    array(
+                        'key'   => 'eop-view-pdf-order-texts',
+                        'label' => __( 'Textos do Pedido', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-edit-page',
+                        'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'order-texts' ) ),
+                        'query' => array(
+                            'page'    => 'eop-pedido-expresso',
+                            'view'    => 'pdf',
+                            'pdf_tab' => 'order-texts',
+                        ),
+                    ),
+                    array(
+                        'key'   => 'eop-view-pdf-order-style',
+                        'label' => __( 'Estilo do Pedido', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-art',
+                        'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'order-style' ) ),
+                        'query' => array(
+                            'page'    => 'eop-pedido-expresso',
+                            'view'    => 'pdf',
+                            'pdf_tab' => 'order-style',
+                        ),
+                    ),
+                    array(
+                        'key'   => 'eop-view-pdf-proposal-settings',
+                        'label' => __( 'Configuracoes da Proposta', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-media-default',
+                        'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'proposal-settings' ) ),
+                        'query' => array(
+                            'page'    => 'eop-pedido-expresso',
+                            'view'    => 'pdf',
+                            'pdf_tab' => 'proposal-settings',
+                        ),
+                    ),
+                    array(
+                        'key'   => 'eop-view-pdf-proposal-columns',
+                        'label' => __( 'Colunas da Proposta', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-editor-table',
+                        'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'proposal-columns' ) ),
+                        'query' => array(
+                            'page'    => 'eop-pedido-expresso',
+                            'view'    => 'pdf',
+                            'pdf_tab' => 'proposal-columns',
+                        ),
+                    ),
+                    array(
+                        'key'   => 'eop-view-pdf-proposal-texts',
+                        'label' => __( 'Textos da Proposta', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-edit-page',
+                        'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'proposal-texts' ) ),
+                        'query' => array(
+                            'page'    => 'eop-pedido-expresso',
+                            'view'    => 'pdf',
+                            'pdf_tab' => 'proposal-texts',
+                        ),
+                    ),
+                    array(
+                        'key'   => 'eop-view-pdf-proposal-style',
+                        'label' => __( 'Estilo da Proposta', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-art',
+                        'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'proposal-style' ) ),
+                        'query' => array(
+                            'page'    => 'eop-pedido-expresso',
+                            'view'    => 'pdf',
+                            'pdf_tab' => 'proposal-style',
+                        ),
+                    ),
+                    array(
+                        'key'   => 'eop-view-pdf-edocuments',
+                        'label' => __( 'Documentos eletronicos', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-media-spreadsheet',
+                        'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'edocuments' ) ),
+                        'query' => array(
+                            'page'    => 'eop-pedido-expresso',
+                            'view'    => 'pdf',
+                            'pdf_tab' => 'edocuments',
+                        ),
+                    ),
+                    array(
+                        'key'   => 'eop-view-pdf-advanced',
+                        'label' => __( 'Avancado', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-admin-tools',
+                        'url'   => self::get_view_url( 'pdf', array( 'pdf_tab' => 'advanced' ) ),
+                        'query' => array(
+                            'page'    => 'eop-pedido-expresso',
+                            'view'    => 'pdf',
+                            'pdf_tab' => 'advanced',
+                        ),
+                    ),
+                )
+            );
+
+            $items = array_merge(
+                array(
+                    array(
+                        'key'   => 'eop-view-general',
+                        'label' => __( 'Geral', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-admin-generic',
+                        'url'   => self::get_view_url( 'settings-general-config' ),
+                        'query' => array(
+                            'page' => 'eop-pedido-expresso',
+                            'view' => 'settings-general-config',
+                        ),
+                        'children' => $general_children,
+                    ),
+                ),
+                $items,
+                array(
+                    array(
+                        'key'   => 'eop-view-documentation',
+                        'label' => __( 'Documentacao', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-book-alt',
+                        'url'   => self::get_view_url( 'documentation' ),
+                        'query' => array(
+                            'page' => 'eop-pedido-expresso',
+                            'view' => 'documentation',
+                        ),
+                    ),
+                    array(
+                        'key'   => 'eop-view-license',
+                        'label' => __( 'Licenca', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-admin-network',
+                        'url'   => self::get_view_url( 'license' ),
+                        'query' => array(
+                            'page' => 'eop-pedido-expresso',
+                            'view' => 'license',
+                        ),
+                    ),
+                )
+            );
+
+            foreach ( $items as $index => $item ) {
+                if ( 'eop-view-pdf' === $item['key'] ) {
+                    $items[ $index ]['children'] = $pdf_children;
+                    break;
+                }
+            }
         }
 
         $config = array(

@@ -40,7 +40,7 @@
 .eop-pdf-admin__shell {
     position: relative;
     display: block;
-    min-height: 760px;
+    min-height: 0;
     margin-top: 0;
     border: 1px solid #dbe3f0;
     border-top: none;
@@ -50,13 +50,13 @@
 .eop-admin-spa .eop-pdf-admin--embedded .eop-pdf-admin__shell {
     border-top: 1px solid #dbe3f0;
     border-radius: 26px;
-    overflow: hidden;
+    overflow: visible;
     box-shadow: 0 24px 60px rgba(0, 3, 75, 0.08);
 }
 
 .eop-pdf-admin__sidebar {
     min-width: 0;
-    padding: 22px 96px 22px 22px;
+    padding: 16px 22px 22px;
     background: #fcfdff;
 }
 
@@ -205,6 +205,7 @@
 .eop-pdf-admin__form {
     display: grid;
     gap: 16px;
+    align-content: start;
 }
 
 .eop-pdf-admin__notice {
@@ -212,6 +213,11 @@
     border-left: 3px solid #4a2f7a;
     background: #fff;
     color: #5b6474;
+}
+
+.eop-admin-spa .eop-pdf-admin--embedded .eop-pdf-admin__notice,
+.eop-admin-spa .eop-pdf-admin--embedded .eop-pdf-admin__document-switcher {
+    margin-top: 0;
 }
 
 .eop-pdf-admin__section-note {
@@ -427,6 +433,11 @@
 
 .eop-pdf-admin__actions {
     padding-top: 8px;
+}
+
+.eop-pdf-admin__sidebar,
+.eop-pdf-admin__documentation {
+    padding-bottom: 128px;
 }
 
 .eop-pdf-admin__status-grid {

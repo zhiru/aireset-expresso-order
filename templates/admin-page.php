@@ -36,11 +36,11 @@ $general_nav_items = array(
         'icon'  => 'dashicons-yes-alt',
     ),
     'settings-order-link-style' => array(
-        'label' => __( 'Estilo/Visual do Link do Pedido', EOP_TEXT_DOMAIN ),
+        'label' => __( 'Visual do Link do Pedido', EOP_TEXT_DOMAIN ),
         'icon'  => 'dashicons-art',
     ),
     'settings-proposal-link-style' => array(
-        'label' => __( 'Estilo/Visual do Link de Proposta', EOP_TEXT_DOMAIN ),
+        'label' => __( 'Visual do Link de Proposta', EOP_TEXT_DOMAIN ),
         'icon'  => 'dashicons-format-image',
     ),
     'settings-texts' => array(
@@ -521,7 +521,7 @@ $general_nav_items = array(
 
                 <section class="eop-pdv-view<?php echo 'settings-order-link-style' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-order-link-style"<?php echo 'settings-order-link-style' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
-                        <h2><?php esc_html_e( 'Estilo/Visual do Link do Pedido', EOP_TEXT_DOMAIN ); ?></h2>
+                        <h2><?php esc_html_e( 'Visual do Link do Pedido', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Separe a identidade visual principal do shell e do link do pedido para ajustes rapidos de marca.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
@@ -531,7 +531,7 @@ $general_nav_items = array(
 
                 <section class="eop-pdv-view<?php echo 'settings-proposal-link-style' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-proposal-link-style"<?php echo 'settings-proposal-link-style' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
-                        <h2><?php esc_html_e( 'Estilo/Visual do Link de Proposta', EOP_TEXT_DOMAIN ); ?></h2>
+                        <h2><?php esc_html_e( 'Visual do Link de Proposta', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Ajuste o visual publico da proposta sem misturar essas opcoes com o restante do admin.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
