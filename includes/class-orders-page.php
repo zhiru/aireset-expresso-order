@@ -38,8 +38,10 @@ class EOP_Orders_Page {
             wp_enqueue_style( 'eop-orders-selected-font', $font_url, array(), null );
         }
 
-        wp_enqueue_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css', array(), WC_VERSION );
-        wp_enqueue_script( 'select2', WC()->plugin_url() . '/assets/js/select2/select2.full.min.js', array( 'jquery' ), WC_VERSION, true );
+        $wc_version = defined( 'WC_VERSION' ) ? WC_VERSION : EOP_VERSION;
+
+        wp_enqueue_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css', array(), $wc_version );
+        wp_enqueue_script( 'select2', WC()->plugin_url() . '/assets/js/select2/select2.full.min.js', array( 'jquery' ), $wc_version, true );
 
         wp_enqueue_style( 'eop-admin', EOP_PLUGIN_URL . 'assets/css/admin.css', array( 'select2' ), EOP_VERSION );
         wp_enqueue_style( 'eop-orders', EOP_PLUGIN_URL . 'assets/css/orders.css', array( 'eop-admin' ), EOP_VERSION );
@@ -128,6 +130,7 @@ class EOP_Orders_Page {
             'paged'      => 1,
             'status'     => 'any',
             'search'     => '',
+            'post_confirmation_flow' => 'any',
             'orderby'    => 'date',
             'order'      => 'DESC',
         );
@@ -154,7 +157,9 @@ class EOP_Orders_Page {
             }
         }
 
-        if ( ! EOP_Role::is_vendedor() ) {
+        $flow_filter = self::normalize_post_confirmation_flow_filter( $args['post_confirmation_flow'] ?? 'any' );
+
+        if ( ! EOP_Role::is_vendedor() && 'any' === $flow_filter ) {
             return wc_get_orders( $query_args );
         }
 
@@ -166,6 +171,7 @@ class EOP_Orders_Page {
 
         $orders = wc_get_orders( $query_args );
         $orders = array_values( array_filter( $orders, array( __CLASS__, 'current_user_can_access_order' ) ) );
+        $orders = self::filter_orders_by_post_confirmation_flow( $orders, $flow_filter );
 
         $total       = count( $orders );
         $max_pages   = max( 1, (int) ceil( $total / $limit ) );
@@ -189,12 +195,14 @@ class EOP_Orders_Page {
         $paged  = max( 1, absint( $_POST['paged'] ?? 1 ) );
         $search = isset( $_POST['search'] ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : '';
         $status = isset( $_POST['status'] ) ? sanitize_key( wp_unslash( $_POST['status'] ) ) : 'any';
+        $post_confirmation_flow = isset( $_POST['post_confirmation_flow'] ) ? self::normalize_post_confirmation_flow_filter( wp_unslash( $_POST['post_confirmation_flow'] ) ) : 'any';
 
         $result = self::get_orders( array(
             'limit'  => 12,
             'paged'  => $paged,
             'status' => $status,
             'search' => $search,
+            'post_confirmation_flow' => $post_confirmation_flow,
         ) );
 
         $orders = array_map( array( __CLASS__, 'prepare_order_list_item' ), $result->orders );
@@ -236,6 +244,10 @@ class EOP_Orders_Page {
         $items         = array();
         $discount_mode = EOP_Settings::get( 'discount_mode', 'both' );
         foreach ( $order->get_items() as $item ) {
+            if ( ! $item instanceof WC_Order_Item_Product ) {
+                continue;
+            }
+
             $product = $item->get_product();
             $subtotal = (float) $item->get_subtotal();
             $total    = (float) $item->get_total();
@@ -322,6 +334,7 @@ class EOP_Orders_Page {
             'discount'      => $general_discount_data['value'],
             'discount_type' => $general_discount_data['type'],
             'notes'         => $order->get_customer_note(),
+            'post_confirmation_flow' => class_exists( 'EOP_Post_Confirmation_Flow' ) ? EOP_Post_Confirmation_Flow::get_export_data( $order, 'admin' ) : array(),
         ) );
     }
 
@@ -442,7 +455,7 @@ class EOP_Orders_Page {
 
                 if ( $disc_amount > 0 ) {
                     $line_item = $order->get_item( $line_item_id );
-                    if ( $line_item ) {
+                    if ( $line_item instanceof WC_Order_Item_Product ) {
                         $line_item->set_subtotal( $line_total );
                         $line_item->set_total( $line_total - $disc_amount );
                         $line_item->update_meta_data( '_eop_discount_type', $item_disc_type );
@@ -543,6 +556,13 @@ class EOP_Orders_Page {
         return ( $post && (int) $post->post_author === $user_id );
     }
 
+    public static function normalize_post_confirmation_flow_filter( $value ) {
+        $value   = sanitize_key( (string) $value );
+        $allowed = array( 'any', 'active', 'pending', 'completed' );
+
+        return in_array( $value, $allowed, true ) ? $value : 'any';
+    }
+
     private static function prepare_order_list_item( $order ) {
         $customer_name = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
         $public_url    = EOP_Public_Proposal::get_public_link( $order );
@@ -562,7 +582,51 @@ class EOP_Orders_Page {
             'pdf_url'         => EOP_Order_Creator::get_pdf_document_url( $order ),
             'public_url'      => $public_url,
             'is_proposal'     => ! empty( $public_url ),
+            'post_confirmation_flow_summary' => class_exists( 'EOP_Post_Confirmation_Flow' ) ? EOP_Post_Confirmation_Flow::get_list_summary( $order ) : array(),
             'created_by_name' => (string) $order->get_meta( '_eop_created_by_name' ),
+        );
+    }
+
+    private static function filter_orders_by_post_confirmation_flow( $orders, $flow_filter ) {
+        $flow_filter = self::normalize_post_confirmation_flow_filter( $flow_filter );
+
+        if ( 'any' === $flow_filter || empty( $orders ) ) {
+            return $orders;
+        }
+
+        if ( ! class_exists( 'EOP_Post_Confirmation_Flow' ) ) {
+            return array();
+        }
+
+        return array_values(
+            array_filter(
+                $orders,
+                static function ( $order ) use ( $flow_filter ) {
+                    if ( ! $order instanceof WC_Order ) {
+                        return false;
+                    }
+
+                    $summary = EOP_Post_Confirmation_Flow::get_list_summary( $order );
+
+                    if ( empty( $summary['active_for_order'] ) ) {
+                        return false;
+                    }
+
+                    if ( 'active' === $flow_filter ) {
+                        return true;
+                    }
+
+                    if ( 'completed' === $flow_filter ) {
+                        return ! empty( $summary['completed'] );
+                    }
+
+                    if ( 'pending' === $flow_filter ) {
+                        return empty( $summary['completed'] );
+                    }
+
+                    return true;
+                }
+            )
         );
     }
 

@@ -104,7 +104,7 @@ class EOP_Admin_Page {
 
     public static function get_default_view() {
         if ( current_user_can( 'manage_options' ) ) {
-            return 'settings';
+            return 'settings-general-config';
         }
 
         return 'new-order';
@@ -115,15 +115,31 @@ class EOP_Admin_Page {
             'new-order' => current_user_can( 'edit_shop_orders' ),
             'orders'    => current_user_can( 'edit_shop_orders' ),
             'pdf'       => current_user_can( 'edit_shop_orders' ),
-            'settings'  => current_user_can( 'manage_options' ),
-            'license'   => current_user_can( 'manage_options' ),
+            'settings-store-info'        => current_user_can( 'manage_options' ),
+            'settings-general-config'    => current_user_can( 'manage_options' ),
+            'settings-confirmation-flow' => current_user_can( 'manage_options' ),
+            'settings-order-link-style'  => current_user_can( 'manage_options' ),
+            'settings-proposal-link-style' => current_user_can( 'manage_options' ),
+            'settings-texts'             => current_user_can( 'manage_options' ),
+            'documentation'              => current_user_can( 'manage_options' ),
+            'license'                    => current_user_can( 'manage_options' ),
         );
 
         return array_keys( array_filter( $views ) );
     }
 
     public static function normalize_view( $view ) {
-        $view            = sanitize_key( (string) $view );
+        $view = sanitize_key( (string) $view );
+
+        $legacy_map = array(
+            'settings'        => 'settings-general-config',
+            'settings-styles' => 'settings-order-link-style',
+        );
+
+        if ( isset( $legacy_map[ $view ] ) ) {
+            $view = $legacy_map[ $view ];
+        }
+
         $available_views = self::get_available_views();
 
         if ( in_array( $view, $available_views, true ) ) {
@@ -145,6 +161,22 @@ class EOP_Admin_Page {
         }
 
         return add_query_arg( $query, admin_url( 'admin.php' ) );
+    }
+
+    public static function get_view_urls() {
+        $urls = array();
+
+        foreach ( self::get_available_views() as $view ) {
+            $args = array();
+
+            if ( 'pdf' === $view ) {
+                $args['pdf_tab'] = class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_current_tab() : 'general';
+            }
+
+            $urls[ $view ] = self::get_view_url( $view, $args );
+        }
+
+        return $urls;
     }
 
     /**
@@ -183,9 +215,11 @@ class EOP_Admin_Page {
             wp_enqueue_style( 'eop-admin-selected-font', $font_url, array(), null );
         }
 
+        $wc_version = defined( 'WC_VERSION' ) ? WC_VERSION : EOP_VERSION;
+
         // Select2 (shipped with WooCommerce).
-        wp_enqueue_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css', array(), WC_VERSION );
-        wp_enqueue_script( 'select2', WC()->plugin_url() . '/assets/js/select2/select2.full.min.js', array( 'jquery' ), WC_VERSION, true );
+        wp_enqueue_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css', array(), $wc_version );
+        wp_enqueue_script( 'select2', WC()->plugin_url() . '/assets/js/select2/select2.full.min.js', array( 'jquery' ), $wc_version, true );
 
         wp_enqueue_style( 'eop-admin', EOP_PLUGIN_URL . 'assets/css/admin.css', array( 'select2' ), EOP_VERSION );
         wp_enqueue_style( 'eop-frontend', EOP_PLUGIN_URL . 'assets/css/frontend.css', array(), EOP_VERSION );
@@ -215,6 +249,10 @@ class EOP_Admin_Page {
 
         wp_enqueue_script( 'eop-coloris', EOP_PLUGIN_URL . 'assets/js/coloris.min.js', array(), EOP_VERSION, true );
 
+        if ( function_exists( 'wp_enqueue_editor' ) ) {
+            wp_enqueue_editor();
+        }
+
         if ( file_exists( $font_js_path ) ) {
             wp_enqueue_script(
                 'eop-fontselect',
@@ -228,7 +266,7 @@ class EOP_Admin_Page {
         wp_enqueue_script(
             'eop-settings-admin',
             EOP_PLUGIN_URL . 'assets/js/settings-admin.js',
-            array_filter( array( 'jquery', 'eop-coloris', 'media-editor', 'media-upload', file_exists( $font_js_path ) ? 'eop-fontselect' : '' ) ),
+            array_filter( array( 'jquery', 'select2', 'eop-coloris', 'media-editor', 'media-upload', 'wp-editor', file_exists( $font_js_path ) ? 'eop-fontselect' : '' ) ),
             EOP_VERSION,
             true
         );
@@ -236,27 +274,18 @@ class EOP_Admin_Page {
         wp_localize_script(
             'eop-settings-admin',
             'eop_settings_vars',
-            array(
-                'has_fontselect'   => file_exists( $font_js_path ),
-                'font_placeholder' => __( 'Escolha uma fonte Google', EOP_TEXT_DOMAIN ),
-                'media_title'      => __( 'Selecionar logo', EOP_TEXT_DOMAIN ),
-                'media_button'     => __( 'Usar esta imagem', EOP_TEXT_DOMAIN ),
-                'remove_logo'      => __( 'Remover logo', EOP_TEXT_DOMAIN ),
-                'select_logo'      => __( 'Selecionar logo', EOP_TEXT_DOMAIN ),
-                'change_logo'      => __( 'Trocar logo', EOP_TEXT_DOMAIN ),
-                'no_logo'          => __( 'Nenhum logo selecionado ainda.', EOP_TEXT_DOMAIN ),
-                'color_default'    => __( 'Padrao', EOP_TEXT_DOMAIN ),
-                'color_clear'      => __( 'Limpar', EOP_TEXT_DOMAIN ),
-                'color_close'      => __( 'Fechar', EOP_TEXT_DOMAIN ),
-            )
+            EOP_Settings::get_settings_admin_localization( file_exists( $font_js_path ) )
         );
 
         wp_localize_script( 'eop-admin', 'eop_vars', array(
             'ajax_url'      => admin_url( 'admin-ajax.php' ),
             'nonce'         => wp_create_nonce( 'eop_nonce' ),
+            'rest_url'      => esc_url_raw( rest_url( trailingslashit( apply_filters( 'eop_post_confirmation_rest_namespace', 'aireset-expresso-order/v1' ) ) ) ),
+            'rest_nonce'    => wp_create_nonce( 'wp_rest' ),
             'discount_mode' => EOP_Settings::get( 'discount_mode', 'both' ),
             'initial_view'  => self::normalize_view( isset( $_GET['view'] ) ? wp_unslash( $_GET['view'] ) : '' ),
             'view_url_base' => self::get_view_url(),
+            'view_urls'     => self::get_view_urls(),
             'i18n'          => array(
                 'search_product'   => __( 'Buscar produto por nome ou SKU...', EOP_TEXT_DOMAIN ),
                 'no_items'         => __( 'Nenhum produto adicionado.', EOP_TEXT_DOMAIN ),
@@ -291,14 +320,59 @@ class EOP_Admin_Page {
                 'shipping_postcode_error'   => __( 'Nao foi possivel buscar o CEP agora. Continue manualmente.', EOP_TEXT_DOMAIN ),
                 'shipping_rates_found'      => __( 'Opcoes encontradas. Escolha a melhor para o cliente.', EOP_TEXT_DOMAIN ),
                 'processing'       => __( 'Processando...', EOP_TEXT_DOMAIN ),
+                'loading'          => __( 'Carregando...', EOP_TEXT_DOMAIN ),
                 'error'            => __( 'Erro ao criar pedido. Tente novamente.', EOP_TEXT_DOMAIN ),
                 'success'          => __( 'Pedido criado com sucesso!', EOP_TEXT_DOMAIN ),
                 'submit_label'     => __( 'Finalizar e Gerar PDF', EOP_TEXT_DOMAIN ),
+                'edit_title'       => __( 'Editando pedido', EOP_TEXT_DOMAIN ),
+                'edit_submit'      => __( 'Salvar alteracoes', EOP_TEXT_DOMAIN ),
+                'edit_loaded'      => __( 'Pedido carregado no painel para edicao.', EOP_TEXT_DOMAIN ),
+                'edit_error'       => __( 'Nao foi possivel abrir este pedido para edicao.', EOP_TEXT_DOMAIN ),
+                'edit_cancel'      => __( 'Edicao cancelada.', EOP_TEXT_DOMAIN ),
                 'nav_new_order'    => __( 'Novo pedido', EOP_TEXT_DOMAIN ),
                 'nav_orders'       => __( 'Pedidos', EOP_TEXT_DOMAIN ),
                 'nav_pdf'          => __( 'PDF', EOP_TEXT_DOMAIN ),
                 'nav_settings'     => __( 'Configuracoes', EOP_TEXT_DOMAIN ),
                 'nav_license'      => __( 'Licenca', EOP_TEXT_DOMAIN ),
+                'orders_loading'   => __( 'Carregando pedidos...', EOP_TEXT_DOMAIN ),
+                'orders_error'     => __( 'Nao foi possivel carregar os pedidos agora.', EOP_TEXT_DOMAIN ),
+                'orders_empty'     => __( 'Nenhum pedido encontrado para este filtro.', EOP_TEXT_DOMAIN ),
+                'orders_previous'  => __( 'Anterior', EOP_TEXT_DOMAIN ),
+                'orders_next'      => __( 'Proxima', EOP_TEXT_DOMAIN ),
+                'orders_of'        => __( 'pedido(s) encontrado(s)', EOP_TEXT_DOMAIN ),
+                'orders_created_by' => __( 'Vendedor', EOP_TEXT_DOMAIN ),
+                'orders_public'    => __( 'Link do cliente', EOP_TEXT_DOMAIN ),
+                'orders_pdf'       => __( 'PDF', EOP_TEXT_DOMAIN ),
+                'orders_edit'      => __( 'Editar aqui', EOP_TEXT_DOMAIN ),
+                'orders_flow_title' => __( 'Fluxo complementar', EOP_TEXT_DOMAIN ),
+                'orders_flow_contract' => __( 'Contrato', EOP_TEXT_DOMAIN ),
+                'orders_flow_fields' => __( 'Campos', EOP_TEXT_DOMAIN ),
+                'orders_flow_attachment' => __( 'Anexo', EOP_TEXT_DOMAIN ),
+                'orders_flow_products' => __( 'Produtos', EOP_TEXT_DOMAIN ),
+                'orders_flow_uploaded' => __( 'Enviado', EOP_TEXT_DOMAIN ),
+                'orders_flow_optional' => __( 'Opcional', EOP_TEXT_DOMAIN ),
+                'post_flow_loading' => __( 'Carregando dados complementares da proposta...', EOP_TEXT_DOMAIN ),
+                'post_flow_unavailable_edit' => __( 'O resumo complementar aparece quando um pedido existente entra em modo de edicao.', EOP_TEXT_DOMAIN ),
+                'post_flow_not_available' => __( 'Este pedido nao esta usando o fluxo complementar da proposta.', EOP_TEXT_DOMAIN ),
+                'post_flow_stage_inactive' => __( 'Inativo', EOP_TEXT_DOMAIN ),
+                'post_flow_pending' => __( 'Pendente', EOP_TEXT_DOMAIN ),
+                'post_flow_contract_pending' => __( 'Aceite contratual pendente.', EOP_TEXT_DOMAIN ),
+                'post_flow_contract_done' => __( 'Aceite registrado.', EOP_TEXT_DOMAIN ),
+                'post_flow_documents_empty' => __( 'Nenhum dado do pedido preenchido no WooCommerce ate agora.', EOP_TEXT_DOMAIN ),
+                'post_flow_signature_documents_empty' => __( 'Nenhum documento para assinatura foi gerado ainda.', EOP_TEXT_DOMAIN ),
+                'post_flow_attachment_missing' => __( 'Nenhum anexo registrado.', EOP_TEXT_DOMAIN ),
+                'post_flow_attachment_done' => __( 'Anexo registrado com sucesso.', EOP_TEXT_DOMAIN ),
+                'post_flow_products_empty' => __( 'Nenhuma personalizacao registrada ate agora.', EOP_TEXT_DOMAIN ),
+                'post_flow_open_public' => __( 'Abrir link publico', EOP_TEXT_DOMAIN ),
+                'post_flow_download_pdf' => __( 'Baixar PDF complementar', EOP_TEXT_DOMAIN ),
+                'post_flow_stat_stage' => __( 'Etapa atual', EOP_TEXT_DOMAIN ),
+                'post_flow_stat_documents' => __( 'Dados do pedido', EOP_TEXT_DOMAIN ),
+                'post_flow_stat_attachment' => __( 'Anexo', EOP_TEXT_DOMAIN ),
+                'post_flow_stat_products' => __( 'Produtos', EOP_TEXT_DOMAIN ),
+                'post_flow_summary_ready' => __( 'Payload estruturado pronto para PDF, admin e integracoes futuras.', EOP_TEXT_DOMAIN ),
+                'post_flow_completed_at' => __( 'Concluido em', EOP_TEXT_DOMAIN ),
+                'post_flow_locked' => __( 'Bloqueado', EOP_TEXT_DOMAIN ),
+                'post_flow_customized' => __( 'Personalizado', EOP_TEXT_DOMAIN ),
             ),
         ) );
     }
@@ -415,12 +489,40 @@ class EOP_Admin_Page {
                 $items,
                 array(
                     'key'   => 'eop-view-settings',
-                    'label' => __( 'Configuracoes', EOP_TEXT_DOMAIN ),
+                    'label' => __( 'Configuracoes gerais', EOP_TEXT_DOMAIN ),
                     'icon'  => 'dashicons-admin-generic',
                     'url'   => self::get_view_url( 'settings' ),
                     'query' => array(
                         'page' => 'eop-pedido-expresso',
                         'view' => 'settings',
+                    ),
+                )
+            );
+
+            array_splice(
+                $items,
+                1,
+                0,
+                array(
+                    array(
+                        'key'   => 'eop-view-settings-styles',
+                        'label' => __( 'Estilos e identidade', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-art',
+                        'url'   => self::get_view_url( 'settings-styles' ),
+                        'query' => array(
+                            'page' => 'eop-pedido-expresso',
+                            'view' => 'settings-styles',
+                        ),
+                    ),
+                    array(
+                        'key'   => 'eop-view-settings-texts',
+                        'label' => __( 'Textos e mensagens', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-edit-large',
+                        'url'   => self::get_view_url( 'settings-texts' ),
+                        'query' => array(
+                            'page' => 'eop-pedido-expresso',
+                            'view' => 'settings-texts',
+                        ),
                     ),
                 )
             );

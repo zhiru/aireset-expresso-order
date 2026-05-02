@@ -133,11 +133,11 @@ class EOP_PDF_Admin_Page {
 
     public static function render_documents_page() {
         if ( class_exists( 'EOP_Admin_Page' ) ) {
-            wp_safe_redirect( self::get_tab_url( 'general' ) );
+            wp_safe_redirect( self::get_tab_url( 'display' ) );
             exit;
         }
 
-        self::render_page( 'general' );
+        self::render_page( 'display' );
     }
 
     public static function render_settings_page() {
@@ -145,24 +145,48 @@ class EOP_PDF_Admin_Page {
             wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
         }
 
-        wp_safe_redirect( self::get_tab_url( 'documents' ) );
+        wp_safe_redirect( self::get_tab_url( 'order-settings' ) );
         exit;
     }
 
     public static function get_tab_capability( $tab ) {
         $tab = self::normalize_tab( $tab );
 
-        return in_array( $tab, array( 'documents', 'edocuments', 'advanced' ), true ) ? 'manage_options' : 'edit_shop_orders';
+        return in_array( $tab, array( 'store', 'order-settings', 'order-columns', 'order-texts', 'order-style', 'proposal-settings', 'proposal-columns', 'proposal-texts', 'proposal-style', 'edocuments', 'advanced' ), true ) ? 'manage_options' : 'edit_shop_orders';
     }
 
     public static function get_tabs() {
         return array(
-            'general'     => __( 'Geral', EOP_TEXT_DOMAIN ),
-            'documents'   => __( 'Documentos', EOP_TEXT_DOMAIN ),
-            'edocuments'  => __( 'Documentos eletrônicos', EOP_TEXT_DOMAIN ),
-            'advanced'    => __( 'Avançado', EOP_TEXT_DOMAIN ),
+            'store'         => __( 'Informacoes sobre a loja', EOP_TEXT_DOMAIN ),
+            'display'       => __( 'Configuracoes de exibicao', EOP_TEXT_DOMAIN ),
+            'order-settings' => __( 'Configuracoes do Pedido', EOP_TEXT_DOMAIN ),
+            'order-columns' => __( 'Colunas do Pedido', EOP_TEXT_DOMAIN ),
+            'order-texts'   => __( 'Textos do Pedido', EOP_TEXT_DOMAIN ),
+            'order-style'   => __( 'Estilo/Visual do Pedido', EOP_TEXT_DOMAIN ),
+            'proposal-settings' => __( 'Configuracoes da Proposta', EOP_TEXT_DOMAIN ),
+            'proposal-columns'  => __( 'Colunas da Proposta', EOP_TEXT_DOMAIN ),
+            'proposal-texts'    => __( 'Textos da Proposta', EOP_TEXT_DOMAIN ),
+            'proposal-style'    => __( 'Estilo/Visual da Proposta', EOP_TEXT_DOMAIN ),
+            'edocuments'    => __( 'Documentos eletronicos', EOP_TEXT_DOMAIN ),
+            'advanced'      => __( 'Avancado', EOP_TEXT_DOMAIN ),
             'documentation' => __( 'Documentacao', EOP_TEXT_DOMAIN ),
         );
+    }
+
+    public static function get_spa_nav_tabs() {
+        $tabs = array();
+
+        foreach ( self::get_tabs() as $tab => $label ) {
+            if ( in_array( $tab, array( 'store', 'documentation' ), true ) ) {
+                continue;
+            }
+
+            if ( current_user_can( self::get_tab_capability( $tab ) ) ) {
+                $tabs[ $tab ] = $label;
+            }
+        }
+
+        return $tabs;
     }
 
     public static function get_accessible_tabs() {
@@ -178,20 +202,31 @@ class EOP_PDF_Admin_Page {
     }
 
     public static function normalize_tab( $tab, $default = 'general' ) {
+        $tab = sanitize_key( (string) $tab );
+
+        if ( 'general' === $tab ) {
+            $tab = 'display';
+        }
+
+        if ( 'documents' === $tab ) {
+            $document = isset( $_GET['document'] ) ? sanitize_key( wp_unslash( $_GET['document'] ) ) : 'order';
+            $tab      = 'proposal' === $document ? 'proposal-settings' : 'order-settings';
+        }
+
         $tabs = self::get_tabs();
-        $tab  = sanitize_key( (string) $tab );
+        $default = 'general' === $default ? 'display' : sanitize_key( (string) $default );
 
         if ( isset( $tabs[ $tab ] ) ) {
             return $tab;
         }
 
-        return isset( $tabs[ $default ] ) ? $default : 'general';
+        return isset( $tabs[ $default ] ) ? $default : 'display';
     }
 
     public static function get_tab_page_slug( $tab ) {
         $tab = self::normalize_tab( $tab );
 
-        if ( 'general' === $tab ) {
+        if ( 'display' === $tab ) {
             return 'eop-pdf';
         }
 
@@ -202,18 +237,18 @@ class EOP_PDF_Admin_Page {
         $page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 
         if ( self::is_spa_request() && isset( $_GET['pdf_tab'] ) ) {
-            return self::normalize_tab( wp_unslash( $_GET['pdf_tab'] ), 'general' );
+            return self::normalize_tab( wp_unslash( $_GET['pdf_tab'] ), 'display' );
         }
 
         if ( 0 === strpos( $page, 'eop-pdf-' ) ) {
-            return self::normalize_tab( substr( $page, 8 ), 'general' );
+            return self::normalize_tab( substr( $page, 8 ), 'display' );
         }
 
         if ( isset( $_GET['tab'] ) ) {
-            return self::normalize_tab( wp_unslash( $_GET['tab'] ), 'general' );
+            return self::normalize_tab( wp_unslash( $_GET['tab'] ), 'display' );
         }
 
-        return 'general';
+        return 'display';
     }
 
     public static function get_tab_url( $tab, $args = array() ) {
@@ -256,9 +291,13 @@ class EOP_PDF_Admin_Page {
         self::render_page( $tab );
     }
 
-    public static function render_embedded_page( $default_tab = 'general' ) {
+    public static function render_embedded_page( $default_tab = 'display' ) {
         $default_tab = self::normalize_tab( $default_tab );
-        $tab         = self::normalize_tab( self::get_current_tab(), $default_tab );
+        $tab         = $default_tab;
+
+        if ( self::is_spa_request() || ! class_exists( 'EOP_Admin_Page' ) ) {
+            $tab = self::normalize_tab( self::get_current_tab(), $default_tab );
+        }
 
         if ( ! current_user_can( self::get_tab_capability( $tab ) ) ) {
             wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );

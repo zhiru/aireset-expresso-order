@@ -4,15 +4,68 @@ defined( 'ABSPATH' ) || exit;
 $plugin_settings = EOP_Settings::get_all();
 $pdf_settings    = EOP_PDF_Settings::get_all();
 $embedded        = ! empty( $embedded );
+$default_tab     = isset( $default_tab ) ? (string) $default_tab : 'display';
 $font_css        = method_exists( 'EOP_Settings', 'get_font_css_family' ) ? EOP_Settings::get_font_css_family( $plugin_settings['font_family'] ) : "'Segoe UI', sans-serif";
 $tabs            = EOP_PDF_Admin_Page::get_accessible_tabs();
 $tab             = EOP_PDF_Admin_Page::normalize_tab( EOP_PDF_Admin_Page::get_current_tab(), $default_tab );
+
+$document_tab_contexts = array(
+    'order-settings' => array(
+        'document' => 'order',
+        'section'  => 'settings',
+        'pair'     => 'proposal-settings',
+    ),
+    'order-columns' => array(
+        'document' => 'order',
+        'section'  => 'columns',
+        'pair'     => 'proposal-columns',
+    ),
+    'order-texts' => array(
+        'document' => 'order',
+        'section'  => 'texts',
+        'pair'     => 'proposal-texts',
+    ),
+    'order-style' => array(
+        'document' => 'order',
+        'section'  => 'style',
+        'pair'     => 'proposal-style',
+    ),
+    'proposal-settings' => array(
+        'document' => 'proposal',
+        'section'  => 'settings',
+        'pair'     => 'order-settings',
+    ),
+    'proposal-columns' => array(
+        'document' => 'proposal',
+        'section'  => 'columns',
+        'pair'     => 'order-columns',
+    ),
+    'proposal-texts' => array(
+        'document' => 'proposal',
+        'section'  => 'texts',
+        'pair'     => 'order-texts',
+    ),
+    'proposal-style' => array(
+        'document' => 'proposal',
+        'section'  => 'style',
+        'pair'     => 'order-style',
+    ),
+);
 
 if ( ! isset( $tabs[ $tab ] ) ) {
     $tab = key( $tabs );
 }
 
 $document        = isset( $_GET['document'] ) && 'proposal' === sanitize_key( wp_unslash( $_GET['document'] ) ) ? 'proposal' : 'order';
+$document_tab_context = isset( $document_tab_contexts[ $tab ] ) ? $document_tab_contexts[ $tab ] : null;
+
+if ( is_array( $document_tab_context ) ) {
+    $document = $document_tab_context['document'];
+}
+
+$document_section = is_array( $document_tab_context ) ? $document_tab_context['section'] : '';
+$document_pair_tab = is_array( $document_tab_context ) ? $document_tab_context['pair'] : '';
+$is_document_tab = is_array( $document_tab_context );
 $recent_orders   = EOP_Document_Manager::get_recent_orders( 20 );
 $preview_order   = EOP_Document_Manager::get_preview_order( absint( $_GET['preview_order'] ?? 0 ) );
 $preview_document = $preview_order instanceof WC_Order ? EOP_Document_Manager::get_document_type_for_order( $preview_order ) : $document;
@@ -33,6 +86,7 @@ $proposal_url    = EOP_Page_Installer::get_page_url( 'proposal' );
 $current_tab_label = isset( $tabs[ $tab ] ) ? $tabs[ $tab ] : __( 'PDF', EOP_TEXT_DOMAIN );
 $woo_general_url = admin_url( 'admin.php?page=wc-settings&tab=general' );
 $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings::get_documentation_sections() : array();
+$current_view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'pdf';
 ?>
 <style>
     .eop-pdf-admin {
@@ -77,14 +131,21 @@ $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings:
 
     <div class="eop-pdf-admin__shell" data-eop-pdf-shell data-eop-pdf-tab-current="<?php echo esc_attr( $tab ); ?>">
         <div class="eop-pdf-admin__sidebar">
-            <?php if ( 'general' === $tab ) : ?>
+            <?php if ( in_array( $tab, array( 'display', 'store' ), true ) ) : ?>
                 <form method="post" action="options.php" class="eop-pdf-admin__form">
                     <?php settings_fields( 'eop_pdf_settings_group' ); ?>
 
                     <div class="eop-pdf-admin__notice">
-                        <p><?php esc_html_e( 'Configure como o PDF deve ser exibido, qual modelo usar e quais dados da loja aparecem no documento.', EOP_TEXT_DOMAIN ); ?></p>
+                        <p>
+                            <?php
+                            echo 'store' === $tab
+                                ? esc_html__( 'Centralize aqui os dados da loja usados nos documentos e no cabecalho institucional do modulo.', EOP_TEXT_DOMAIN )
+                                : esc_html__( 'Configure como o PDF deve ser exibido e qual modelo o modulo usa ao gerar ou abrir o documento.', EOP_TEXT_DOMAIN );
+                            ?>
+                        </p>
                     </div>
 
+                    <?php if ( 'display' === $tab ) : ?>
                     <details class="eop-pdf-admin__section" open>
                         <summary><?php esc_html_e( 'Configuracoes de exibicao', EOP_TEXT_DOMAIN ); ?></summary>
                         <div class="eop-pdf-admin__grid">
@@ -133,7 +194,9 @@ $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings:
                             </div>
                         </div>
                     </details>
+                    <?php endif; ?>
 
+                    <?php if ( 'store' === $tab ) : ?>
                     <details class="eop-pdf-admin__section" open>
                         <summary><?php esc_html_e( 'Informacoes sobre a loja', EOP_TEXT_DOMAIN ); ?></summary>
                         <div class="eop-pdf-admin__section-note">
@@ -226,22 +289,24 @@ $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings:
                             </div>
                         </div>
                     </details>
+                    <?php endif; ?>
 
-                    <div class="eop-pdf-admin__actions"><?php submit_button( __( 'Salvar configuracoes gerais', EOP_TEXT_DOMAIN ), 'primary', 'submit', false ); ?></div>
+                    <div class="eop-pdf-admin__actions"><?php submit_button( 'store' === $tab ? __( 'Salvar informacoes da loja', EOP_TEXT_DOMAIN ) : __( 'Salvar configuracoes de exibicao', EOP_TEXT_DOMAIN ), 'primary', 'submit', false ); ?></div>
                 </form>
-            <?php elseif ( 'documents' === $tab ) : ?>
+            <?php elseif ( $is_document_tab ) : ?>
                 <form method="post" action="options.php" class="eop-pdf-admin__form">
                     <?php settings_fields( 'eop_pdf_settings_group' ); ?>
 
                     <div class="eop-pdf-admin__document-switcher" aria-label="<?php esc_attr_e( 'Documento em configuracao', EOP_TEXT_DOMAIN ); ?>">
-                        <a class="eop-pdf-admin__document-pill<?php echo 'order' === $document ? ' is-active' : ''; ?>" href="<?php echo esc_url( EOP_PDF_Admin_Page::get_tab_url( $tab, array( 'document' => 'order', 'preview_order' => $preview_order ? $preview_order->get_id() : 0 ) ) ); ?>"><?php esc_html_e( 'Pedido', EOP_TEXT_DOMAIN ); ?></a>
-                        <a class="eop-pdf-admin__document-pill<?php echo 'proposal' === $document ? ' is-active' : ''; ?>" href="<?php echo esc_url( EOP_PDF_Admin_Page::get_tab_url( $tab, array( 'document' => 'proposal', 'preview_order' => $preview_order ? $preview_order->get_id() : 0 ) ) ); ?>"><?php esc_html_e( 'Proposta', EOP_TEXT_DOMAIN ); ?></a>
+                        <a class="eop-pdf-admin__document-pill<?php echo 'order' === $document ? ' is-active' : ''; ?>" href="<?php echo esc_url( EOP_PDF_Admin_Page::get_tab_url( 'order' === $document ? $tab : $document_pair_tab, array( 'preview_order' => $preview_order ? $preview_order->get_id() : 0 ) ) ); ?>"><?php esc_html_e( 'Pedido', EOP_TEXT_DOMAIN ); ?></a>
+                        <a class="eop-pdf-admin__document-pill<?php echo 'proposal' === $document ? ' is-active' : ''; ?>" href="<?php echo esc_url( EOP_PDF_Admin_Page::get_tab_url( 'proposal' === $document ? $tab : $document_pair_tab, array( 'preview_order' => $preview_order ? $preview_order->get_id() : 0 ) ) ); ?>"><?php esc_html_e( 'Proposta', EOP_TEXT_DOMAIN ); ?></a>
                     </div>
 
                     <div class="eop-pdf-admin__notice eop-pdf-admin__notice--document-context">
                         <p><?php printf( esc_html__( 'Voce esta editando as configuracoes de %s. Pedido e proposta possuem textos e opcoes independentes.', EOP_TEXT_DOMAIN ), esc_html( $editing_label ) ); ?></p>
                     </div>
 
+                    <?php if ( 'settings' === $document_section ) : ?>
                     <details class="eop-pdf-admin__section" open>
                         <summary><?php echo esc_html( 'proposal' === $document ? __( 'Configuracoes da proposta', EOP_TEXT_DOMAIN ) : __( 'Configuracoes do pedido', EOP_TEXT_DOMAIN ) ); ?></summary>
                         <div class="eop-pdf-admin__grid">
@@ -344,6 +409,40 @@ $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings:
                         </div>
                     </details>
                     <details class="eop-pdf-admin__section" open>
+                        <summary><?php esc_html_e( 'Totais exibidos', EOP_TEXT_DOMAIN ); ?></summary>
+                        <div class="eop-pdf-admin__grid">
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_show_total_subtotal"><?php esc_html_e( 'Exibir subtotal', EOP_TEXT_DOMAIN ); ?></label>
+                                <select id="eop_doc_show_total_subtotal" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_show_total_subtotal]">
+                                    <option value="yes" <?php selected( $pdf_settings[ $document . '_show_total_subtotal' ], 'yes' ); ?>><?php esc_html_e( 'Sim', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="no" <?php selected( $pdf_settings[ $document . '_show_total_subtotal' ], 'no' ); ?>><?php esc_html_e( 'Nao', EOP_TEXT_DOMAIN ); ?></option>
+                                </select>
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_show_total_shipping"><?php esc_html_e( 'Exibir frete', EOP_TEXT_DOMAIN ); ?></label>
+                                <select id="eop_doc_show_total_shipping" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_show_total_shipping]">
+                                    <option value="yes" <?php selected( $pdf_settings[ $document . '_show_total_shipping' ], 'yes' ); ?>><?php esc_html_e( 'Sim', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="no" <?php selected( $pdf_settings[ $document . '_show_total_shipping' ], 'no' ); ?>><?php esc_html_e( 'Nao', EOP_TEXT_DOMAIN ); ?></option>
+                                </select>
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_show_total_discount"><?php esc_html_e( 'Exibir desconto total', EOP_TEXT_DOMAIN ); ?></label>
+                                <select id="eop_doc_show_total_discount" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_show_total_discount]">
+                                    <option value="yes" <?php selected( $pdf_settings[ $document . '_show_total_discount' ], 'yes' ); ?>><?php esc_html_e( 'Sim', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="no" <?php selected( $pdf_settings[ $document . '_show_total_discount' ], 'no' ); ?>><?php esc_html_e( 'Nao', EOP_TEXT_DOMAIN ); ?></option>
+                                </select>
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_show_total_total"><?php esc_html_e( 'Exibir total final', EOP_TEXT_DOMAIN ); ?></label>
+                                <select id="eop_doc_show_total_total" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_show_total_total]">
+                                    <option value="yes" <?php selected( $pdf_settings[ $document . '_show_total_total' ], 'yes' ); ?>><?php esc_html_e( 'Sim', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="no" <?php selected( $pdf_settings[ $document . '_show_total_total' ], 'no' ); ?>><?php esc_html_e( 'Nao', EOP_TEXT_DOMAIN ); ?></option>
+                                </select>
+                            </div>
+                        </div>
+                    </details>
+                    <?php elseif ( 'columns' === $document_section ) : ?>
+                    <details class="eop-pdf-admin__section" open>
                         <summary><?php esc_html_e( 'Colunas do detalhamento', EOP_TEXT_DOMAIN ); ?></summary>
                         <div class="eop-pdf-admin__grid">
                             <div class="eop-settings-field">
@@ -398,6 +497,35 @@ $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings:
                         </div>
                     </details>
                     <details class="eop-pdf-admin__section eop-pdf-admin__section--column-labels" open>
+                        <summary><?php esc_html_e( 'Ordem das colunas', EOP_TEXT_DOMAIN ); ?></summary>
+                        <div class="eop-pdf-admin__section-note">
+                            <p><?php esc_html_e( 'Use numeros menores para trazer a coluna mais para a esquerda. A coluna de item sequencial fica sempre no inicio quando ativada.', EOP_TEXT_DOMAIN ); ?></p>
+                        </div>
+                        <div class="eop-pdf-admin__grid">
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_quantity_position"><?php esc_html_e( 'Posicao da coluna de quantidade', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_quantity_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_quantity_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_quantity_position' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_unit_price_position"><?php esc_html_e( 'Posicao da coluna de valor unitario', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_unit_price_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_unit_price_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_unit_price_position' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_discount_position"><?php esc_html_e( 'Posicao da coluna de desconto', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_discount_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discount_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discount_position' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_discounted_unit_price_position"><?php esc_html_e( 'Posicao da coluna de valor unitario com desconto', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_discounted_unit_price_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discounted_unit_price_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discounted_unit_price_position' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_line_total_position"><?php esc_html_e( 'Posicao da coluna de total do item', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_line_total_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_line_total_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_line_total_position' ] ); ?>" />
+                            </div>
+                        </div>
+                    </details>
+                    <?php elseif ( 'texts' === $document_section ) : ?>
+                    <details class="eop-pdf-admin__section eop-pdf-admin__section--column-labels" open>
                         <summary><?php esc_html_e( 'Textos das colunas', EOP_TEXT_DOMAIN ); ?></summary>
                         <div class="eop-pdf-admin__grid">
                             <div class="eop-settings-field">
@@ -434,34 +562,7 @@ $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings:
                             </div>
                         </div>
                     </details>
-                    <details class="eop-pdf-admin__section" open>
-                        <summary><?php esc_html_e( 'Ordem das colunas', EOP_TEXT_DOMAIN ); ?></summary>
-                        <div class="eop-pdf-admin__section-note">
-                            <p><?php esc_html_e( 'Use numeros menores para trazer a coluna mais para a esquerda. A coluna de item sequencial fica sempre no inicio quando ativada.', EOP_TEXT_DOMAIN ); ?></p>
-                        </div>
-                        <div class="eop-pdf-admin__grid">
-                            <div class="eop-settings-field">
-                                <label for="eop_doc_quantity_position"><?php esc_html_e( 'Posicao da coluna de quantidade', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_doc_quantity_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_quantity_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_quantity_position' ] ); ?>" />
-                            </div>
-                            <div class="eop-settings-field">
-                                <label for="eop_doc_unit_price_position"><?php esc_html_e( 'Posicao da coluna de valor unitario', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_doc_unit_price_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_unit_price_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_unit_price_position' ] ); ?>" />
-                            </div>
-                            <div class="eop-settings-field">
-                                <label for="eop_doc_discount_position"><?php esc_html_e( 'Posicao da coluna de desconto', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_doc_discount_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discount_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discount_position' ] ); ?>" />
-                            </div>
-                            <div class="eop-settings-field">
-                                <label for="eop_doc_discounted_unit_price_position"><?php esc_html_e( 'Posicao da coluna de valor unitario com desconto', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_doc_discounted_unit_price_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discounted_unit_price_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discounted_unit_price_position' ] ); ?>" />
-                            </div>
-                            <div class="eop-settings-field">
-                                <label for="eop_doc_line_total_position"><?php esc_html_e( 'Posicao da coluna de total do item', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_doc_line_total_position" type="number" min="1" max="99" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_line_total_position]" value="<?php echo esc_attr( $pdf_settings[ $document . '_line_total_position' ] ); ?>" />
-                            </div>
-                        </div>
-                    </details>
+                    <?php elseif ( 'style' === $document_section ) : ?>
                     <details class="eop-pdf-admin__section" open>
                         <summary><?php esc_html_e( 'Visual do documento', EOP_TEXT_DOMAIN ); ?></summary>
                         <div class="eop-pdf-admin__grid">
@@ -511,39 +612,7 @@ $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings:
                             </div>
                         </div>
                     </details>
-                    <details class="eop-pdf-admin__section" open>
-                        <summary><?php esc_html_e( 'Totais exibidos', EOP_TEXT_DOMAIN ); ?></summary>
-                        <div class="eop-pdf-admin__grid">
-                            <div class="eop-settings-field">
-                                <label for="eop_doc_show_total_subtotal"><?php esc_html_e( 'Exibir subtotal', EOP_TEXT_DOMAIN ); ?></label>
-                                <select id="eop_doc_show_total_subtotal" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_show_total_subtotal]">
-                                    <option value="yes" <?php selected( $pdf_settings[ $document . '_show_total_subtotal' ], 'yes' ); ?>><?php esc_html_e( 'Sim', EOP_TEXT_DOMAIN ); ?></option>
-                                    <option value="no" <?php selected( $pdf_settings[ $document . '_show_total_subtotal' ], 'no' ); ?>><?php esc_html_e( 'Nao', EOP_TEXT_DOMAIN ); ?></option>
-                                </select>
-                            </div>
-                            <div class="eop-settings-field">
-                                <label for="eop_doc_show_total_shipping"><?php esc_html_e( 'Exibir frete', EOP_TEXT_DOMAIN ); ?></label>
-                                <select id="eop_doc_show_total_shipping" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_show_total_shipping]">
-                                    <option value="yes" <?php selected( $pdf_settings[ $document . '_show_total_shipping' ], 'yes' ); ?>><?php esc_html_e( 'Sim', EOP_TEXT_DOMAIN ); ?></option>
-                                    <option value="no" <?php selected( $pdf_settings[ $document . '_show_total_shipping' ], 'no' ); ?>><?php esc_html_e( 'Nao', EOP_TEXT_DOMAIN ); ?></option>
-                                </select>
-                            </div>
-                            <div class="eop-settings-field">
-                                <label for="eop_doc_show_total_discount"><?php esc_html_e( 'Exibir desconto total', EOP_TEXT_DOMAIN ); ?></label>
-                                <select id="eop_doc_show_total_discount" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_show_total_discount]">
-                                    <option value="yes" <?php selected( $pdf_settings[ $document . '_show_total_discount' ], 'yes' ); ?>><?php esc_html_e( 'Sim', EOP_TEXT_DOMAIN ); ?></option>
-                                    <option value="no" <?php selected( $pdf_settings[ $document . '_show_total_discount' ], 'no' ); ?>><?php esc_html_e( 'Nao', EOP_TEXT_DOMAIN ); ?></option>
-                                </select>
-                            </div>
-                            <div class="eop-settings-field">
-                                <label for="eop_doc_show_total_total"><?php esc_html_e( 'Exibir total final', EOP_TEXT_DOMAIN ); ?></label>
-                                <select id="eop_doc_show_total_total" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_show_total_total]">
-                                    <option value="yes" <?php selected( $pdf_settings[ $document . '_show_total_total' ], 'yes' ); ?>><?php esc_html_e( 'Sim', EOP_TEXT_DOMAIN ); ?></option>
-                                    <option value="no" <?php selected( $pdf_settings[ $document . '_show_total_total' ], 'no' ); ?>><?php esc_html_e( 'Nao', EOP_TEXT_DOMAIN ); ?></option>
-                                </select>
-                            </div>
-                        </div>
-                    </details>
+                    <?php endif; ?>
                     <div class="eop-pdf-admin__actions"><?php submit_button( __( 'Salvar configuracoes do documento', EOP_TEXT_DOMAIN ), 'primary', 'submit', false ); ?></div>
                 </form>
             <?php elseif ( 'edocuments' === $tab ) : ?>
@@ -807,8 +876,10 @@ $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings:
                 <form method="get" class="eop-pdf-admin__preview-toolbar">
                     <?php if ( $embedded || EOP_PDF_Admin_Page::is_spa_request() ) : ?>
                         <input type="hidden" name="page" value="eop-pedido-expresso" />
-                        <input type="hidden" name="view" value="pdf" />
-                        <input type="hidden" name="pdf_tab" value="<?php echo esc_attr( $tab ); ?>" />
+                        <input type="hidden" name="view" value="<?php echo esc_attr( $current_view ); ?>" />
+                        <?php if ( 'pdf' === $current_view ) : ?>
+                            <input type="hidden" name="pdf_tab" value="<?php echo esc_attr( $tab ); ?>" />
+                        <?php endif; ?>
                     <?php else : ?>
                         <input type="hidden" name="page" value="<?php echo esc_attr( EOP_PDF_Admin_Page::get_tab_page_slug( $tab ) ); ?>" />
                     <?php endif; ?>

@@ -7,11 +7,46 @@ $order_statuses      = function_exists( 'wc_get_order_statuses' ) ? wc_get_order
 $initial_view        = EOP_Admin_Page::normalize_view( isset( $_GET['view'] ) ? wp_unslash( $_GET['view'] ) : '' );
 $license_manager     = class_exists( 'EOP_License_Manager' ) ? EOP_License_Manager::get_instance() : null;
 $can_manage_settings = current_user_can( 'manage_options' );
-$pdf_tabs            = class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_accessible_tabs() : array();
-$current_pdf_tab     = class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_current_tab() : 'general';
+$pdf_tabs            = class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_spa_nav_tabs() : array();
+$current_pdf_tab     = class_exists( 'EOP_PDF_Admin_Page' ) ? EOP_PDF_Admin_Page::get_current_tab() : 'display';
 $pdf_preview_args    = array(
     'document'      => isset( $_GET['document'] ) && 'proposal' === sanitize_key( wp_unslash( $_GET['document'] ) ) ? 'proposal' : 'order',
     'preview_order' => absint( $_GET['preview_order'] ?? 0 ),
+);
+$general_views = array(
+    'settings-store-info',
+    'settings-general-config',
+    'settings-confirmation-flow',
+    'settings-order-link-style',
+    'settings-proposal-link-style',
+    'settings-texts',
+);
+$is_general_view = in_array( $initial_view, $general_views, true );
+$general_nav_items = array(
+    'settings-store-info' => array(
+        'label' => __( 'Informacoes sobre a loja', EOP_TEXT_DOMAIN ),
+        'icon'  => 'dashicons-store',
+    ),
+    'settings-general-config' => array(
+        'label' => __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ),
+        'icon'  => 'dashicons-admin-settings',
+    ),
+    'settings-confirmation-flow' => array(
+        'label' => __( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ),
+        'icon'  => 'dashicons-yes-alt',
+    ),
+    'settings-order-link-style' => array(
+        'label' => __( 'Estilo/Visual do Link do Pedido', EOP_TEXT_DOMAIN ),
+        'icon'  => 'dashicons-art',
+    ),
+    'settings-proposal-link-style' => array(
+        'label' => __( 'Estilo/Visual do Link de Proposta', EOP_TEXT_DOMAIN ),
+        'icon'  => 'dashicons-format-image',
+    ),
+    'settings-texts' => array(
+        'label' => __( 'Textos', EOP_TEXT_DOMAIN ),
+        'icon'  => 'dashicons-edit-large',
+    ),
 );
 ?>
 <style>
@@ -49,6 +84,33 @@ $pdf_preview_args    = array(
                     <span class="eop-admin-spa-nav__icon dashicons dashicons-list-view" aria-hidden="true"></span>
                     <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Pedidos', EOP_TEXT_DOMAIN ); ?></span>
                 </button>
+                <?php if ( $can_manage_settings ) : ?>
+                    <div class="eop-admin-spa-nav__group eop-admin-spa-nav__group--general<?php echo $is_general_view ? ' is-open' : ''; ?>">
+                        <button
+                            type="button"
+                            class="eop-pdv-nav__item eop-admin-spa-nav__item eop-admin-spa-nav__group-toggle<?php echo $is_general_view ? ' is-active' : ''; ?>"
+                            data-eop-nav-toggle="general"
+                            aria-selected="<?php echo $is_general_view ? 'true' : 'false'; ?>"
+                            aria-expanded="<?php echo $is_general_view ? 'true' : 'false'; ?>"
+                        >
+                            <span class="eop-admin-spa-nav__icon dashicons dashicons-admin-generic" aria-hidden="true"></span>
+                            <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Geral', EOP_TEXT_DOMAIN ); ?></span>
+                            <span class="eop-admin-spa-nav__group-arrow dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
+                        </button>
+
+                        <div class="eop-admin-spa-nav__submenu"<?php echo $is_general_view ? '' : ' hidden'; ?>>
+                            <?php foreach ( $general_nav_items as $view_key => $nav_item ) : ?>
+                                <button
+                                    type="button"
+                                    class="eop-admin-spa-nav__submenu-item<?php echo $initial_view === $view_key ? ' is-active' : ''; ?>"
+                                    data-eop-view-target="<?php echo esc_attr( $view_key ); ?>"
+                                >
+                                    <span class="eop-admin-spa-nav__submenu-label"><?php echo esc_html( $nav_item['label'] ); ?></span>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
                 <?php if ( ! empty( $pdf_tabs ) ) : ?>
                     <div class="eop-admin-spa-nav__group eop-admin-spa-nav__group--pdf<?php echo 'pdf' === $initial_view ? ' is-open' : ''; ?>">
                         <button
@@ -83,9 +145,9 @@ $pdf_preview_args    = array(
                     </button>
                 <?php endif; ?>
                 <?php if ( $can_manage_settings ) : ?>
-                    <button type="button" class="eop-pdv-nav__item eop-admin-spa-nav__item<?php echo 'settings' === $initial_view ? ' is-active' : ''; ?>" data-eop-view-target="settings" aria-selected="<?php echo 'settings' === $initial_view ? 'true' : 'false'; ?>">
-                        <span class="eop-admin-spa-nav__icon dashicons dashicons-admin-generic" aria-hidden="true"></span>
-                        <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Configuracoes', EOP_TEXT_DOMAIN ); ?></span>
+                    <button type="button" class="eop-pdv-nav__item eop-admin-spa-nav__item<?php echo 'documentation' === $initial_view ? ' is-active' : ''; ?>" data-eop-view-target="documentation" aria-selected="<?php echo 'documentation' === $initial_view ? 'true' : 'false'; ?>">
+                        <span class="eop-admin-spa-nav__icon dashicons dashicons-book-alt" aria-hidden="true"></span>
+                        <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Documentacao', EOP_TEXT_DOMAIN ); ?></span>
                     </button>
                     <button type="button" class="eop-pdv-nav__item eop-admin-spa-nav__item<?php echo 'license' === $initial_view ? ' is-active' : ''; ?>" data-eop-view-target="license" aria-selected="<?php echo 'license' === $initial_view ? 'true' : 'false'; ?>">
                         <span class="eop-admin-spa-nav__icon dashicons dashicons-admin-network" aria-hidden="true"></span>
@@ -307,6 +369,48 @@ $pdf_preview_args    = array(
                                 <?php esc_html_e( 'Finalizar e Gerar PDF', EOP_TEXT_DOMAIN ); ?>
                             </button>
                         </div>
+
+                        <div class="eop-card eop-post-flow-card" id="eop-post-flow-card">
+                            <div class="eop-post-flow-card__head">
+                                <div>
+                                    <h2><?php esc_html_e( 'Fluxo complementar do cliente', EOP_TEXT_DOMAIN ); ?></h2>
+                                    <p id="eop-post-flow-subtitle"><?php esc_html_e( 'O resumo complementar aparece quando um pedido existente entra em modo de edicao.', EOP_TEXT_DOMAIN ); ?></p>
+                                </div>
+                                <span class="eop-post-flow-badge is-inactive" id="eop-post-flow-badge"><?php esc_html_e( 'Inativo', EOP_TEXT_DOMAIN ); ?></span>
+                            </div>
+
+                            <div class="eop-post-flow-card__stats" id="eop-post-flow-stats"></div>
+
+                            <div class="eop-post-flow-card__section">
+                                <h3><?php esc_html_e( 'Contrato', EOP_TEXT_DOMAIN ); ?></h3>
+                                <p id="eop-post-flow-contract"><?php esc_html_e( 'Nenhum aceite registrado.', EOP_TEXT_DOMAIN ); ?></p>
+                            </div>
+
+                            <div class="eop-post-flow-card__section">
+                                <h3><?php esc_html_e( 'Documentos para assinatura', EOP_TEXT_DOMAIN ); ?></h3>
+                                <div class="eop-post-flow-list" id="eop-post-flow-signature-documents"></div>
+                            </div>
+
+                            <div class="eop-post-flow-card__section">
+                                <h3><?php esc_html_e( 'Dados do pedido', EOP_TEXT_DOMAIN ); ?></h3>
+                                <div class="eop-post-flow-list" id="eop-post-flow-order-data"></div>
+                            </div>
+
+                            <div class="eop-post-flow-card__section">
+                                <h3><?php esc_html_e( 'Anexo', EOP_TEXT_DOMAIN ); ?></h3>
+                                <div class="eop-post-flow-list" id="eop-post-flow-attachment"></div>
+                            </div>
+
+                            <div class="eop-post-flow-card__section">
+                                <h3><?php esc_html_e( 'Produtos', EOP_TEXT_DOMAIN ); ?></h3>
+                                <div class="eop-post-flow-list" id="eop-post-flow-products"></div>
+                            </div>
+
+                            <div class="eop-post-flow-card__actions">
+                                <a class="eop-btn" id="eop-post-flow-public-link" href="#" target="_blank" rel="noopener" hidden><?php esc_html_e( 'Abrir link publico', EOP_TEXT_DOMAIN ); ?></a>
+                                <a class="eop-btn eop-btn-secondary" id="eop-post-flow-pdf-link" href="#" target="_blank" rel="noopener" hidden><?php esc_html_e( 'Baixar PDF complementar', EOP_TEXT_DOMAIN ); ?></a>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 </div>
@@ -351,6 +455,15 @@ $pdf_preview_args    = array(
                                     <?php endforeach; ?>
                                 </select>
                             </div>
+                            <div class="eop-field">
+                                <label for="eop-orders-flow-filter"><?php esc_html_e( 'Fluxo complementar', EOP_TEXT_DOMAIN ); ?></label>
+                                <select id="eop-orders-flow-filter">
+                                    <option value="any"><?php esc_html_e( 'Todos', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="active"><?php esc_html_e( 'Com fluxo ativo', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="pending"><?php esc_html_e( 'Pendentes', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="completed"><?php esc_html_e( 'Concluidos', EOP_TEXT_DOMAIN ); ?></option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -376,13 +489,73 @@ $pdf_preview_args    = array(
             </section>
 
             <?php if ( $can_manage_settings ) : ?>
-                <section class="eop-pdv-view<?php echo 'settings' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings"<?php echo 'settings' === $initial_view ? '' : ' hidden'; ?>>
+                <section class="eop-pdv-view<?php echo 'settings-store-info' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-store-info"<?php echo 'settings-store-info' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
-                        <h2><?php esc_html_e( 'Configuracoes do fluxo', EOP_TEXT_DOMAIN ); ?></h2>
-                        <p><?php esc_html_e( 'Ajuste comportamento comercial, identidade visual e textos sem sair do admin do plugin.', EOP_TEXT_DOMAIN ); ?></p>
+                        <h2><?php esc_html_e( 'Informacoes sobre a loja', EOP_TEXT_DOMAIN ); ?></h2>
+                        <p><?php esc_html_e( 'Centralize logo, dados institucionais e informacoes exibidas nos documentos do Pedido Expresso.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
-                    <?php EOP_Settings::render_embedded_page(); ?>
+                    <?php EOP_PDF_Admin_Page::render_embedded_page( 'store' ); ?>
+                    </div>
+                </section>
+
+                <section class="eop-pdv-view<?php echo 'settings-general-config' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-general-config"<?php echo 'settings-general-config' === $initial_view ? '' : ' hidden'; ?>>
+                    <div class="eop-admin-panel-head">
+                        <h2><?php esc_html_e( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ); ?></h2>
+                        <p><?php esc_html_e( 'Mantenha em um bloco proprio as regras operacionais do plugin, paginas publicas e comportamento comercial principal.', EOP_TEXT_DOMAIN ); ?></p>
+                    </div>
+                    <div class="eop-admin-view-main">
+                    <?php EOP_Settings::render_embedded_page( 'general-config' ); ?>
+                    </div>
+                </section>
+
+                <section class="eop-pdv-view<?php echo 'settings-confirmation-flow' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-confirmation-flow"<?php echo 'settings-confirmation-flow' === $initial_view ? '' : ' hidden'; ?>>
+                    <div class="eop-admin-panel-head">
+                        <h2><?php esc_html_e( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ); ?></h2>
+                        <p><?php esc_html_e( 'Edite a jornada complementar apos a proposta em uma tela propria, com contrato, anexos e personalizacao.', EOP_TEXT_DOMAIN ); ?></p>
+                    </div>
+                    <div class="eop-admin-view-main">
+                    <?php EOP_Settings::render_embedded_page( 'confirmation-flow' ); ?>
+                    </div>
+                </section>
+
+                <section class="eop-pdv-view<?php echo 'settings-order-link-style' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-order-link-style"<?php echo 'settings-order-link-style' === $initial_view ? '' : ' hidden'; ?>>
+                    <div class="eop-admin-panel-head">
+                        <h2><?php esc_html_e( 'Estilo/Visual do Link do Pedido', EOP_TEXT_DOMAIN ); ?></h2>
+                        <p><?php esc_html_e( 'Separe a identidade visual principal do shell e do link do pedido para ajustes rapidos de marca.', EOP_TEXT_DOMAIN ); ?></p>
+                    </div>
+                    <div class="eop-admin-view-main">
+                    <?php EOP_Settings::render_embedded_page( 'order-link-style' ); ?>
+                    </div>
+                </section>
+
+                <section class="eop-pdv-view<?php echo 'settings-proposal-link-style' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-proposal-link-style"<?php echo 'settings-proposal-link-style' === $initial_view ? '' : ' hidden'; ?>>
+                    <div class="eop-admin-panel-head">
+                        <h2><?php esc_html_e( 'Estilo/Visual do Link de Proposta', EOP_TEXT_DOMAIN ); ?></h2>
+                        <p><?php esc_html_e( 'Ajuste o visual publico da proposta sem misturar essas opcoes com o restante do admin.', EOP_TEXT_DOMAIN ); ?></p>
+                    </div>
+                    <div class="eop-admin-view-main">
+                    <?php EOP_Settings::render_embedded_page( 'proposal-link-style' ); ?>
+                    </div>
+                </section>
+
+                <section class="eop-pdv-view<?php echo 'settings-texts' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-texts"<?php echo 'settings-texts' === $initial_view ? '' : ' hidden'; ?>>
+                    <div class="eop-admin-panel-head">
+                        <h2><?php esc_html_e( 'Textos e mensagens', EOP_TEXT_DOMAIN ); ?></h2>
+                        <p><?php esc_html_e( 'Mantenha em uma pagina propria os titulos, descricoes e labels usados no painel e na proposta publica.', EOP_TEXT_DOMAIN ); ?></p>
+                    </div>
+                    <div class="eop-admin-view-main">
+                    <?php EOP_Settings::render_embedded_page( 'texts' ); ?>
+                    </div>
+                </section>
+
+                <section class="eop-pdv-view<?php echo 'documentation' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="documentation"<?php echo 'documentation' === $initial_view ? '' : ' hidden'; ?>>
+                    <div class="eop-admin-panel-head">
+                        <h2><?php esc_html_e( 'Documentacao', EOP_TEXT_DOMAIN ); ?></h2>
+                        <p><?php esc_html_e( 'Consulte em uma area propria o efeito real de cada configuracao do modulo de documentos.', EOP_TEXT_DOMAIN ); ?></p>
+                    </div>
+                    <div class="eop-admin-view-main">
+                    <?php EOP_PDF_Admin_Page::render_embedded_page( 'documentation' ); ?>
                     </div>
                 </section>
 

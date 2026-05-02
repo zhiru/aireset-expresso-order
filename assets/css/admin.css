@@ -508,13 +508,6 @@ body.eop-admin-spa-screen #wpbody-content > .fs-notice {
   color: rgba(255, 255, 255, 0.82);
 }
 
-#eop-notices:empty,
-.eop-notices:empty,
-#eop-notices[hidden],
-.eop-notices[hidden] {
-  display: none !important;
-}
-
 #eop-notices .notice,
 #eop-notices div.notice {
   display: block !important;
@@ -612,13 +605,17 @@ body.eop-admin-spa-screen #wpbody-content > .fs-notice {
   align-items: center;
   justify-content: flex-start;
   gap: 10px;
+  width: 100%;
   min-height: 0;
   margin: 0 4px;
   padding: 8px 12px 8px 38px;
+  border: 0;
   border-left: 3px solid transparent;
   border-radius: 10px;
   background: transparent;
   color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  font-family: inherit;
   font-size: 13px;
   font-weight: 500;
   text-align: left;
@@ -705,11 +702,6 @@ body.eop-admin-spa-screen #wpbody-content > .fs-notice {
 
 .eop-admin-panel-head {
   margin-bottom: 0;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
-  border-radius: 16px;
-  box-shadow: 0 14px 30px rgba(15, 37, 87, 0.14);
 }
 .eop-admin-panel-head h2 {
   display: flex;
@@ -717,17 +709,17 @@ body.eop-admin-spa-screen #wpbody-content > .fs-notice {
   gap: 10px;
   margin: 0;
   color: #fff;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 700;
-  line-height: 1.12;
+  line-height: 1.08;
   letter-spacing: -0.03em;
 }
 .eop-admin-panel-head p {
   margin: 0;
-  max-width: 58ch;
+  max-width: 70ch;
   color: rgba(255, 255, 255, 0.86);
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .eop-admin-view-main {
@@ -1017,7 +1009,7 @@ body.eop-admin-spa-screen #wpbody-content > .fs-notice {
   }
   .eop-admin-view-header,
   .eop-admin-panel-head {
-    padding: 16px;
+    padding: 20px;
     border-radius: 12px;
     align-items: stretch;
   }

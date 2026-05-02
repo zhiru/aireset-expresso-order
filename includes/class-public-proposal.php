@@ -80,7 +80,7 @@ class EOP_Public_Proposal {
         exit;
     }
 
-    private static function get_order_by_token( $token ) {
+    public static function get_order_by_token( $token ) {
         $orders = wc_get_orders(
             array(
                 'limit'      => 1,
@@ -112,6 +112,7 @@ class EOP_Public_Proposal {
         $can_pay         = 'yes' === EOP_Settings::get( 'enable_checkout_confirmation', 'no' ) && method_exists( $order, 'needs_payment' ) && $order->needs_payment();
         $payment_url     = $can_pay ? $order->get_checkout_payment_url() : '';
         $pdf_url         = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_public_document_url( $order, true ) : '';
+        $flow_enabled    = class_exists( 'EOP_Post_Confirmation_Flow' ) && EOP_Post_Confirmation_Flow::is_enabled_for_order( $order );
         $document_config = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_document_display_settings( 'proposal' ) : array();
         $item_columns    = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_document_item_columns( 'proposal' ) : array();
         $item_labels     = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_document_item_labels( 'proposal' ) : array();
@@ -325,6 +326,8 @@ class EOP_Public_Proposal {
                             </a>
                         <?php endif; ?>
                     </div>
+                <?php elseif ( $flow_enabled ) : ?>
+                    <?php echo EOP_Post_Confirmation_Flow::render_frontend_stage( $order, $line_items, $pdf_url ); ?>
                 <?php elseif ( $payment_url || $pdf_url ) : ?>
                     <div class="eop-proposal-actions">
                         <?php if ( $payment_url ) : ?>

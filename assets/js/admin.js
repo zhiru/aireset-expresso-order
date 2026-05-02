@@ -14,6 +14,7 @@
     var ordersPage = 1;
     var currentEditingOrderId = 0;
     var editLoadToken = 0;
+    var postFlowRequestToken = 0;
 
     function getDefaultDiscountFieldConfig() {
         if (discountMode === 'percent') {
@@ -103,7 +104,7 @@
     function getCurrentPdfTab() {
         var params = new URLSearchParams(window.location.search);
         var fromUrl = params.get('pdf_tab');
-        var fromNav = $('.eop-admin-spa-nav__submenu-item.is-active').first().data('eop-pdf-tab');
+        var fromNav = $('.eop-admin-spa-nav__submenu-item.is-active[data-eop-pdf-tab]').first().data('eop-pdf-tab');
 
         if (fromUrl) {
             return String(fromUrl);
@@ -113,10 +114,10 @@
             return String(fromNav);
         }
 
-        return 'general';
+        return 'display';
     }
 
-    function togglePdfNavGroup($toggle, forceOpen) {
+    function toggleNavGroup($toggle, forceOpen) {
         var $group = $toggle.closest('.eop-admin-spa-nav__group');
         var $submenu = $group.find('.eop-admin-spa-nav__submenu').first();
         var isOpen = typeof forceOpen === 'boolean' ? !forceOpen : $toggle.attr('aria-expanded') === 'true';
@@ -129,6 +130,27 @@
         $group.toggleClass('is-open', nextState);
         $toggle.attr('aria-expanded', nextState ? 'true' : 'false');
         $submenu.attr('hidden', nextState ? false : true);
+    }
+
+    function getNavGroupForView(viewName) {
+        var generalViews = [
+            'settings-store-info',
+            'settings-general-config',
+            'settings-confirmation-flow',
+            'settings-order-link-style',
+            'settings-proposal-link-style',
+            'settings-texts'
+        ];
+
+        if (generalViews.indexOf(String(viewName || '')) !== -1) {
+            return 'general';
+        }
+
+        if (String(viewName || '') === 'pdf') {
+            return 'pdf';
+        }
+
+        return '';
     }
 
     function setPdfPreviewState($admin, isOpen) {
@@ -226,7 +248,7 @@
 
     function updatePdfNavState(url) {
         var parsedUrl = new URL(url, window.location.origin);
-        var nextTab = parsedUrl.searchParams.get('pdf_tab') || 'general';
+        var nextTab = parsedUrl.searchParams.get('pdf_tab') || 'display';
 
         $('.eop-admin-spa-nav__submenu-item').each(function () {
             var isActive = $(this).data('eop-pdf-tab') === nextTab;
@@ -236,6 +258,7 @@
 
     function buildPdfToolbarUrl(form) {
         var baseUrl = new URL(window.location.href, window.location.origin);
+        var currentToolbarView = String(baseUrl.searchParams.get('view') || currentView || 'pdf');
 
         $(form).serializeArray().forEach(function (field) {
             if (field.value === '') {
@@ -246,8 +269,13 @@
             baseUrl.searchParams.set(field.name, field.value);
         });
 
-        baseUrl.searchParams.set('view', 'pdf');
-        baseUrl.searchParams.set('pdf_tab', getCurrentPdfTab());
+        baseUrl.searchParams.set('view', currentToolbarView);
+
+        if (currentToolbarView === 'pdf') {
+            baseUrl.searchParams.set('pdf_tab', getCurrentPdfTab());
+        } else {
+            baseUrl.searchParams.delete('pdf_tab');
+        }
 
         return baseUrl.toString();
     }
@@ -403,6 +431,8 @@
         if ($submit.length) {
             $submit.text(isEditing ? (i18n.edit_submit || 'Salvar alteracoes') : i18n.submit_label);
         }
+
+        renderPostConfirmationFlowPlaceholder(isEditing ? (i18n.post_flow_loading || 'Carregando dados complementares da proposta...') : (i18n.post_flow_unavailable_edit || 'O resumo complementar aparece quando um pedido existente entra em modo de edicao.'));
     }
 
     function getCurrentSubmitLabel() {
@@ -455,9 +485,19 @@
             views.push('pdf');
         }
 
-        if ($('[data-eop-view="settings"]').length) {
-            views.push('settings');
-        }
+        [
+            'settings-store-info',
+            'settings-general-config',
+            'settings-confirmation-flow',
+            'settings-order-link-style',
+            'settings-proposal-link-style',
+            'settings-texts',
+            'documentation'
+        ].forEach(function (viewName) {
+            if ($('[data-eop-view="' + viewName + '"]').length) {
+                views.push(viewName);
+            }
+        });
 
         if ($('[data-eop-view="license"]').length) {
             views.push('license');
@@ -478,7 +518,8 @@
     }
 
     function buildViewUrl(viewName) {
-        var base = String(eop_vars.view_url_base || '');
+        var viewUrls = eop_vars.view_urls || {};
+        var base = String(viewUrls[normalizeView(viewName)] || eop_vars.view_url_base || '');
         var currentParams = new URLSearchParams(window.location.search);
         var normalizedView = normalizeView(viewName);
         var url;
@@ -535,7 +576,14 @@
         currentView = targetView;
 
         $('.eop-pdv-nav__item').each(function () {
-            var isActive = $(this).data('eop-view-target') === targetView;
+            var isActive;
+
+            if ($(this).is('[data-eop-nav-toggle]')) {
+                isActive = $(this).data('eop-nav-toggle') === getNavGroupForView(targetView);
+            } else {
+                isActive = $(this).data('eop-view-target') === targetView;
+            }
+
             $(this).toggleClass('is-active', isActive).attr('aria-selected', isActive ? 'true' : 'false');
         });
 
@@ -545,12 +593,25 @@
         });
 
         $('.eop-admin-spa-nav__submenu-item').each(function () {
-            var isActive = targetView === 'pdf' && $(this).data('eop-pdf-tab') === getCurrentPdfTab();
+            var $item = $(this);
+            var itemView = $item.data('eop-view-target');
+            var isActive = false;
+
+            if (itemView) {
+                isActive = itemView === targetView;
+            } else if (targetView === 'pdf') {
+                isActive = $item.data('eop-pdf-tab') === getCurrentPdfTab();
+            }
+
             $(this).toggleClass('is-active', isActive);
         });
 
-        if (targetView === 'pdf') {
-            togglePdfNavGroup($('.eop-admin-spa-nav__group-toggle[data-eop-nav-toggle="pdf"]'), true);
+        if (getNavGroupForView(targetView) === 'pdf') {
+            toggleNavGroup($('.eop-admin-spa-nav__group-toggle[data-eop-nav-toggle="pdf"]'), true);
+        }
+
+        if (getNavGroupForView(targetView) === 'general') {
+            toggleNavGroup($('.eop-admin-spa-nav__group-toggle[data-eop-nav-toggle="general"]'), true);
         }
 
         if (targetView === 'orders' && !ordersLoaded) {
@@ -623,6 +684,22 @@
             }
 
             html += '</div>';
+
+            if (order.post_confirmation_flow_summary && order.post_confirmation_flow_summary.active_for_order) {
+                html += '<div class="eop-order-card__flow">';
+                html += '<div class="eop-order-card__flow-head">';
+                html += '<span>' + escapeHtml(i18n.orders_flow_title || 'Fluxo complementar') + '</span>';
+                html += '<strong>' + escapeHtml(order.post_confirmation_flow_summary.stage_label || '') + '</strong>';
+                html += '</div>';
+                html += '<div class="eop-order-card__flow-list">';
+                html += '<span class="eop-order-card__flow-pill">' + escapeHtml((i18n.orders_flow_contract || 'Contrato') + ': ' + ((order.post_confirmation_flow_summary.contract && order.post_confirmation_flow_summary.contract.accepted) ? (i18n.post_flow_contract_done || 'Aceite registrado.') : (i18n.post_flow_pending || 'Pendente'))) + '</span>';
+                html += '<span class="eop-order-card__flow-pill">' + escapeHtml((i18n.orders_flow_fields || 'Campos') + ': ' + (order.post_confirmation_flow_summary.documents ? (order.post_confirmation_flow_summary.documents.completed + '/' + order.post_confirmation_flow_summary.documents.total) : '0/0')) + '</span>';
+                html += '<span class="eop-order-card__flow-pill">' + escapeHtml((i18n.orders_flow_attachment || 'Anexo') + ': ' + (order.post_confirmation_flow_summary.attachment ? (order.post_confirmation_flow_summary.attachment.uploaded ? (i18n.orders_flow_uploaded || 'Enviado') : (order.post_confirmation_flow_summary.attachment.required ? (i18n.post_flow_pending || 'Pendente') : (i18n.orders_flow_optional || 'Opcional'))) : '—')) + '</span>';
+                html += '<span class="eop-order-card__flow-pill">' + escapeHtml((i18n.orders_flow_products || 'Produtos') + ': ' + (order.post_confirmation_flow_summary.products ? (order.post_confirmation_flow_summary.products.completed + '/' + order.post_confirmation_flow_summary.products.editable) : '0/0')) + '</span>';
+                html += '</div>';
+                html += '</div>';
+            }
+
             html += '<div class="eop-order-card__actions">';
 
             if (order.public_url) {
@@ -645,6 +722,7 @@
         var requestedPage = parseInt(page, 10) || 1;
         var search = $('#eop-orders-search').val() || '';
         var status = $('#eop-orders-status-filter').val() || 'any';
+        var postConfirmationFlow = $('#eop-orders-flow-filter').val() || 'any';
 
         ordersPage = requestedPage;
         $('#eop-orders-list').html('<div class="eop-card eop-orders-empty-state">' + escapeHtml(i18n.orders_loading || 'Carregando pedidos...') + '</div>');
@@ -655,7 +733,8 @@
             nonce: eop_vars.nonce,
             paged: requestedPage,
             search: search,
-            status: status
+            status: status,
+            post_confirmation_flow: postConfirmationFlow
         }, function (res) {
             if (!res.success) {
                 $('#eop-orders-list').html('<div class="eop-card eop-orders-empty-state">' + escapeHtml((res.data && res.data.message) || i18n.orders_error || 'Nao foi possivel carregar os pedidos agora.') + '</div>');
@@ -741,6 +820,7 @@
                 setShippingSummary(i18n.shipping_summary_default || 'Clique para calcular com o endereco do cliente.');
             }
 
+            loadPostConfirmationFlow(orderId);
             recalcTotals();
             showNotice(i18n.edit_loaded || 'Pedido carregado no painel para edicao.', 'success');
         }).fail(function () {
@@ -902,8 +982,187 @@
         recalcTotals();
     }
 
+    function renderPostConfirmationFlowPlaceholder(message) {
+        var $card = $('#eop-post-flow-card');
+
+        if (!$card.length) {
+            return;
+        }
+
+        $('#eop-post-flow-badge').text(i18n.post_flow_stage_inactive || 'Inativo').attr('class', 'eop-post-flow-badge is-inactive');
+        $('#eop-post-flow-subtitle').text(message || i18n.post_flow_unavailable_edit || 'O resumo complementar aparece quando um pedido existente entra em modo de edicao.');
+        $('#eop-post-flow-stats').empty();
+        $('#eop-post-flow-contract').text(i18n.post_flow_not_available || 'Este pedido nao esta usando o fluxo complementar da proposta.');
+        $('#eop-post-flow-signature-documents').html('<p>' + escapeHtml(i18n.post_flow_signature_documents_empty || 'Nenhum documento para assinatura foi gerado ainda.') + '</p>');
+        $('#eop-post-flow-order-data').html('<p>' + escapeHtml(i18n.post_flow_documents_empty || 'Nenhum dado do pedido preenchido no WooCommerce ate agora.') + '</p>');
+        $('#eop-post-flow-attachment').html('<p>' + escapeHtml(i18n.post_flow_attachment_missing || 'Nenhum anexo registrado.') + '</p>');
+        $('#eop-post-flow-products').html('<p>' + escapeHtml(i18n.post_flow_products_empty || 'Nenhuma personalizacao registrada ate agora.') + '</p>');
+        $('#eop-post-flow-public-link').prop('hidden', true).attr('href', '#');
+        $('#eop-post-flow-pdf-link').prop('hidden', true).attr('href', '#');
+    }
+
+    function renderPostConfirmationFlow(flow) {
+        flow = flow || {};
+
+        if (!flow.active_for_order) {
+            renderPostConfirmationFlowPlaceholder(i18n.post_flow_not_available || 'Este pedido nao esta usando o fluxo complementar da proposta.');
+            return;
+        }
+
+        $('#eop-post-flow-badge').text((flow.status && flow.status.current_stage_label) || '').attr('class', 'eop-post-flow-badge is-active');
+        $('#eop-post-flow-subtitle').text((flow.status && flow.status.completed_at) ? ((i18n.post_flow_completed_at || 'Concluido em') + ' ' + flow.status.completed_at + '.') : (i18n.post_flow_summary_ready || 'Payload estruturado pronto para PDF, admin e integracoes futuras.'));
+        $('#eop-post-flow-stats').empty();
+        $('#eop-post-flow-signature-documents').empty();
+        $('#eop-post-flow-order-data').empty();
+        $('#eop-post-flow-attachment').empty();
+        $('#eop-post-flow-products').empty();
+
+        var orderData = flow.order_data || flow.documents || [];
+        var orderDataFilled = (flow.summary && typeof flow.summary.order_data_filled !== 'undefined') ? flow.summary.order_data_filled : (flow.summary ? flow.summary.documents_completed : 0);
+        var orderDataTotal = (flow.summary && typeof flow.summary.order_data_total !== 'undefined') ? flow.summary.order_data_total : (flow.summary ? flow.summary.documents_total : 0);
+
+        [
+            { label: i18n.post_flow_stat_stage || 'Etapa atual', value: (flow.status && flow.status.current_stage_label) || '—' },
+            { label: i18n.post_flow_stat_documents || 'Dados do pedido', value: orderDataFilled + '/' + orderDataTotal },
+            { label: i18n.post_flow_stat_attachment || 'Anexo', value: (flow.summary && flow.summary.attachment_uploaded) ? (i18n.post_flow_attachment_done || 'Anexo registrado com sucesso.') : ((flow.summary && flow.summary.attachment_required) ? (i18n.post_flow_pending || 'Pendente') : (i18n.orders_flow_optional || 'Opcional')) },
+            { label: i18n.post_flow_stat_products || 'Produtos', value: (flow.summary ? (flow.summary.products_completed + '/' + flow.summary.products_editable) : '0/0') }
+        ].forEach(function (stat) {
+            $('#eop-post-flow-stats').append(
+                '<div class="eop-post-flow-stat">' +
+                    '<span>' + escapeHtml(stat.label) + '</span>' +
+                    '<strong>' + escapeHtml(stat.value) + '</strong>' +
+                '</div>'
+            );
+        });
+
+        if (flow.contract && flow.contract.accepted) {
+            $('#eop-post-flow-contract').text((i18n.post_flow_contract_done || 'Aceite registrado.') + ' ' + [flow.contract.accepted_name, flow.contract.accepted_at].filter(Boolean).join(' • '));
+        } else {
+            $('#eop-post-flow-contract').text(i18n.post_flow_contract_pending || 'Aceite contratual pendente.');
+        }
+
+        if (flow.signature_documents && flow.signature_documents.length) {
+            flow.signature_documents.forEach(function (documentRow) {
+                $('#eop-post-flow-signature-documents').append(
+                    '<div class="eop-post-flow-row">' +
+                        '<strong>' + escapeHtml(documentRow.title || '') + '</strong>' +
+                        '<span><a href="' + escapeHtml(documentRow.admin_view_url || documentRow.public_view_url || '#') + '" target="_blank" rel="noopener">' + escapeHtml(documentRow.filename || documentRow.title || 'PDF') + '</a></span>' +
+                    '</div>'
+                );
+            });
+        }
+
+        if (!$('#eop-post-flow-signature-documents').children().length) {
+            $('#eop-post-flow-signature-documents').html('<p>' + escapeHtml(i18n.post_flow_signature_documents_empty || 'Nenhum documento para assinatura foi gerado ainda.') + '</p>');
+        }
+
+        if (orderData.length) {
+            orderData.forEach(function (documentField) {
+                if (!documentField.filled) {
+                    return;
+                }
+
+                $('#eop-post-flow-order-data').append(
+                    '<div class="eop-post-flow-row">' +
+                        '<strong>' + escapeHtml(documentField.label || '') + '</strong>' +
+                        '<span>' + escapeHtml(documentField.value || '') + '</span>' +
+                    '</div>'
+                );
+            });
+        }
+
+        if (!$('#eop-post-flow-order-data').children().length) {
+            $('#eop-post-flow-order-data').html('<p>' + escapeHtml(i18n.post_flow_documents_empty || 'Nenhum dado do pedido preenchido no WooCommerce ate agora.') + '</p>');
+        }
+
+        if (flow.attachment && flow.attachment.id) {
+            $('#eop-post-flow-attachment').append(
+                '<div class="eop-post-flow-row">' +
+                    '<strong>' + escapeHtml(flow.attachment.filename || '') + '</strong>' +
+                    '<span>' + escapeHtml(flow.attachment.uploaded_at || '') + '</span>' +
+                '</div>'
+            );
+
+            if (flow.attachment.url) {
+                $('#eop-post-flow-attachment').append('<p><a href="' + escapeHtml(flow.attachment.url) + '" target="_blank" rel="noopener">' + escapeHtml(flow.attachment.filename || 'Arquivo') + '</a></p>');
+            }
+        } else {
+            $('#eop-post-flow-attachment').html('<p>' + escapeHtml(i18n.post_flow_attachment_missing || 'Nenhum anexo registrado.') + '</p>');
+        }
+
+        if (flow.products && flow.products.length) {
+            flow.products.forEach(function (productRow) {
+                var statusLabel = productRow.locked ? (i18n.post_flow_locked || 'Bloqueado') : (productRow.custom_name ? (i18n.post_flow_customized || 'Personalizado') : (i18n.post_flow_pending || 'Pendente'));
+                var valueLabel = productRow.custom_name || productRow.original_name || '';
+
+                $('#eop-post-flow-products').append(
+                    '<div class="eop-post-flow-row">' +
+                        '<strong>' + escapeHtml(productRow.original_name || '') + '</strong>' +
+                        '<span>' + escapeHtml(valueLabel + ' • ' + statusLabel) + '</span>' +
+                    '</div>'
+                );
+            });
+        } else {
+            $('#eop-post-flow-products').html('<p>' + escapeHtml(i18n.post_flow_products_empty || 'Nenhuma personalizacao registrada ate agora.') + '</p>');
+        }
+
+        if (flow.links && flow.links.public_url) {
+            $('#eop-post-flow-public-link').prop('hidden', false).attr('href', flow.links.public_url).text(i18n.post_flow_open_public || 'Abrir link publico');
+        } else {
+            $('#eop-post-flow-public-link').prop('hidden', true).attr('href', '#');
+        }
+
+        if (flow.links && flow.links.admin_pdf_url) {
+            $('#eop-post-flow-pdf-link').prop('hidden', false).attr('href', flow.links.admin_pdf_url).text(i18n.post_flow_download_pdf || 'Baixar PDF complementar');
+        } else {
+            $('#eop-post-flow-pdf-link').prop('hidden', true).attr('href', '#');
+        }
+    }
+
+    function loadPostConfirmationFlow(orderId) {
+        var requestToken = postFlowRequestToken + 1;
+        var baseUrl = String(eop_vars.rest_url || '');
+
+        postFlowRequestToken = requestToken;
+
+        if (!orderId || !baseUrl) {
+            renderPostConfirmationFlowPlaceholder(i18n.post_flow_not_available || 'Este pedido nao esta usando o fluxo complementar da proposta.');
+            return;
+        }
+
+        renderPostConfirmationFlowPlaceholder(i18n.post_flow_loading || 'Carregando dados complementares da proposta...');
+
+        window.fetch(baseUrl + 'orders/' + encodeURIComponent(orderId) + '/post-confirmation?context=internal', {
+            method: 'GET',
+            headers: {
+                'X-WP-Nonce': String(eop_vars.rest_nonce || ''),
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin'
+        }).then(function (response) {
+            if (!response.ok) {
+                throw new Error('rest_error');
+            }
+
+            return response.json();
+        }).then(function (data) {
+            if (requestToken !== postFlowRequestToken) {
+                return;
+            }
+
+            renderPostConfirmationFlow(data || {});
+        }).catch(function () {
+            if (requestToken !== postFlowRequestToken) {
+                return;
+            }
+
+            renderPostConfirmationFlowPlaceholder(i18n.post_flow_not_available || 'Este pedido nao esta usando o fluxo complementar da proposta.');
+        });
+    }
+
     function resetForm() {
         editLoadToken += 1;
+        postFlowRequestToken += 1;
         items = [];
         renderItems();
 
@@ -1427,7 +1686,7 @@
 
     $(document).on('click', '.eop-pdv-nav__item', function () {
         if ($(this).is('[data-eop-nav-toggle]')) {
-            togglePdfNavGroup($(this));
+            toggleNavGroup($(this));
             return;
         }
 
@@ -1443,7 +1702,17 @@
     });
 
     $(document).on('click', '.eop-admin-spa-nav__submenu-item', function (e) {
+        var targetView = $(this).data('eop-view-target');
         var url;
+
+        if (targetView) {
+            if (targetView === 'new-order') {
+                resetForm();
+            }
+
+            setAppView(targetView);
+            return;
+        }
 
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.which === 2) {
             return;
@@ -1471,8 +1740,14 @@
     $(document).on('change', '.eop-pdf-admin__preview-toolbar select', function () {
         var $form = $(this).closest('.eop-pdf-admin__preview-toolbar');
         var targetUrl = buildPdfToolbarUrl($form.get(0));
+        var targetView = new URL(targetUrl, window.location.origin).searchParams.get('view') || 'pdf';
 
         savePendingPdfSettings().done(function () {
+            if (targetView !== 'pdf') {
+                window.location.href = targetUrl;
+                return;
+            }
+
             setAppView('pdf', { skipHistory: true });
             loadPdfTab(targetUrl, { preservePreview: true });
         }).fail(function () {
@@ -1484,6 +1759,8 @@
         var submitter = e.originalEvent && e.originalEvent.submitter ? $(e.originalEvent.submitter) : $();
         var toolbar = this;
         var pdfUrl = submitter.length && submitter.is('.button-primary[formaction]') ? submitter.attr('formaction') : '';
+        var targetUrl = buildPdfToolbarUrl(toolbar);
+        var targetView = new URL(targetUrl, window.location.origin).searchParams.get('view') || 'pdf';
 
         e.preventDefault();
 
@@ -1493,8 +1770,13 @@
                 return;
             }
 
+            if (targetView !== 'pdf') {
+                window.location.href = targetUrl;
+                return;
+            }
+
             setAppView('pdf', { skipHistory: true });
-            loadPdfTab(buildPdfToolbarUrl(toolbar), { preservePreview: true });
+            loadPdfTab(targetUrl, { preservePreview: true });
         }).fail(function () {
             showNotice(i18n.error || 'Nao foi possivel salvar as configuracoes do PDF.', 'error');
         });
@@ -1518,6 +1800,10 @@
     });
 
     $('#eop-orders-status-filter').on('change', function () {
+        loadOrdersList(1);
+    });
+
+    $('#eop-orders-flow-filter').on('change', function () {
         loadOrdersList(1);
     });
 

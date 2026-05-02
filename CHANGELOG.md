@@ -2,6 +2,49 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.56 - 2026-05-02
+
+- restaurado o bootstrap do fluxo complementar pos-confirmacao, incluindo carga da classe central, endpoints REST e reexibicao do resumo do fluxo dentro do shell SPA
+- reativada a integracao da proposta publica com a etapa complementar apos a confirmacao, evitando cair direto apenas nos botoes finais quando o fluxo estiver habilitado
+- devolvidos os campos de configuracao do fluxo complementar no admin e o resumo visual do progresso voltou para a edicao de pedidos e para a listagem interna
+
+## 1.1.55 - 2026-05-01
+
+- adicionados filtros da listagem da SPA para isolar pedidos com fluxo complementar ativo, pendente ou concluido
+- criada rota REST de colecao paginada para o fluxo complementar, com busca, status do pedido e filtro por status do proprio fluxo
+
+## 1.1.54 - 2026-04-30
+
+- a listagem de pedidos da SPA passou a exibir um resumo compacto do fluxo complementar, incluindo etapa atual, contrato, campos, anexo e progresso dos produtos
+- adicionado payload leve especifico para cards de listagem, evitando reutilizar o export completo do fluxo complementar onde ele nao era necessario
+
+## 1.1.53 - 2026-04-29
+
+- a SPA administrativa do Pedido Expresso passou a consumir a rota REST do fluxo complementar ao abrir um pedido em modo de edicao
+- o shell administrativo ganhou um card proprio para resumir contrato, campos, anexo, produtos e links do fluxo complementar sem depender apenas do retorno AJAX legado
+
+## 1.1.52 - 2026-04-29
+
+- adicionada rota REST autenticada para consultar o payload estruturado do fluxo complementar por pedido, com validacao de permissao por usuario e por acesso ao pedido
+- enriquecido o payload exportado com contexto, timestamp de geracao e metadados basicos do pedido para consumo mais direto em integracoes
+
+## 1.1.51 - 2026-04-29
+
+- adicionado um export estruturado e filtravel do fluxo complementar por pedido, pronto para reaproveito em integracoes futuras sem depender do HTML do frontend ou do PDF
+- enriquecido o retorno AJAX de carregamento do pedido com o payload do fluxo complementar para uso no painel interno
+- criada uma leitura visual do fluxo complementar na tela administrativa de edicao do pedido, com etapa atual, contrato, campos preenchidos, anexo, produtos e links rapidos
+
+## 1.1.50 - 2026-04-29
+
+- adicionado PDF complementar do fluxo pos-confirmacao, com contrato, campos documentais, status do anexo e personalizacao dos produtos, disponivel no frontend concluido e no admin do pedido
+- trocado o campo textual de produtos bloqueados por um seletor visual com busca por nome ou SKU no settings do plugin, mantendo compatibilidade com a option existente
+- refinada a experiencia publica do fluxo complementar com barra de progresso, cards de status laterais, resumo de upload e mensagens orientando cada etapa
+
+## 1.1.49 - 2026-04-29
+
+- adicionada a base do fluxo complementar opcional apos a confirmacao da proposta, com contrato inline, 11 campos documentais configuraveis, upload de anexo, personalizacao de nomes por item e resumo no admin do pedido
+- a pagina publica da proposta agora consegue retomar a jornada depois do pagamento usando o mesmo link do cliente
+
 ## 1.1.48 - 2026-04-23
 
 - ocultado o container de notices do shell quando estiver vazio, inclusive apos dispensar mensagens no admin e na tela de pedidos
@@ -76,15 +119,15 @@ Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser regi
 - corrigida a invalidacao do cache dos PDFs quando configuracoes visuais e textos de colunas sao alterados
 - centralizados os defaults dos textos das colunas e adicionada indicacao visual de expandir/recolher no accordion do admin
 
+## 1.1.34 - 2026-04-18
+
+- adicionada a coluna configuravel de valor unitario com desconto e a personalizacao dos nomes das colunas no PDF e na proposta publica
+
 ## 1.1.33 - 2026-04-17
 
 - priorizada a geracao do PDF final a partir do mesmo HTML do preview, usando Dompdf carregado do plugin de referencia com fallback seguro
 - modulo PDF integrado ao shell SPA do Pedido Expresso com submenu lateral em accordion, tabs sem reload completo e preview recolhido em drawer lateral
 - proposta publica e downloads passaram a usar metadados visuais consistentes e nome de arquivo no formato `id-do-pedido.pdf`
-
-## 1.1.34 - 2026-04-18
-
-- adicionada a coluna configuravel de valor unitario com desconto e a personalizacao dos nomes das colunas no PDF e na proposta publica
 
 ## 1.1.32 - 2026-04-17
 

@@ -3,6 +3,7 @@
     'use strict';
 
     var mediaFrame = null;
+    var documentPdfFrame = null;
     var mediaUploaderBound = false;
     var colorisConfigured = false;
     var colorSwatches = ['#067bc2', '#84bcda', '#80e377', '#ecc30b', '#f37748', '#d56062'];
@@ -41,9 +42,149 @@
         $selectButton.text(hasUrl ? getSettingsVar('change_logo', 'Trocar logo') : getSettingsVar('select_logo', 'Selecionar logo'));
     }
 
+    function buildDocumentEditorSettings() {
+        return {
+            tinymce: {
+                wpautop: true,
+                toolbar1: 'formatselect,bold,italic,bullist,numlist,blockquote,alignleft,aligncenter,alignright,link,unlink,undo,redo',
+                toolbar2: '',
+                height: 320
+            },
+            quicktags: true,
+            mediaButtons: false
+        };
+    }
+
+    function initSignatureEditors(scope) {
+        var $scope = scope && scope.jquery ? scope : $(scope || document);
+
+        if (typeof window.wp === 'undefined' || !window.wp.editor || typeof window.wp.editor.initialize !== 'function') {
+            return;
+        }
+
+        $scope.find('textarea[data-signature-document-editor]').each(function () {
+            var textarea = this;
+            var id = String(textarea.id || '');
+
+            if (!id || $(textarea).data('editorInitialized')) {
+                return;
+            }
+
+            window.wp.editor.initialize(id, buildDocumentEditorSettings());
+            $(textarea).data('editorInitialized', true);
+        });
+    }
+
+    function destroySignatureEditor($textarea) {
+        var id = String($textarea.attr('id') || '');
+
+        if (!id || typeof window.wp === 'undefined' || !window.wp.editor || typeof window.wp.editor.remove !== 'function') {
+            return;
+        }
+
+        window.wp.editor.remove(id);
+    }
+
+    function updateSignatureDocumentPanels($document) {
+        var source = String($document.find('[data-signature-document-source]').val() || 'editor');
+
+        $document.find('[data-signature-document-panel="editor"]').toggleClass('is-hidden', source !== 'editor');
+        $document.find('[data-signature-document-panel="attachment"]').toggleClass('is-hidden', source !== 'attachment');
+    }
+
     function bindMediaUploader() {
         if (mediaUploaderBound) {
             return;
+        }
+
+        function bindSignatureDocumentMedia() {
+            $(document).on('click', '[data-signature-document-attachment-select]', function (event) {
+                var $button = $(this);
+                var $document = $button.closest('[data-signature-document]');
+                var $hidden = $document.find('[data-signature-document-attachment-id]').first();
+                var $name = $document.find('[data-signature-document-attachment-name]').first();
+                var $remove = $document.find('[data-signature-document-attachment-remove]').first();
+
+                event.preventDefault();
+
+                if (typeof wp === 'undefined' || !wp.media) {
+                    return;
+                }
+
+                documentPdfFrame = wp.media({
+                    title: getSettingsVar('document_media_title', 'Selecionar PDF do documento'),
+                    button: {
+                        text: getSettingsVar('document_media_button', 'Usar este PDF')
+                    },
+                    multiple: false,
+                    library: {
+                        type: 'application/pdf'
+                    }
+                });
+
+                documentPdfFrame.on('select', function () {
+                    var selection = documentPdfFrame.state().get('selection').first();
+                    var attachment = selection ? selection.toJSON() : null;
+                    var hasAttachment = Boolean(attachment && attachment.id);
+
+                    $hidden.val(hasAttachment ? attachment.id : '');
+                    $name.text(hasAttachment && attachment.filename ? attachment.filename : getSettingsVar('document_pdf_empty', 'Nenhum PDF anexado ainda.'));
+                    $button.text(hasAttachment ? getSettingsVar('document_change_pdf', 'Trocar PDF') : getSettingsVar('document_select_pdf', 'Selecionar PDF'));
+                    $remove.toggleClass('is-hidden', !hasAttachment);
+                });
+
+                documentPdfFrame.open();
+            });
+
+            $(document).on('click', '[data-signature-document-attachment-remove]', function (event) {
+                var $button = $(this);
+                var $document = $button.closest('[data-signature-document]');
+
+                event.preventDefault();
+
+                $document.find('[data-signature-document-attachment-id]').val('');
+                $document.find('[data-signature-document-attachment-name]').text(getSettingsVar('document_pdf_empty', 'Nenhum PDF anexado ainda.'));
+                $document.find('[data-signature-document-attachment-select]').text(getSettingsVar('document_select_pdf', 'Selecionar PDF'));
+                $button.addClass('is-hidden');
+            });
+        }
+
+        function bindSignatureDocuments() {
+            $(document).on('click', '[data-signature-document-add]', function (event) {
+                var $root = $(this).closest('[data-signature-documents]');
+                var $list = $root.find('[data-signature-documents-list]').first();
+                var $template = $('#eop-signature-document-template');
+                var nextIndex = parseInt($root.attr('data-next-index') || '0', 10);
+                var markup;
+                var $document;
+
+                event.preventDefault();
+
+                if (!$template.length) {
+                    return;
+                }
+
+                markup = String($template.html() || '').replace(/__INDEX__/g, String(nextIndex));
+                $document = $(markup);
+                $list.append($document);
+                $root.attr('data-next-index', String(nextIndex + 1));
+                updateSignatureDocumentPanels($document);
+                initSignatureEditors($document);
+            });
+
+            $(document).on('click', '[data-signature-document-remove]', function (event) {
+                var $document = $(this).closest('[data-signature-document]');
+
+                event.preventDefault();
+                $document.find('textarea[data-signature-document-editor]').each(function () {
+                    destroySignatureEditor($(this));
+                });
+                $document.remove();
+            });
+
+            $(document).on('change', '[data-signature-document-source]', function () {
+                updateSignatureDocumentPanels($(this).closest('[data-signature-document]'));
+            });
         }
 
         mediaUploaderBound = true;
@@ -83,6 +224,62 @@
         $(document).on('click', '[data-media-remove]', function (event) {
             event.preventDefault();
             setMediaOnWrap($(this).closest('.eop-settings-media'), '');
+        });
+
+        bindSignatureDocumentMedia();
+        bindSignatureDocuments();
+    }
+
+    function initLockedProductsSelector(scope) {
+        var $scope = scope && scope.jquery ? scope : $(scope || document);
+
+        if (!$.fn.select2) {
+            return;
+        }
+
+        $scope.find('.eop-settings-product-selector').each(function () {
+            var $select = $(this);
+            var targetSelector = String($select.data('target-input') || '');
+            var $target = targetSelector ? $(targetSelector) : $();
+
+            if ($select.hasClass('select2-hidden-accessible')) {
+                return;
+            }
+
+            $select.select2({
+                width: '100%',
+                multiple: true,
+                allowClear: true,
+                placeholder: getSettingsVar('locked_placeholder', 'Busque produtos por nome ou SKU...'),
+                language: {
+                    noResults: function () {
+                        return getSettingsVar('locked_no_results', 'Nenhum produto encontrado.');
+                    }
+                },
+                ajax: {
+                    url: getSettingsVar('ajax_url', ''),
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            action: 'eop_search_products',
+                            nonce: getSettingsVar('nonce', ''),
+                            term: params.term || ''
+                        };
+                    },
+                    processResults: function (data) {
+                        return data && data.results ? data : { results: [] };
+                    },
+                    cache: true
+                }
+            });
+
+            if ($target.length) {
+                $select.on('change', function () {
+                    var value = ($select.val() || []).filter(Boolean).join(',');
+                    $target.val(value);
+                });
+            }
         });
     }
 
@@ -281,6 +478,11 @@
         injectPdfHelpTooltips($scope);
         initColorFields($scope);
         mountColorDefaultButtons($scope);
+        initLockedProductsSelector($scope);
+        initSignatureEditors($scope);
+        $scope.find('[data-signature-document]').each(function () {
+            updateSignatureDocumentPanels($(this));
+        });
     }
 
     $(function () {
