@@ -2,6 +2,10 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.64 - 2026-05-03
+
+- revisao de manutencao para sincronizar versao e metadados de release do plugin
+
 ## 1.1.63 - 2026-05-03
 
 - o shell administrativo consolidou o bootstrap leve com lazy load para views principais e seccionou melhor as configuracoes do fluxo complementar, experiencia do cliente e modulos de suporte
