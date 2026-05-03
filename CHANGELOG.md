@@ -13,6 +13,9 @@ Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser regi
 - reorganizado o shell SPA do admin com headers mais compactos, menus internos mais granulares e rodape fixo de salvamento para reduzir o excesso visual nas configuracoes
 - o modulo PDF embutido passou a respeitar a aba correta em cada view, remover o chrome redundante no topo e manter os formularios mais curtos ao navegar entre configuracoes
 - convertidos os selects binarios do settings para switches visuais e refinada a proposta publica confirmada com resumo lateral, hierarquia melhor e etapa contratual mais clara
+- adicionados modo foco no shell administrativo, placeholders com lazy load para views pesadas e cache local da SPA para acelerar reabertura de telas, pedidos e rascunhos
+- corrigido o estado visual da navegacao lateral para evitar grupos e itens presos ao trocar de view, enquanto o botao de foco foi reduzido para um icone compacto no sidebar
+- a navegacao interna do PDF passou a usar um endpoint AJAX dedicado, com cache por aba e documentacao interna do roadmap futuro em `PERFORMANCE_OPTIMIZATION_PLAN.md`
 
 ## 1.1.55 - 2026-05-01
 

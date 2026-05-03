@@ -282,6 +282,7 @@ class EOP_Admin_Page {
             'nonce'         => wp_create_nonce( 'eop_nonce' ),
             'rest_url'      => esc_url_raw( rest_url( trailingslashit( apply_filters( 'eop_post_confirmation_rest_namespace', 'aireset-expresso-order/v1' ) ) ) ),
             'rest_nonce'    => wp_create_nonce( 'wp_rest' ),
+            'cache_namespace' => EOP_VERSION,
             'discount_mode' => EOP_Settings::get( 'discount_mode', 'both' ),
             'initial_view'  => self::normalize_view( isset( $_GET['view'] ) ? wp_unslash( $_GET['view'] ) : '' ),
             'view_url_base' => self::get_view_url(),
@@ -373,6 +374,11 @@ class EOP_Admin_Page {
                 'post_flow_completed_at' => __( 'Concluido em', EOP_TEXT_DOMAIN ),
                 'post_flow_locked' => __( 'Bloqueado', EOP_TEXT_DOMAIN ),
                 'post_flow_customized' => __( 'Personalizado', EOP_TEXT_DOMAIN ),
+                'focus_mode_enter' => __( 'Ocultar interface do WordPress', EOP_TEXT_DOMAIN ),
+                'focus_mode_exit' => __( 'Voltar a mostrar interface do WordPress', EOP_TEXT_DOMAIN ),
+                'focus_mode_label_enter' => __( 'Modo foco', EOP_TEXT_DOMAIN ),
+                'focus_mode_label_exit' => __( 'Sair do foco', EOP_TEXT_DOMAIN ),
+                'lazy_loading_view' => __( 'Carregando tela...', EOP_TEXT_DOMAIN ),
             ),
         ) );
     }

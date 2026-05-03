@@ -48,6 +48,28 @@ $general_nav_items = array(
         'icon'  => 'dashicons-edit-large',
     ),
 );
+$lazy_views = array(
+    'pdf',
+    'settings-store-info',
+    'settings-general-config',
+    'settings-confirmation-flow',
+    'settings-order-link-style',
+    'settings-proposal-link-style',
+    'settings-texts',
+    'documentation',
+    'license',
+);
+$render_lazy_placeholder = static function ( $title ) {
+    ?>
+    <div class="eop-admin-view-lazy" data-eop-lazy-placeholder="true">
+        <div class="eop-card eop-admin-view-lazy__card">
+            <div class="eop-admin-view-lazy__icon dashicons dashicons-update" aria-hidden="true"></div>
+            <strong><?php echo esc_html( $title ); ?></strong>
+            <p><?php esc_html_e( 'Esta area sera carregada sob demanda para deixar o plugin mais leve.', EOP_TEXT_DOMAIN ); ?></p>
+        </div>
+    </div>
+    <?php
+};
 ?>
 <style>
     .eop-admin-spa {
@@ -68,7 +90,13 @@ $general_nav_items = array(
                     <img src="<?php echo esc_url( EOP_PLUGIN_URL . 'assets/images/logo-aireset.png' ); ?>" alt="Pedido Expresso - Aireset" />
                 </div>
                 <div class="eop-admin-spa__brand-copy">
-                    <h1><?php echo esc_html( $settings['panel_title'] ); ?></h1>
+                    <div class="eop-admin-spa__brand-head">
+                        <h1><?php echo esc_html( $settings['panel_title'] ); ?></h1>
+                        <button type="button" class="eop-admin-spa__chrome-toggle" id="eop-admin-chrome-toggle" aria-pressed="false" title="<?php esc_attr_e( 'Ocultar interface do WordPress', EOP_TEXT_DOMAIN ); ?>">
+                            <span class="dashicons dashicons-fullscreen-alt" aria-hidden="true"></span>
+                            <span class="screen-reader-text eop-admin-spa__chrome-toggle-label"><?php esc_html_e( 'Modo foco', EOP_TEXT_DOMAIN ); ?></span>
+                        </button>
+                    </div>
                     <?php if ( ! empty( $settings['panel_subtitle'] ) ) : ?>
                         <p><?php echo esc_html( $settings['panel_subtitle'] ); ?></p>
                     <?php endif; ?>
@@ -474,104 +502,140 @@ $general_nav_items = array(
                 </div>
             </section>
 
-            <section class="eop-pdv-view<?php echo 'pdf' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="pdf"<?php echo 'pdf' === $initial_view ? '' : ' hidden'; ?>>
+            <section class="eop-pdv-view<?php echo 'pdf' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="pdf" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'pdf' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'pdf' === $initial_view ? '' : ' hidden'; ?>>
                 <div class="eop-admin-panel-head">
                     <h2><?php esc_html_e( 'PDF', EOP_TEXT_DOMAIN ); ?></h2>
                     <p><?php esc_html_e( 'Configure documentos, preview e comportamento do modulo PDF sem sair do shell original do Pedido Expresso.', EOP_TEXT_DOMAIN ); ?></p>
                 </div>
                 <div class="eop-admin-view-main">
-                <?php
-                if ( class_exists( 'EOP_PDF_Admin_Page' ) ) {
-                    EOP_PDF_Admin_Page::render_embedded_page();
-                }
-                ?>
+                <?php if ( 'pdf' === $initial_view ) : ?>
+                    <?php
+                    if ( class_exists( 'EOP_PDF_Admin_Page' ) ) {
+                        EOP_PDF_Admin_Page::render_embedded_page();
+                    }
+                    ?>
+                <?php else : ?>
+                    <?php $render_lazy_placeholder( __( 'Modulo PDF', EOP_TEXT_DOMAIN ) ); ?>
+                <?php endif; ?>
                 </div>
             </section>
 
             <?php if ( $can_manage_settings ) : ?>
-                <section class="eop-pdv-view<?php echo 'settings-store-info' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-store-info"<?php echo 'settings-store-info' === $initial_view ? '' : ' hidden'; ?>>
+                <section class="eop-pdv-view<?php echo 'settings-store-info' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-store-info" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-store-info' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-store-info' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
                         <h2><?php esc_html_e( 'Informacoes sobre a loja', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Centralize logo, dados institucionais e informacoes exibidas nos documentos do Pedido Expresso.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
-                    <?php EOP_PDF_Admin_Page::render_embedded_page( 'store' ); ?>
+                    <?php if ( 'settings-store-info' === $initial_view ) : ?>
+                        <?php EOP_PDF_Admin_Page::render_embedded_page( 'store' ); ?>
+                    <?php else : ?>
+                        <?php $render_lazy_placeholder( __( 'Informacoes sobre a loja', EOP_TEXT_DOMAIN ) ); ?>
+                    <?php endif; ?>
                     </div>
                 </section>
 
-                <section class="eop-pdv-view<?php echo 'settings-general-config' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-general-config"<?php echo 'settings-general-config' === $initial_view ? '' : ' hidden'; ?>>
+                <section class="eop-pdv-view<?php echo 'settings-general-config' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-general-config" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-general-config' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-general-config' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
                         <h2><?php esc_html_e( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Mantenha em um bloco proprio as regras operacionais do plugin, paginas publicas e comportamento comercial principal.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
-                    <?php EOP_Settings::render_embedded_page( 'general-config' ); ?>
+                    <?php if ( 'settings-general-config' === $initial_view ) : ?>
+                        <?php EOP_Settings::render_embedded_page( 'general-config' ); ?>
+                    <?php else : ?>
+                        <?php $render_lazy_placeholder( __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ) ); ?>
+                    <?php endif; ?>
                     </div>
                 </section>
 
-                <section class="eop-pdv-view<?php echo 'settings-confirmation-flow' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-confirmation-flow"<?php echo 'settings-confirmation-flow' === $initial_view ? '' : ' hidden'; ?>>
+                <section class="eop-pdv-view<?php echo 'settings-confirmation-flow' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-confirmation-flow" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-confirmation-flow' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-confirmation-flow' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
                         <h2><?php esc_html_e( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Edite a jornada complementar apos a proposta em uma tela propria, com contrato, anexos e personalizacao.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
-                    <?php EOP_Settings::render_embedded_page( 'confirmation-flow' ); ?>
+                    <?php if ( 'settings-confirmation-flow' === $initial_view ) : ?>
+                        <?php EOP_Settings::render_embedded_page( 'confirmation-flow' ); ?>
+                    <?php else : ?>
+                        <?php $render_lazy_placeholder( __( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ) ); ?>
+                    <?php endif; ?>
                     </div>
                 </section>
 
-                <section class="eop-pdv-view<?php echo 'settings-order-link-style' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-order-link-style"<?php echo 'settings-order-link-style' === $initial_view ? '' : ' hidden'; ?>>
+                <section class="eop-pdv-view<?php echo 'settings-order-link-style' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-order-link-style" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-order-link-style' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-order-link-style' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
                         <h2><?php esc_html_e( 'Visual do Link do Pedido', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Separe a identidade visual principal do shell e do link do pedido para ajustes rapidos de marca.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
-                    <?php EOP_Settings::render_embedded_page( 'order-link-style' ); ?>
+                    <?php if ( 'settings-order-link-style' === $initial_view ) : ?>
+                        <?php EOP_Settings::render_embedded_page( 'order-link-style' ); ?>
+                    <?php else : ?>
+                        <?php $render_lazy_placeholder( __( 'Visual do Link do Pedido', EOP_TEXT_DOMAIN ) ); ?>
+                    <?php endif; ?>
                     </div>
                 </section>
 
-                <section class="eop-pdv-view<?php echo 'settings-proposal-link-style' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-proposal-link-style"<?php echo 'settings-proposal-link-style' === $initial_view ? '' : ' hidden'; ?>>
+                <section class="eop-pdv-view<?php echo 'settings-proposal-link-style' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-proposal-link-style" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-proposal-link-style' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-proposal-link-style' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
                         <h2><?php esc_html_e( 'Visual do Link de Proposta', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Ajuste o visual publico da proposta sem misturar essas opcoes com o restante do admin.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
-                    <?php EOP_Settings::render_embedded_page( 'proposal-link-style' ); ?>
+                    <?php if ( 'settings-proposal-link-style' === $initial_view ) : ?>
+                        <?php EOP_Settings::render_embedded_page( 'proposal-link-style' ); ?>
+                    <?php else : ?>
+                        <?php $render_lazy_placeholder( __( 'Visual do Link de Proposta', EOP_TEXT_DOMAIN ) ); ?>
+                    <?php endif; ?>
                     </div>
                 </section>
 
-                <section class="eop-pdv-view<?php echo 'settings-texts' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-texts"<?php echo 'settings-texts' === $initial_view ? '' : ' hidden'; ?>>
+                <section class="eop-pdv-view<?php echo 'settings-texts' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-texts" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-texts' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-texts' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
                         <h2><?php esc_html_e( 'Textos e mensagens', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Mantenha em uma pagina propria os titulos, descricoes e labels usados no painel e na proposta publica.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
-                    <?php EOP_Settings::render_embedded_page( 'texts' ); ?>
+                    <?php if ( 'settings-texts' === $initial_view ) : ?>
+                        <?php EOP_Settings::render_embedded_page( 'texts' ); ?>
+                    <?php else : ?>
+                        <?php $render_lazy_placeholder( __( 'Textos e mensagens', EOP_TEXT_DOMAIN ) ); ?>
+                    <?php endif; ?>
                     </div>
                 </section>
 
-                <section class="eop-pdv-view<?php echo 'documentation' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="documentation"<?php echo 'documentation' === $initial_view ? '' : ' hidden'; ?>>
+                <section class="eop-pdv-view<?php echo 'documentation' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="documentation" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'documentation' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'documentation' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
                         <h2><?php esc_html_e( 'Documentacao', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Consulte em uma area propria o efeito real de cada configuracao do modulo de documentos.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
-                    <?php EOP_PDF_Admin_Page::render_embedded_page( 'documentation' ); ?>
+                    <?php if ( 'documentation' === $initial_view ) : ?>
+                        <?php EOP_PDF_Admin_Page::render_embedded_page( 'documentation' ); ?>
+                    <?php else : ?>
+                        <?php $render_lazy_placeholder( __( 'Documentacao', EOP_TEXT_DOMAIN ) ); ?>
+                    <?php endif; ?>
                     </div>
                 </section>
 
-                <section class="eop-pdv-view<?php echo 'license' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="license"<?php echo 'license' === $initial_view ? '' : ' hidden'; ?>>
+                <section class="eop-pdv-view<?php echo 'license' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="license" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'license' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'license' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
                         <h2><?php esc_html_e( 'Licenca', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Consulte a validade da assinatura e administre a ativacao do plugin sem sair do painel.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
-                    <div class="eop-admin-license-shell">
-                        <?php
-                        if ( $license_manager ) {
-                            $license_manager->activated();
-                        }
-                        ?>
-                    </div>
+                    <?php if ( 'license' === $initial_view ) : ?>
+                        <div class="eop-admin-license-shell">
+                            <?php
+                            if ( $license_manager ) {
+                                $license_manager->activated();
+                            }
+                            ?>
+                        </div>
+                    <?php else : ?>
+                        <?php $render_lazy_placeholder( __( 'Licenca', EOP_TEXT_DOMAIN ) ); ?>
+                    <?php endif; ?>
                     </div>
                 </section>
             <?php endif; ?>

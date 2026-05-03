@@ -15,6 +15,355 @@
     var currentEditingOrderId = 0;
     var editLoadToken = 0;
     var postFlowRequestToken = 0;
+    var lazyViewRequestToken = 0;
+    var cacheNamespace = String(eop_vars.cache_namespace || 'default');
+    var cachePrefix = 'eop:' + cacheNamespace + ':';
+    var sessionStore = null;
+    var localStore = null;
+
+    function getStorage(type) {
+        var storage;
+        var probeKey = cachePrefix + 'probe';
+
+        try {
+            storage = type === 'local' ? window.localStorage : window.sessionStorage;
+
+            if (!storage) {
+                return null;
+            }
+
+            storage.setItem(probeKey, '1');
+            storage.removeItem(probeKey);
+
+            return storage;
+        } catch (err) {
+            return null;
+        }
+    }
+
+    function getCacheKey(scope, key) {
+        return cachePrefix + scope + ':' + key;
+    }
+
+    function writeCache(storage, key, value) {
+        if (!storage) {
+            return;
+        }
+
+        try {
+            storage.setItem(key, JSON.stringify({
+                storedAt: Date.now(),
+                value: value
+            }));
+        } catch (err) {
+            return;
+        }
+    }
+
+    function readCache(storage, key, ttl) {
+        var raw;
+        var parsed;
+
+        if (!storage) {
+            return null;
+        }
+
+        try {
+            raw = storage.getItem(key);
+        } catch (err) {
+            return null;
+        }
+
+        if (!raw) {
+            return null;
+        }
+
+        try {
+            parsed = JSON.parse(raw);
+        } catch (err) {
+            return null;
+        }
+
+        if (!parsed || typeof parsed !== 'object' || !parsed.hasOwnProperty('value')) {
+            return null;
+        }
+
+        if (ttl && parsed.storedAt && (Date.now() - parsed.storedAt) > ttl) {
+            try {
+                storage.removeItem(key);
+            } catch (removeErr) {
+                return null;
+            }
+
+            return null;
+        }
+
+        return parsed.value;
+    }
+
+    function removeCache(storage, key) {
+        if (!storage) {
+            return;
+        }
+
+        try {
+            storage.removeItem(key);
+        } catch (err) {
+            return;
+        }
+    }
+
+    function removeCacheByPrefix(storage, prefix) {
+        var index;
+        var key;
+
+        if (!storage) {
+            return;
+        }
+
+        for (index = storage.length - 1; index >= 0; index -= 1) {
+            key = storage.key(index);
+
+            if (key && key.indexOf(prefix) === 0) {
+                try {
+                    storage.removeItem(key);
+                } catch (err) {
+                    return;
+                }
+            }
+        }
+    }
+
+    function getPdfCacheKey(url) {
+        return getCacheKey('pdf-tab', String(url || ''));
+    }
+
+    function getOrdersCacheKey(page, search, status, flowStatus) {
+        return getCacheKey('orders-list', [page, search, status, flowStatus].join('|'));
+    }
+
+    function getOrderCacheKey(orderId) {
+        return getCacheKey('order-edit', String(orderId || '0'));
+    }
+
+    function getPostFlowCacheKey(orderId) {
+        return getCacheKey('post-flow', String(orderId || '0'));
+    }
+
+    function getLazyViewCacheKey(url) {
+        return getCacheKey('lazy-view', String(url || ''));
+    }
+
+    function getDraftCacheKey() {
+        return getCacheKey('draft', 'new-order');
+    }
+
+    function applyPluginFullscreen(isEnabled) {
+        var $toggle = $('#eop-admin-chrome-toggle');
+        var iconClass = isEnabled ? 'dashicons-fullscreen-exit-alt' : 'dashicons-fullscreen-alt';
+        var label = isEnabled ? (i18n.focus_mode_label_exit || 'Sair do foco') : (i18n.focus_mode_label_enter || 'Modo foco');
+        var title = isEnabled ? (i18n.focus_mode_exit || 'Voltar a mostrar interface do WordPress') : (i18n.focus_mode_enter || 'Ocultar interface do WordPress');
+
+        $('body').toggleClass('is-plugin-fullscreen', Boolean(isEnabled));
+        document.documentElement.classList.toggle('eop-admin-spa-fullscreen', Boolean(isEnabled));
+
+        if ($toggle.length) {
+            $toggle.attr('aria-pressed', isEnabled ? 'true' : 'false');
+            $toggle.attr('title', title);
+            $toggle.attr('aria-label', title);
+            $toggle.find('.dashicons').attr('class', 'dashicons ' + iconClass);
+            $toggle.find('.eop-admin-spa__chrome-toggle-label').text(label);
+        }
+
+        writeCache(localStore, getCacheKey('ui', 'fullscreen'), Boolean(isEnabled));
+    }
+
+    function restorePluginFullscreen() {
+        applyPluginFullscreen(Boolean(readCache(localStore, getCacheKey('ui', 'fullscreen'))));
+    }
+
+    function getLazyViewShell(viewName) {
+        return $('.eop-pdv-view[data-eop-view="' + String(viewName || '') + '"]');
+    }
+
+    function isLazyViewPending(viewName) {
+        var $view = getLazyViewShell(viewName);
+
+        return $view.length && $view.attr('data-eop-lazy') === 'true' && $view.attr('data-eop-lazy-loaded') !== 'true';
+    }
+
+    function finalizeLazyView($view, viewName) {
+        if (!$view.length) {
+            return;
+        }
+
+        $view.attr('data-eop-lazy-loaded', 'true').removeClass('is-loading');
+
+        if (viewName === 'pdf') {
+            syncPdfSettingsFormSnapshot($view);
+        }
+
+        $(document).trigger('eop:settings-ui:init', [$view]);
+    }
+
+    function hydrateLazyView(viewName, response, options) {
+        var settings = options || {};
+        var $currentView = getLazyViewShell(viewName);
+        var $parsed;
+        var $nextView;
+
+        if (!$currentView.length) {
+            return false;
+        }
+
+        $parsed = $('<div>').append($.parseHTML(response, document, true));
+        $nextView = $parsed.find('.eop-pdv-view[data-eop-view="' + viewName + '"]').first();
+
+        if (!$nextView.length) {
+            return false;
+        }
+
+        $currentView.replaceWith($nextView);
+        finalizeLazyView($nextView, viewName);
+
+        if (!settings.skipHistory) {
+            syncBrowserView(viewName, Boolean(settings.replaceState));
+        }
+
+        setAppView(viewName, { skipHistory: true, skipLazy: true });
+
+        return true;
+    }
+
+    function loadLazyView(viewName, options) {
+        var settings = options || {};
+        var requestToken = lazyViewRequestToken + 1;
+        var url = settings.url || buildViewUrl(viewName);
+        var cacheKey = getLazyViewCacheKey(url);
+        var cached = readCache(sessionStore, cacheKey, 5 * 60 * 1000);
+        var $view = getLazyViewShell(viewName);
+
+        lazyViewRequestToken = requestToken;
+
+        if (!$view.length || !url) {
+            return;
+        }
+
+        $view.addClass('is-loading');
+
+        if (cached && hydrateLazyView(viewName, cached, settings)) {
+            return;
+        }
+
+        $.get(url)
+            .done(function (response) {
+                if (requestToken !== lazyViewRequestToken) {
+                    return;
+                }
+
+                writeCache(sessionStore, cacheKey, response);
+
+                if (!hydrateLazyView(viewName, response, settings)) {
+                    window.location.href = url;
+                }
+            })
+            .fail(function () {
+                if (requestToken !== lazyViewRequestToken) {
+                    return;
+                }
+
+                window.location.href = url;
+            })
+            .always(function () {
+                getLazyViewShell(viewName).removeClass('is-loading');
+            });
+    }
+
+    function collectDraftState() {
+        return {
+            items: items,
+            customer: {
+                user_id: parseInt($('#eop-user-id').val(), 10) || 0,
+                document: $('#eop-document').val() || '',
+                name: $('#eop-name').val() || '',
+                email: $('#eop-email').val() || '',
+                phone: $('#eop-phone').val() || ''
+            },
+            shipping: {
+                postcode: $('#eop-shipping-postcode').val() || '',
+                state: $('#eop-shipping-state').val() || '',
+                city: $('#eop-shipping-city').val() || '',
+                address: $('#eop-shipping-address').val() || '',
+                number: $('#eop-shipping-number').val() || '',
+                neighborhood: $('#eop-shipping-neighborhood').val() || '',
+                address_2: $('#eop-shipping-address-2').val() || '',
+                total: $('#eop-shipping').val() || '0',
+                method: selectedShippingRate || null
+            },
+            general_discount: $('#eop-discount').val() || '',
+            default_quantity: $('#eop-default-item-quantity').val() || '1',
+            default_discount: $('#eop-default-item-discount').val() || '',
+            status: $('#eop-status').val() || 'completed'
+        };
+    }
+
+    function persistDraftState() {
+        if (currentEditingOrderId > 0) {
+            removeCache(localStore, getDraftCacheKey());
+            return;
+        }
+
+        writeCache(localStore, getDraftCacheKey(), collectDraftState());
+    }
+
+    function restoreDraftState() {
+        var draft = readCache(localStore, getDraftCacheKey());
+        var customer;
+        var shipping;
+
+        if (!draft || currentEditingOrderId > 0) {
+            return;
+        }
+
+        customer = draft.customer || {};
+        shipping = draft.shipping || {};
+
+        items = Array.isArray(draft.items) ? draft.items : [];
+
+        $('#eop-user-id').val(customer.user_id || 0);
+        $('#eop-document').val(customer.document || '');
+        $('#eop-name').val(customer.name || '');
+        $('#eop-email').val(customer.email || '');
+        $('#eop-phone').val(customer.phone || '');
+        $('#eop-default-item-quantity').val(draft.default_quantity || '1');
+        $('#eop-default-item-discount').val(draft.default_discount || '');
+        $('#eop-discount').val(draft.general_discount || '');
+        $('#eop-status').val(draft.status || 'completed');
+        $('#eop-shipping-postcode').val(shipping.postcode || '');
+        $('#eop-shipping-state').val(shipping.state || '');
+        $('#eop-shipping-city').val(shipping.city || '');
+        $('#eop-shipping-address').val(shipping.address || '');
+        $('#eop-shipping-number').val(shipping.number || '');
+        $('#eop-shipping-neighborhood').val(shipping.neighborhood || '');
+        $('#eop-shipping-address-2').val(shipping.address_2 || '');
+        $('#eop-shipping').val(shipping.total || '0');
+
+        selectedShippingRate = shipping.method || null;
+
+        if (selectedShippingRate && selectedShippingRate.label) {
+            setShippingSummary(selectedShippingRate.label + ' - ' + formatBRL(selectedShippingRate.cost || 0));
+        }
+
+        renderItems();
+        recalcTotals();
+    }
+
+    function clearDraftState() {
+        removeCache(localStore, getDraftCacheKey());
+    }
+
+    sessionStore = getStorage('session');
+    localStore = getStorage('local');
 
     function getDefaultDiscountFieldConfig() {
         if (discountMode === 'percent') {
@@ -132,6 +481,55 @@
         $submenu.attr('hidden', nextState ? false : true);
     }
 
+    function setNavGroupState(groupName) {
+        $('.eop-admin-spa-nav__group').each(function () {
+            var $group = $(this);
+            var $toggle = $group.find('.eop-admin-spa-nav__group-toggle').first();
+            var $submenu = $group.find('.eop-admin-spa-nav__submenu').first();
+            var isTarget = String($toggle.data('eop-nav-toggle') || '') === String(groupName || '');
+
+            $group.toggleClass('is-open', isTarget);
+            $toggle.attr('aria-expanded', isTarget ? 'true' : 'false');
+            $submenu.attr('hidden', isTarget ? false : true);
+        });
+    }
+
+    function syncSidebarState(viewName, activePdfTab) {
+        var targetView = normalizeView(viewName);
+        var activeGroup = getNavGroupForView(targetView);
+        var resolvedPdfTab = String(activePdfTab || getCurrentPdfTab());
+
+        $('.eop-pdv-nav__item').each(function () {
+            var $item = $(this);
+            var isActive;
+
+            if ($item.is('[data-eop-nav-toggle]')) {
+                isActive = String($item.data('eop-nav-toggle') || '') === activeGroup;
+            } else {
+                isActive = String($item.data('eop-view-target') || '') === targetView;
+            }
+
+            $item.toggleClass('is-active', isActive).attr('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        $('.eop-admin-spa-nav__submenu-item').each(function () {
+            var $item = $(this);
+            var itemView = String($item.data('eop-view-target') || '');
+            var itemPdfTab = String($item.data('eop-pdf-tab') || '');
+            var isActive = false;
+
+            if (itemView) {
+                isActive = itemView === targetView;
+            } else if (targetView === 'pdf' && itemPdfTab) {
+                isActive = itemPdfTab === resolvedPdfTab;
+            }
+
+            $item.toggleClass('is-active', isActive);
+        });
+
+        setNavGroupState(activeGroup);
+    }
+
     function getNavGroupForView(viewName) {
         var generalViews = [
             'settings-store-info',
@@ -184,6 +582,14 @@
         });
     }
 
+    function clearPdfTabCache() {
+        removeCacheByPrefix(sessionStore, getCacheKey('pdf-tab', ''));
+    }
+
+    function clearLazyViewCache() {
+        removeCacheByPrefix(sessionStore, getCacheKey('lazy-view', ''));
+    }
+
     function savePendingPdfSettings() {
         var $form = getActivePdfSettingsForm();
         var deferred = $.Deferred();
@@ -216,6 +622,8 @@
                 withCredentials: true
             }
         }).done(function () {
+            clearPdfTabCache();
+            clearLazyViewCache();
             $form.data('eopSnapshot', currentSnapshot);
             deferred.resolve();
         }).fail(function () {
@@ -250,10 +658,19 @@
         var parsedUrl = new URL(url, window.location.origin);
         var nextTab = parsedUrl.searchParams.get('pdf_tab') || 'display';
 
-        $('.eop-admin-spa-nav__submenu-item').each(function () {
-            var isActive = $(this).data('eop-pdf-tab') === nextTab;
-            $(this).toggleClass('is-active', isActive);
-        });
+        syncSidebarState('pdf', nextTab);
+    }
+
+    function buildPdfAjaxRequest(url) {
+        var parsedUrl = new URL(url, window.location.origin);
+
+        return {
+            action: 'eop_load_pdf_tab',
+            nonce: eop_vars.nonce,
+            pdf_tab: parsedUrl.searchParams.get('pdf_tab') || 'display',
+            document: parsedUrl.searchParams.get('document') || 'order',
+            preview_order: parsedUrl.searchParams.get('preview_order') || ''
+        };
     }
 
     function buildPdfToolbarUrl(form) {
@@ -284,8 +701,39 @@
         var settings = options || {};
         var $admin = $('.eop-pdf-admin').first();
         var preservePreview = settings.preservePreview !== false && $admin.hasClass('is-preview-open');
+        var cachedShell = readCache(sessionStore, getPdfCacheKey(url), 5 * 60 * 1000);
+
+        function applyPdfShell(shellHtml) {
+            var $nextShell = $(shellHtml);
+
+            if (!$nextShell.length) {
+                $nextShell = $('<div>').append($.parseHTML(shellHtml, document, true)).find('[data-eop-pdf-shell]').first();
+            }
+
+            if (!$nextShell.length) {
+                window.location.href = url;
+                return;
+            }
+
+            $admin.find('[data-eop-pdf-shell]').first().replaceWith($nextShell);
+
+            if (!settings.skipHistory) {
+                syncBrowserUrl(url, Boolean(settings.replaceState));
+            }
+
+            updatePdfNavState(url);
+            setAppView('pdf', { skipHistory: true, skipLazy: true });
+            setPdfPreviewState($admin, preservePreview);
+            syncPdfSettingsFormSnapshot($admin);
+            $(document).trigger('eop:settings-ui:init', [$nextShell]);
+        }
 
         if (!$admin.length || !url) {
+            if (url && isLazyViewPending('pdf')) {
+                loadLazyView('pdf', { url: url, replaceState: Boolean(settings.replaceState), skipHistory: Boolean(settings.skipHistory) });
+                return;
+            }
+
             if (url) {
                 window.location.href = url;
             }
@@ -293,29 +741,30 @@
             return;
         }
 
+        if (cachedShell) {
+            applyPdfShell(cachedShell);
+            return;
+        }
+
         setPdfAdminLoading($admin, true);
 
-        $.get(url)
+        $.ajax({
+            url: eop_vars.ajax_url,
+            method: 'GET',
+            dataType: 'json',
+            data: buildPdfAjaxRequest(url)
+        })
             .done(function (response) {
-                var $parsed = $('<div>').append($.parseHTML(response, document, true));
-                var $nextShell = $parsed.find('[data-eop-pdf-shell]').first();
+                var shellHtml;
 
-                if (!$nextShell.length) {
+                if (!response || !response.success || !response.data || !response.data.html) {
                     window.location.href = url;
                     return;
                 }
 
-                $admin.find('[data-eop-pdf-shell]').first().replaceWith($nextShell);
-
-                if (!settings.skipHistory) {
-                    syncBrowserUrl(url, Boolean(settings.replaceState));
-                }
-
-                updatePdfNavState(url);
-                setAppView('pdf', { skipHistory: true });
-                setPdfPreviewState($admin, preservePreview);
-                syncPdfSettingsFormSnapshot($admin);
-                $(document).trigger('eop:settings-ui:init', [$nextShell]);
+                shellHtml = response.data.html;
+                writeCache(sessionStore, getPdfCacheKey(url), shellHtml);
+                applyPdfShell(shellHtml);
             })
             .fail(function () {
                 window.location.href = url;
@@ -575,47 +1024,19 @@
 
         currentView = targetView;
 
-        $('.eop-pdv-nav__item').each(function () {
-            var isActive;
-
-            if ($(this).is('[data-eop-nav-toggle]')) {
-                isActive = $(this).data('eop-nav-toggle') === getNavGroupForView(targetView);
-            } else {
-                isActive = $(this).data('eop-view-target') === targetView;
-            }
-
-            $(this).toggleClass('is-active', isActive).attr('aria-selected', isActive ? 'true' : 'false');
-        });
-
         $('.eop-pdv-view').each(function () {
             var isActive = $(this).data('eop-view') === targetView;
             $(this).toggleClass('is-active', isActive).attr('hidden', !isActive);
         });
 
-        $('.eop-admin-spa-nav__submenu-item').each(function () {
-            var $item = $(this);
-            var itemView = $item.data('eop-view-target');
-            var isActive = false;
-
-            if (itemView) {
-                isActive = itemView === targetView;
-            } else if (targetView === 'pdf') {
-                isActive = $item.data('eop-pdf-tab') === getCurrentPdfTab();
-            }
-
-            $(this).toggleClass('is-active', isActive);
-        });
-
-        if (getNavGroupForView(targetView) === 'pdf') {
-            toggleNavGroup($('.eop-admin-spa-nav__group-toggle[data-eop-nav-toggle="pdf"]'), true);
-        }
-
-        if (getNavGroupForView(targetView) === 'general') {
-            toggleNavGroup($('.eop-admin-spa-nav__group-toggle[data-eop-nav-toggle="general"]'), true);
-        }
+        syncSidebarState(targetView);
 
         if (targetView === 'orders' && !ordersLoaded) {
             loadOrdersList(1);
+        }
+
+        if (!settings.skipLazy && isLazyViewPending(targetView)) {
+            loadLazyView(targetView, { skipHistory: true });
         }
 
         if (!settings.skipHistory) {
@@ -723,10 +1144,19 @@
         var search = $('#eop-orders-search').val() || '';
         var status = $('#eop-orders-status-filter').val() || 'any';
         var postConfirmationFlow = $('#eop-orders-flow-filter').val() || 'any';
+        var cachedResponse = readCache(sessionStore, getOrdersCacheKey(requestedPage, search, status, postConfirmationFlow), 60 * 1000);
 
         ordersPage = requestedPage;
         $('#eop-orders-list').html('<div class="eop-card eop-orders-empty-state">' + escapeHtml(i18n.orders_loading || 'Carregando pedidos...') + '</div>');
         $('#eop-orders-pagination').empty();
+
+        if (cachedResponse) {
+            ordersLoaded = true;
+            renderOrdersSummary(cachedResponse.pagination.total_items, cachedResponse.viewer);
+            renderOrdersList(cachedResponse.orders || [], cachedResponse.viewer || {});
+            renderOrdersPagination(cachedResponse.pagination.page, cachedResponse.pagination.total_pages);
+            return;
+        }
 
         $.post(eop_vars.ajax_url, {
             action: 'eop_list_orders',
@@ -742,6 +1172,7 @@
             }
 
             ordersLoaded = true;
+            writeCache(sessionStore, getOrdersCacheKey(requestedPage, search, status, postConfirmationFlow), res.data);
             renderOrdersSummary(res.data.pagination.total_items, res.data.viewer);
             renderOrdersList(res.data.orders || [], res.data.viewer || {});
             renderOrdersPagination(res.data.pagination.page, res.data.pagination.total_pages);
@@ -752,30 +1183,12 @@
 
     function loadOrderForEditing(orderId) {
         var requestToken = editLoadToken + 1;
+        var cachedOrder = readCache(sessionStore, getOrderCacheKey(orderId), 2 * 60 * 1000);
 
-        editLoadToken = requestToken;
+        function applyOrderData(d, fallbackOrderId) {
+            var addr = d.shipping_address || {};
 
-        $.post(eop_vars.ajax_url, {
-            action: 'eop_load_order',
-            nonce: eop_vars.nonce,
-            order_id: orderId
-        }, function (res) {
-            var d;
-            var addr;
-
-            if (requestToken !== editLoadToken) {
-                return;
-            }
-
-            if (!res.success) {
-                showNotice((res.data && res.data.message) || i18n.edit_error || 'Nao foi possivel abrir este pedido para edicao.', 'error');
-                return;
-            }
-
-            d = res.data || {};
-            addr = d.shipping_address || {};
-
-            enterEditMode(d.order_id || orderId);
+            enterEditMode(d.order_id || fallbackOrderId);
 
             $('#eop-document').val(d.customer && d.customer.document ? d.customer.document : '');
             $('#eop-name').val(d.customer && d.customer.name ? d.customer.name : '');
@@ -820,9 +1233,37 @@
                 setShippingSummary(i18n.shipping_summary_default || 'Clique para calcular com o endereco do cliente.');
             }
 
-            loadPostConfirmationFlow(orderId);
+            loadPostConfirmationFlow(fallbackOrderId);
             recalcTotals();
             showNotice(i18n.edit_loaded || 'Pedido carregado no painel para edicao.', 'success');
+        }
+
+        editLoadToken = requestToken;
+
+        if (cachedOrder) {
+            applyOrderData(cachedOrder, orderId);
+            return;
+        }
+
+        $.post(eop_vars.ajax_url, {
+            action: 'eop_load_order',
+            nonce: eop_vars.nonce,
+            order_id: orderId
+        }, function (res) {
+            var d;
+
+            if (requestToken !== editLoadToken) {
+                return;
+            }
+
+            if (!res.success) {
+                showNotice((res.data && res.data.message) || i18n.edit_error || 'Nao foi possivel abrir este pedido para edicao.', 'error');
+                return;
+            }
+
+            d = res.data || {};
+            writeCache(sessionStore, getOrderCacheKey(orderId), d);
+            applyOrderData(d, orderId);
         }).fail(function () {
             if (requestToken !== editLoadToken) {
                 return;
@@ -889,6 +1330,7 @@
         $('#eop-shipping-total').text(formatBRL(shipping));
         $('#eop-discount-total').text('- ' + formatBRL(totalDiscount));
         $('#eop-grand-total').text(formatBRL(grand));
+        persistDraftState();
     }
 
     function updateCardSubtotal($card, idx) {
@@ -980,6 +1422,7 @@
         });
 
         recalcTotals();
+        persistDraftState();
     }
 
     function renderPostConfirmationFlowPlaceholder(message) {
@@ -1122,6 +1565,7 @@
     function loadPostConfirmationFlow(orderId) {
         var requestToken = postFlowRequestToken + 1;
         var baseUrl = String(eop_vars.rest_url || '');
+        var cachedFlow = readCache(sessionStore, getPostFlowCacheKey(orderId), 2 * 60 * 1000);
 
         postFlowRequestToken = requestToken;
 
@@ -1131,6 +1575,11 @@
         }
 
         renderPostConfirmationFlowPlaceholder(i18n.post_flow_loading || 'Carregando dados complementares da proposta...');
+
+        if (cachedFlow) {
+            renderPostConfirmationFlow(cachedFlow);
+            return;
+        }
 
         window.fetch(baseUrl + 'orders/' + encodeURIComponent(orderId) + '/post-confirmation?context=internal', {
             method: 'GET',
@@ -1150,6 +1599,7 @@
                 return;
             }
 
+            writeCache(sessionStore, getPostFlowCacheKey(orderId), data || {});
             renderPostConfirmationFlow(data || {});
         }).catch(function () {
             if (requestToken !== postFlowRequestToken) {
@@ -1184,6 +1634,7 @@
         clearShippingSelection(true);
         setShippingAddressStatus('', '');
         exitEditMode();
+        clearDraftState();
 
         recalcTotals();
     }
@@ -1646,6 +2097,9 @@
             if (currentEditingOrderId) {
                 showNotice(res.data && res.data.message ? res.data.message : (i18n.edit_submit || 'Salvar alteracoes'), 'success');
                 ordersLoaded = false;
+                removeCache(sessionStore, getOrderCacheKey(currentEditingOrderId));
+                removeCache(sessionStore, getPostFlowCacheKey(currentEditingOrderId));
+                removeCacheByPrefix(sessionStore, getCacheKey('orders-list', ''));
                 loadOrdersList(ordersPage || 1);
                 exitEditMode();
                 setAppView('orders');
@@ -1668,6 +2122,8 @@
             }
 
             ordersLoaded = false;
+            clearDraftState();
+            removeCacheByPrefix(sessionStore, getCacheKey('orders-list', ''));
         }).fail(function () {
             $btn.prop('disabled', false).text(getCurrentSubmitLabel());
             showNotice(i18n.error, 'error');
@@ -1698,7 +2154,11 @@
             return;
         }
 
-        setAppView(targetView);
+        setAppView(targetView, { skipLazy: true });
+
+        if (isLazyViewPending(targetView)) {
+            loadLazyView(targetView, { skipHistory: true });
+        }
     });
 
     $(document).on('click', '.eop-admin-spa-nav__submenu-item', function (e) {
@@ -1725,8 +2185,23 @@
         }
 
         e.preventDefault();
-        setAppView('pdf', { skipHistory: true });
+        setAppView('pdf', { skipHistory: true, skipLazy: true });
+
+        if (isLazyViewPending('pdf')) {
+            loadLazyView('pdf', { url: url, skipHistory: true });
+            return;
+        }
+
         loadPdfTab(url, { preservePreview: true });
+    });
+
+    $(document).on('submit', '.eop-pdf-admin__sidebar .eop-pdf-admin__form', function () {
+        clearPdfTabCache();
+        clearLazyViewCache();
+    });
+
+    $(document).on('submit', '.eop-settings-form, .eop-admin-license-shell form', function () {
+        clearLazyViewCache();
     });
 
     $(document).on('input change', '.eop-pdf-admin__sidebar .eop-pdf-admin__form :input', function () {
@@ -1794,7 +2269,16 @@
         loadOrderForEditing(orderId);
     });
 
+    $(document).on('click', '#eop-admin-chrome-toggle', function () {
+        applyPluginFullscreen(!$('body').hasClass('is-plugin-fullscreen'));
+    });
+
+    $(document).on('input change', '#eop-document, #eop-name, #eop-email, #eop-phone, #eop-default-item-quantity, #eop-default-item-discount, #eop-discount, #eop-status, #eop-shipping-postcode, #eop-shipping-state, #eop-shipping-city, #eop-shipping-address, #eop-shipping-number, #eop-shipping-neighborhood, #eop-shipping-address-2', function () {
+        persistDraftState();
+    });
+
     $('#eop-orders-refresh').on('click', function () {
+        removeCacheByPrefix(sessionStore, getCacheKey('orders-list', ''));
         loadOrdersList(1);
     });
 
@@ -1870,7 +2354,18 @@
         var bootstrapAction = params.get('action') || '';
         var bootstrapOrderId = parseInt(params.get('order_id') || '0', 10) || 0;
 
-        setAppView(bootstrapView, { replaceState: true });
+        restorePluginFullscreen();
+        syncSidebarState(bootstrapView);
+
+        setAppView(bootstrapView, { replaceState: true, skipLazy: true });
+
+        if (!bootstrapAction && bootstrapOrderId <= 0) {
+            restoreDraftState();
+        }
+
+        if (isLazyViewPending(bootstrapView)) {
+            loadLazyView(bootstrapView, { replaceState: true, skipHistory: true });
+        }
 
         if (bootstrapAction === 'edit' && bootstrapOrderId > 0) {
             loadOrderForEditing(bootstrapOrderId);

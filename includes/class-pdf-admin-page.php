@@ -17,6 +17,7 @@ class EOP_PDF_Admin_Page {
 
         add_action( 'admin_menu', array( __CLASS__, 'register_submenu' ) );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+        add_action( 'wp_ajax_eop_load_pdf_tab', array( __CLASS__, 'ajax_load_pdf_tab' ) );
         add_action( 'admin_post_eop_pdf_purge_cache', array( __CLASS__, 'handle_purge_cache' ) );
         add_action( 'admin_post_eop_pdf_reset_counters', array( __CLASS__, 'handle_reset_counters' ) );
         add_action( 'admin_post_eop_download_edoc_xml', array( __CLASS__, 'handle_download_edoc_xml' ) );
@@ -318,6 +319,48 @@ class EOP_PDF_Admin_Page {
         $embedded    = (bool) $embedded;
         $tab         = $default_tab;
         include EOP_PLUGIN_DIR . 'templates/pdf-admin-page.php';
+    }
+
+    public static function ajax_load_pdf_tab() {
+        check_ajax_referer( 'eop_nonce', 'nonce' );
+
+        $tab           = isset( $_REQUEST['pdf_tab'] ) ? self::normalize_tab( wp_unslash( $_REQUEST['pdf_tab'] ), 'display' ) : 'display';
+        $document      = isset( $_REQUEST['document'] ) ? sanitize_key( wp_unslash( $_REQUEST['document'] ) ) : 'order';
+        $preview_order = absint( $_REQUEST['preview_order'] ?? 0 );
+
+        if ( ! current_user_can( self::get_tab_capability( $tab ) ) ) {
+            wp_send_json_error(
+                array(
+                    'message' => __( 'Acesso negado.', EOP_TEXT_DOMAIN ),
+                ),
+                403
+            );
+        }
+
+        if ( 'proposal' !== $document ) {
+            $document = 'order';
+        }
+
+        $_GET['page']      = 'eop-pedido-expresso';
+        $_GET['view']      = 'pdf';
+        $_GET['pdf_tab']   = $tab;
+        $_GET['document']  = $document;
+
+        if ( $preview_order > 0 ) {
+            $_GET['preview_order'] = $preview_order;
+        } else {
+            unset( $_GET['preview_order'] );
+        }
+
+        ob_start();
+        self::render_page( $tab, true );
+
+        wp_send_json_success(
+            array(
+                'html' => ob_get_clean(),
+                'tab'  => $tab,
+            )
+        );
     }
 
     public static function handle_purge_cache() {
