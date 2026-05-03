@@ -12,11 +12,20 @@ Padronizar menus, bordas, superficies e estados de navegacao entre plugins, mant
 - bordas discretas em baixa opacidade e sombras curtas, evitando brilho excessivo
 - item ativo principal com gradiente navy + teal e anel interno suave
 - submenu com fundo translcido, recuo leve e destaque lateral teal no hover e no ativo
+- o topo da lateral esquerda precisa sempre nascer com um bloco de marca composto por logo Aireset, dados essenciais do plugin e acao de expandir o plugin para tela total
 - tipografia do hero continua especifica por plugin; nao usar copy generica obrigatoria
 - o hero pode variar por produto, mas a navegacao lateral deve manter a mesma linguagem visual
 - headers das views SPA podem compartilhar o mesmo gradiente do shell para unificar a navegacao com o conteudo
 - wrappers globais do SPA nao devem sobrescrever formularios ou containers de modulos que ja possuam design proprio validado
 - configuracoes, PDF e licenca devem manter seus cards internos e apenas receber o shell, espacamento e headers compartilhados
+
+## Bloco superior da sidebar
+
+- a logo Aireset deve aparecer no topo da sidebar antes da navegacao, preferencialmente como wordmark oficial em arquivo proprio do plugin
+- o card principal desse bloco deve exibir nome do plugin, resumo curto do produto e pelo menos dois ou tres dados operacionais do modulo, como versao, slug ou dominios cobertos
+- a acao de tela total precisa ficar no canto superior desse card, com botao proprio e estado visivel para entrar e sair do modo foco
+- esse bloco superior e parte obrigatoria do shell Aireset; nao deve ser substituido por um simples titulo textual solto
+- plugins que reutilizarem este shell devem copiar a estrutura do topo lateral junto com a navegacao, e nao apenas as cores da sidebar
 
 ## Regras de controles
 
@@ -38,6 +47,7 @@ Padronizar menus, bordas, superficies e estados de navegacao entre plugins, mant
 
 - manter o hero com `panel_title` e `panel_subtitle`
 - aplicar o padrao apenas no shell lateral, grupos, submenus e estados ativos
+- manter no topo lateral a wordmark Aireset, o card com os dados do plugin e o toggle de tela total usado no shell SPA
 - nao acoplar a paleta administrativa aos controles de cor da proposta do cliente
 - preservar o visual nativo de `.eop-settings-form`, `.eop-settings-card` e `.el-license-container`, evitando wrappers que redefinam borda, fundo ou sombra nesses modulos
 - manter os campos `.eop-color-field` com o mesmo comportamento do checkout: swatch interno em `.clr-field` e `Padrao` externo em `.eop-color-control`

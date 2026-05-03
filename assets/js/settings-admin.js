@@ -92,6 +92,17 @@
         $document.find('[data-signature-document-panel="attachment"]').toggleClass('is-hidden', source !== 'attachment');
     }
 
+    function refreshSignatureDocumentsEmptyState($root) {
+        var $list = $root.find('[data-signature-documents-list]').first();
+        var $empty = $root.find('[data-signature-documents-empty]').first();
+
+        if (!$empty.length) {
+            return;
+        }
+
+        $empty.toggleClass('is-hidden', $list.find('[data-signature-document]').length > 0);
+    }
+
     function bindMediaUploader() {
         if (mediaUploaderBound) {
             return;
@@ -112,13 +123,13 @@
                 }
 
                 documentPdfFrame = wp.media({
-                    title: getSettingsVar('document_media_title', 'Selecionar PDF do documento'),
+                    title: getSettingsVar('document_media_title', 'Selecionar arquivo do documento'),
                     button: {
-                        text: getSettingsVar('document_media_button', 'Usar este PDF')
+                        text: getSettingsVar('document_media_button', 'Usar este arquivo')
                     },
                     multiple: false,
                     library: {
-                        type: 'application/pdf'
+                        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
                     }
                 });
 
@@ -128,8 +139,8 @@
                     var hasAttachment = Boolean(attachment && attachment.id);
 
                     $hidden.val(hasAttachment ? attachment.id : '');
-                    $name.text(hasAttachment && attachment.filename ? attachment.filename : getSettingsVar('document_pdf_empty', 'Nenhum PDF anexado ainda.'));
-                    $button.text(hasAttachment ? getSettingsVar('document_change_pdf', 'Trocar PDF') : getSettingsVar('document_select_pdf', 'Selecionar PDF'));
+                    $name.text(hasAttachment && attachment.filename ? attachment.filename : getSettingsVar('document_pdf_empty', 'Nenhum arquivo anexado ainda.'));
+                    $button.text(hasAttachment ? getSettingsVar('document_change_pdf', 'Trocar arquivo') : getSettingsVar('document_select_pdf', 'Selecionar arquivo'));
                     $remove.toggleClass('is-hidden', !hasAttachment);
                 });
 
@@ -143,8 +154,8 @@
                 event.preventDefault();
 
                 $document.find('[data-signature-document-attachment-id]').val('');
-                $document.find('[data-signature-document-attachment-name]').text(getSettingsVar('document_pdf_empty', 'Nenhum PDF anexado ainda.'));
-                $document.find('[data-signature-document-attachment-select]').text(getSettingsVar('document_select_pdf', 'Selecionar PDF'));
+                $document.find('[data-signature-document-attachment-name]').text(getSettingsVar('document_pdf_empty', 'Nenhum arquivo anexado ainda.'));
+                $document.find('[data-signature-document-attachment-select]').text(getSettingsVar('document_select_pdf', 'Selecionar arquivo'));
                 $button.addClass('is-hidden');
             });
         }
@@ -170,16 +181,19 @@
                 $root.attr('data-next-index', String(nextIndex + 1));
                 updateSignatureDocumentPanels($document);
                 initSignatureEditors($document);
+                refreshSignatureDocumentsEmptyState($root);
             });
 
             $(document).on('click', '[data-signature-document-remove]', function (event) {
                 var $document = $(this).closest('[data-signature-document]');
+                var $root = $document.closest('[data-signature-documents]');
 
                 event.preventDefault();
                 $document.find('textarea[data-signature-document-editor]').each(function () {
                     destroySignatureEditor($(this));
                 });
                 $document.remove();
+                refreshSignatureDocumentsEmptyState($root);
             });
 
             $(document).on('change', '[data-signature-document-source]', function () {
@@ -560,7 +574,10 @@
         initSignatureEditors($scope);
         initBinarySwitches($scope);
         $scope.find('[data-signature-document]').each(function () {
-            updateSignatureDocumentPanels($(this));
+			updateSignatureDocumentPanels($(this));
+        });
+        $scope.find('[data-signature-documents]').each(function () {
+            refreshSignatureDocumentsEmptyState($(this));
         });
     }
 

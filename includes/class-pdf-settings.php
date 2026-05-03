@@ -24,7 +24,7 @@ class EOP_PDF_Settings {
     public static function get_all() {
         return self::apply_document_label_fallbacks(
             self::apply_legacy_pdf_fallbacks(
-                self::apply_woocommerce_store_defaults( wp_parse_args( get_option( self::OPTION_KEY, array() ), self::get_defaults() ) )
+                self::apply_shared_store_defaults( wp_parse_args( get_option( self::OPTION_KEY, array() ), self::get_defaults() ) )
             )
         );
     }
@@ -120,7 +120,7 @@ class EOP_PDF_Settings {
     public static function get_output_signature( $settings = null ) {
         $settings = self::apply_document_label_fallbacks(
             self::apply_legacy_pdf_fallbacks(
-                self::apply_woocommerce_store_defaults( wp_parse_args( is_array( $settings ) ? $settings : array(), self::get_defaults() ) )
+                self::apply_shared_store_defaults( wp_parse_args( is_array( $settings ) ? $settings : array(), self::get_defaults() ) )
             )
         );
 
@@ -791,7 +791,7 @@ class EOP_PDF_Settings {
     }
 
     public static function get_defaults() {
-        $woo_store = self::get_woocommerce_store_defaults();
+        $shared_store = self::get_shared_store_defaults();
 
         return array(
             'display_mode'              => 'new_tab',
@@ -803,16 +803,16 @@ class EOP_PDF_Settings {
             'extended_currency_symbol'  => 'no',
             'shop_logo_url'             => '',
             'shop_logo_height'          => '3cm',
-            'shop_name'                 => get_bloginfo( 'name' ),
-            'shop_address_line_1'       => $woo_store['shop_address_line_1'],
-            'shop_address_line_2'       => $woo_store['shop_address_line_2'],
-            'shop_city'                 => $woo_store['shop_city'],
-            'shop_state'                => $woo_store['shop_state'],
-            'shop_postcode'             => $woo_store['shop_postcode'],
-            'shop_country'              => $woo_store['shop_country'],
-            'shop_phone'                => '',
-            'shop_email'                => get_bloginfo( 'admin_email' ),
-            'shop_vat_number'           => '',
+            'shop_name'                 => $shared_store['shop_name'],
+            'shop_address_line_1'       => $shared_store['shop_address_line_1'],
+            'shop_address_line_2'       => $shared_store['shop_address_line_2'],
+            'shop_city'                 => $shared_store['shop_city'],
+            'shop_state'                => $shared_store['shop_state'],
+            'shop_postcode'             => $shared_store['shop_postcode'],
+            'shop_country'              => $shared_store['shop_country'],
+            'shop_phone'                => $shared_store['shop_phone'],
+            'shop_email'                => $shared_store['shop_email'],
+            'shop_vat_number'           => $shared_store['shop_vat_number'],
             'shop_chamber_of_commerce'  => '',
             'shop_extra_1'              => '',
             'shop_extra_2'              => '',
@@ -940,9 +940,10 @@ class EOP_PDF_Settings {
     public static function sanitize_settings( $input ) {
         $defaults = self::get_defaults();
         $saved    = get_option( self::OPTION_KEY, array() );
-        $input    = wp_parse_args( is_array( $input ) ? $input : array(), is_array( $saved ) ? $saved : array() );
+        $raw_input = is_array( $input ) ? $input : array();
+        $input     = wp_parse_args( $raw_input, is_array( $saved ) ? $saved : array() );
 
-        return self::apply_woocommerce_store_defaults( array(
+        $sanitized = array(
             'display_mode'              => in_array( $input['display_mode'] ?? '', array( 'new_tab', 'download' ), true ) ? $input['display_mode'] : $defaults['display_mode'],
             'paper_size'                => in_array( $input['paper_size'] ?? '', array( 'a4', 'letter' ), true ) ? $input['paper_size'] : $defaults['paper_size'],
             'template_name'             => in_array( $input['template_name'] ?? '', array( 'simple', 'compact', 'minimal' ), true ) ? $input['template_name'] : $defaults['template_name'],
@@ -1083,7 +1084,13 @@ class EOP_PDF_Settings {
             'advanced_order_note_logs'  => self::sanitize_toggle( $input['advanced_order_note_logs'] ?? $defaults['advanced_order_note_logs'] ),
             'advanced_auto_cleanup'     => self::sanitize_toggle( $input['advanced_auto_cleanup'] ?? $defaults['advanced_auto_cleanup'] ),
             'advanced_danger_zone'      => self::sanitize_toggle( $input['advanced_danger_zone'] ?? $defaults['advanced_danger_zone'] ),
-        ) );
+        );
+
+        if ( self::has_shared_store_input( $raw_input ) ) {
+            self::sync_shared_store_settings( $sanitized );
+        }
+
+        return self::apply_shared_store_defaults( $sanitized );
     }
 
     private static function get_woocommerce_store_defaults() {
@@ -1112,16 +1119,82 @@ class EOP_PDF_Settings {
         );
     }
 
-    private static function apply_woocommerce_store_defaults( $settings ) {
+    private static function get_shared_store_defaults() {
+        $defaults = self::get_woocommerce_store_defaults();
+
+        $defaults['shop_name']       = sanitize_text_field( (string) get_option( 'blogname', get_bloginfo( 'name' ) ) );
+        $defaults['shop_phone']      = sanitize_text_field( (string) get_option( 'telefone', '' ) );
+        $defaults['shop_email']      = sanitize_email( (string) get_option( 'email_contato', get_option( 'admin_email', get_bloginfo( 'admin_email' ) ) ) );
+        $defaults['shop_vat_number'] = sanitize_text_field( (string) get_option( 'cnpj', '' ) );
+
+        return $defaults;
+    }
+
+    private static function apply_shared_store_defaults( $settings ) {
         $settings = is_array( $settings ) ? $settings : array();
 
-        foreach ( self::get_woocommerce_store_defaults() as $key => $value ) {
-            if ( ! isset( $settings[ $key ] ) || '' === trim( (string) $settings[ $key ] ) ) {
-                $settings[ $key ] = $value;
-            }
+        foreach ( self::get_shared_store_defaults() as $key => $value ) {
+            $settings[ $key ] = $value;
         }
 
         return $settings;
+    }
+
+    private static function has_shared_store_input( $input ) {
+        if ( ! is_array( $input ) ) {
+            return false;
+        }
+
+        foreach ( array( 'shop_name', 'shop_address_line_1', 'shop_address_line_2', 'shop_city', 'shop_state', 'shop_postcode', 'shop_country', 'shop_phone', 'shop_email', 'shop_vat_number' ) as $shared_key ) {
+            if ( array_key_exists( $shared_key, $input ) ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function sync_shared_store_settings( $settings ) {
+        $settings = is_array( $settings ) ? $settings : array();
+
+        update_option( 'blogname', sanitize_text_field( (string) ( $settings['shop_name'] ?? get_option( 'blogname', '' ) ) ) );
+        update_option( 'telefone', sanitize_text_field( (string) ( $settings['shop_phone'] ?? '' ) ) );
+        update_option( 'email_contato', sanitize_email( (string) ( $settings['shop_email'] ?? '' ) ) );
+        update_option( 'cnpj', sanitize_text_field( (string) ( $settings['shop_vat_number'] ?? '' ) ) );
+
+        self::sync_store_address_settings( $settings );
+    }
+
+    private static function sync_store_address_settings( $settings ) {
+        $address_1 = sanitize_text_field( (string) ( $settings['shop_address_line_1'] ?? '' ) );
+        $address_2 = sanitize_text_field( (string) ( $settings['shop_address_line_2'] ?? '' ) );
+        $city      = sanitize_text_field( (string) ( $settings['shop_city'] ?? '' ) );
+        $postcode  = sanitize_text_field( (string) ( $settings['shop_postcode'] ?? '' ) );
+        $country   = strtoupper( sanitize_text_field( (string) ( $settings['shop_country'] ?? 'BR' ) ) );
+        $state     = strtoupper( sanitize_text_field( (string) ( $settings['shop_state'] ?? '' ) ) );
+
+        $country = preg_replace( '/[^A-Z]/', '', $country );
+        if ( strlen( $country ) !== 2 ) {
+            $country = 'BR';
+        }
+
+        $state = preg_replace( '/[^A-Z]/', '', $state );
+        if ( 'BR' === $country ) {
+            $state = substr( $state, 0, 2 );
+        }
+
+        update_option( 'endereco', $address_1 );
+        update_option( 'endereco_linha_2', $address_2 );
+        update_option( 'cidade', $city );
+        update_option( 'cep', $postcode );
+        update_option( 'pais', $country );
+        update_option( 'estado', $state );
+
+        update_option( 'woocommerce_store_address', $address_1 );
+        update_option( 'woocommerce_store_address_2', $address_2 );
+        update_option( 'woocommerce_store_city', $city );
+        update_option( 'woocommerce_store_postcode', $postcode );
+        update_option( 'woocommerce_default_country', '' === $state ? $country : $country . ':' . $state );
     }
 
     private static function apply_legacy_pdf_fallbacks( $settings ) {

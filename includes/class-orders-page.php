@@ -158,30 +158,41 @@ class EOP_Orders_Page {
         }
 
         $flow_filter = self::normalize_post_confirmation_flow_filter( $args['post_confirmation_flow'] ?? 'any' );
+        $meta_query  = array();
 
-        if ( ! EOP_Role::is_vendedor() && 'any' === $flow_filter ) {
-            return wc_get_orders( $query_args );
+        if ( EOP_Role::is_vendedor() ) {
+            $meta_query[] = array(
+                'key'     => '_eop_created_by',
+                'value'   => get_current_user_id(),
+                'compare' => '=',
+                'type'    => 'NUMERIC',
+            );
         }
 
-        $limit = max( 1, absint( $args['limit'] ) );
-        $page  = max( 1, absint( $args['paged'] ) );
+        $flow_meta_query = self::get_post_confirmation_flow_meta_query( $flow_filter );
 
-        $query_args['limit']    = -1;
-        $query_args['paginate'] = false;
+        if ( false === $flow_meta_query ) {
+            return self::get_empty_orders_result();
+        }
 
-        $orders = wc_get_orders( $query_args );
-        $orders = array_values( array_filter( $orders, array( __CLASS__, 'current_user_can_access_order' ) ) );
-        $orders = self::filter_orders_by_post_confirmation_flow( $orders, $flow_filter );
+        if ( ! empty( $flow_meta_query ) ) {
+            $meta_query = array_merge( $meta_query, $flow_meta_query );
+        }
 
-        $total       = count( $orders );
-        $max_pages   = max( 1, (int) ceil( $total / $limit ) );
-        $offset      = ( $page - 1 ) * $limit;
-        $paged_slice = array_slice( $orders, $offset, $limit );
+        if ( ! empty( $meta_query ) ) {
+            $query_args['meta_query'] = count( $meta_query ) > 1
+                ? array_merge( array( 'relation' => 'AND' ), $meta_query )
+                : $meta_query;
+        }
 
+        return wc_get_orders( $query_args );
+    }
+
+    private static function get_empty_orders_result() {
         return (object) array(
-            'orders'         => $paged_slice,
-            'total'          => $total,
-            'max_num_pages'  => $max_pages,
+            'orders'        => array(),
+            'total'         => 0,
+            'max_num_pages' => 1,
         );
     }
 
@@ -217,6 +228,14 @@ class EOP_Orders_Page {
             'viewer'      => array(
                 'is_admin' => ! EOP_Role::is_vendedor(),
             ),
+            '_performance' => class_exists( 'EOP_Performance_Audit' )
+                ? EOP_Performance_Audit::get_request_metrics(
+                    'orders_list',
+                    array(
+                        'page' => $paged,
+                    )
+                )
+                : array(),
         ) );
     }
 
@@ -335,6 +354,14 @@ class EOP_Orders_Page {
             'discount_type' => $general_discount_data['type'],
             'notes'         => $order->get_customer_note(),
             'post_confirmation_flow' => class_exists( 'EOP_Post_Confirmation_Flow' ) ? EOP_Post_Confirmation_Flow::get_export_data( $order, 'admin' ) : array(),
+            '_performance'     => class_exists( 'EOP_Performance_Audit' )
+                ? EOP_Performance_Audit::get_request_metrics(
+                    'order_load',
+                    array(
+                        'order_id' => $order->get_id(),
+                    )
+                )
+                : array(),
         ) );
     }
 
@@ -563,6 +590,49 @@ class EOP_Orders_Page {
         return in_array( $value, $allowed, true ) ? $value : 'any';
     }
 
+    private static function get_post_confirmation_flow_meta_query( $flow_filter ) {
+        $flow_filter = self::normalize_post_confirmation_flow_filter( $flow_filter );
+
+        if ( 'any' === $flow_filter ) {
+            return array();
+        }
+
+        if ( ! class_exists( 'EOP_Post_Confirmation_Flow' ) || ! EOP_Post_Confirmation_Flow::is_enabled() ) {
+            return false;
+        }
+
+        $meta_query = array(
+            array(
+                'key'     => '_eop_is_proposal',
+                'value'   => 'yes',
+                'compare' => '=',
+            ),
+        );
+
+        if ( 'completed' === $flow_filter ) {
+            $meta_query[] = array(
+                'key'     => EOP_Post_Confirmation_Flow::META_FLAG,
+                'value'   => 'yes',
+                'compare' => '=',
+            );
+        } elseif ( 'pending' === $flow_filter ) {
+            $meta_query[] = array(
+                'relation' => 'OR',
+                array(
+                    'key'     => EOP_Post_Confirmation_Flow::META_FLAG,
+                    'value'   => 'yes',
+                    'compare' => '!=',
+                ),
+                array(
+                    'key'     => EOP_Post_Confirmation_Flow::META_FLAG,
+                    'compare' => 'NOT EXISTS',
+                ),
+            );
+        }
+
+        return $meta_query;
+    }
+
     private static function prepare_order_list_item( $order ) {
         $customer_name = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
         $public_url    = EOP_Public_Proposal::get_public_link( $order );
@@ -584,49 +654,6 @@ class EOP_Orders_Page {
             'is_proposal'     => ! empty( $public_url ),
             'post_confirmation_flow_summary' => class_exists( 'EOP_Post_Confirmation_Flow' ) ? EOP_Post_Confirmation_Flow::get_list_summary( $order ) : array(),
             'created_by_name' => (string) $order->get_meta( '_eop_created_by_name' ),
-        );
-    }
-
-    private static function filter_orders_by_post_confirmation_flow( $orders, $flow_filter ) {
-        $flow_filter = self::normalize_post_confirmation_flow_filter( $flow_filter );
-
-        if ( 'any' === $flow_filter || empty( $orders ) ) {
-            return $orders;
-        }
-
-        if ( ! class_exists( 'EOP_Post_Confirmation_Flow' ) ) {
-            return array();
-        }
-
-        return array_values(
-            array_filter(
-                $orders,
-                static function ( $order ) use ( $flow_filter ) {
-                    if ( ! $order instanceof WC_Order ) {
-                        return false;
-                    }
-
-                    $summary = EOP_Post_Confirmation_Flow::get_list_summary( $order );
-
-                    if ( empty( $summary['active_for_order'] ) ) {
-                        return false;
-                    }
-
-                    if ( 'active' === $flow_filter ) {
-                        return true;
-                    }
-
-                    if ( 'completed' === $flow_filter ) {
-                        return ! empty( $summary['completed'] );
-                    }
-
-                    if ( 'pending' === $flow_filter ) {
-                        return empty( $summary['completed'] );
-                    }
-
-                    return true;
-                }
-            )
         );
     }
 

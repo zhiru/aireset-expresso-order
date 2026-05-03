@@ -354,11 +354,22 @@ class EOP_PDF_Admin_Page {
 
         ob_start();
         self::render_page( $tab, true );
+        $html = ob_get_clean();
 
         wp_send_json_success(
             array(
-                'html' => ob_get_clean(),
+                'html' => $html,
                 'tab'  => $tab,
+                '_performance' => class_exists( 'EOP_Performance_Audit' )
+                    ? EOP_Performance_Audit::get_request_metrics(
+                        'pdf_tab',
+                        array(
+                            'tab'            => $tab,
+                            'document'       => $document,
+                            'response_bytes' => strlen( $html ),
+                        )
+                    )
+                    : array(),
             )
         );
     }

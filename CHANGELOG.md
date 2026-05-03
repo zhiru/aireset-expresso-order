@@ -2,6 +2,43 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.63 - 2026-05-03
+
+- o shell administrativo consolidou o bootstrap leve com lazy load para views principais e seccionou melhor as configuracoes do fluxo complementar, experiencia do cliente e modulos de suporte
+- adicionada a tela de exportar e importar configuracoes dentro da SPA, incluindo a nova base de portabilidade para backup e migracao do plugin
+- refinados o modulo PDF, a proposta publica e o carregamento das configuracoes para reduzir preload desnecessario e manter a experiencia comercial mais fluida
+
+## 1.1.62 - 2026-05-03
+
+- o shell inicial do admin deixou de embutir inteiro as views de Novo pedido e Pedidos; ambas agora nascem como placeholder e carregam o HTML real sob demanda pelo endpoint leve da SPA
+- a view comercial principal passou a se auto-inicializar mesmo quando chega via AJAX, preservando Select2, rascunho local e abertura direta de pedido em modo de edicao
+- os filtros e atalhos da listagem foram movidos para binds delegados, permitindo lazy load completo da tela de Pedidos sem depender do DOM presente no bootstrap
+
+## 1.1.61 - 2026-05-03
+
+- reduzidas as queries e o custo PHP da listagem de pedidos ao empurrar filtros de vendedor e fluxo complementar para o wc_get_orders com meta_query indexada, evitando varredura completa e filtro em memoria
+- o carregamento da edicao de pedido deixou de gerar PDFs de assinatura no payload inicial do admin; os links continuam disponiveis e a geracao fica sob demanda quando o documento for aberto
+- o resumo do fluxo complementar nos cards de pedido passou a usar metadados ja persistidos e contagem leve de itens, cortando trabalho repetitivo com produtos e renderizacao pesada
+
+## 1.1.60 - 2026-05-03
+
+- reduzido o custo de renderizacao das lazy views de configuracoes ao carregar listas de paginas, produtos bloqueados e documentos de contrato apenas nas secoes que realmente usam esses dados
+- mantida a mesma estrutura da SPA administrativa, mas sem o preload desnecessario que estava inflando o tempo PHP nas views de settings
+
+## 1.1.59 - 2026-05-02
+
+- iniciada a Fase 2 do plano de performance com um endpoint AJAX leve para lazy views administrativas, evitando baixar e renderizar a pagina inteira ao abrir PDF, settings, documentacao e licenca
+- a SPA agora carrega essas views sob demanda com payload focado na secao solicitada e continua registrando baseline por request para comparar antes e depois das proximas otimizações
+
+## 1.1.58 - 2026-05-02
+
+- iniciada a Fase 1 do plano de performance com baseline visual no shell admin para medir abertura da SPA, views lazy, PDF e requests principais de pedidos na sessao atual
+- adicionada instrumentacao de metricas no PHP e no JavaScript, incluindo tempo total, tempo PHP, tamanho estimado de resposta, pico de memoria e resumo dos assets carregados
+- os endpoints AJAX de listagem de pedidos, edicao de pedido e abas do PDF agora retornam dados de auditoria para orientar as proximas fases de otimizacao
+- redesenhada a pagina publica confirmada com hero mais forte, cards laterais mais claros e uma hierarquia visual nova para itens, resumo financeiro e acoes
+- criada a view dedicada Experiencia do Cliente dentro da SPA para separar fontes, textos e cores da jornada publica confirmada do restante das configuracoes
+- o fluxo complementar passou a usar a nova paleta da experiencia publica e agora le o titulo do mapa de jornada diretamente das novas configuracoes
+
 ## 1.1.56 - 2026-05-02
 
 - restaurado o bootstrap do fluxo complementar pos-confirmacao, incluindo carga da classe central, endpoints REST e reexibicao do resumo do fluxo dentro do shell SPA

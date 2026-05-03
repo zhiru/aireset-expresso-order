@@ -208,7 +208,7 @@ $show_context_chrome = ! $embedded;
                     <details class="eop-pdf-admin__section" open>
                         <summary><?php esc_html_e( 'Informacoes sobre a loja', EOP_TEXT_DOMAIN ); ?></summary>
                         <div class="eop-pdf-admin__section-note">
-                            <p><?php printf( wp_kses_post( __( 'Endereco, cidade, estado, CEP e pais sao sincronizados com o WooCommerce. Para alterar esses dados, edite em <a href="%s">WooCommerce > Configuracoes > Geral</a>.', EOP_TEXT_DOMAIN ) ), esc_url( $woo_general_url ) ); ?></p>
+                            <p><?php printf( wp_kses_post( __( 'Nome da loja, endereco, telefone, e-mail e documento compartilham a mesma base do Aireset Default e do WooCommerce. Alterando aqui, o outro plugin e as configuracoes da loja tambem refletem os dados. Voce tambem pode conferir em <a href="%s">WooCommerce > Configuracoes > Geral</a>.', EOP_TEXT_DOMAIN ) ), esc_url( $woo_general_url ) ); ?></p>
                         </div>
                         <div class="eop-pdf-admin__grid">
                             <div class="eop-settings-field is-full">
@@ -240,39 +240,39 @@ $show_context_chrome = ! $embedded;
                                 <input id="eop_shop_name" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_name]" value="<?php echo esc_attr( $pdf_settings['shop_name'] ); ?>" />
                             </div>
                             <div class="eop-settings-field">
-                                <label for="eop_shop_address_line_1"><?php esc_html_e( 'Endereco da loja, linha 1', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_shop_address_line_1" class="eop-settings-field__readonly" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_address_line_1]" value="<?php echo esc_attr( $pdf_settings['shop_address_line_1'] ); ?>" readonly aria-readonly="true" />
+                                <label for="eop_shop_email"><?php esc_html_e( 'E-mail da loja', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_shop_email" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_email]" value="<?php echo esc_attr( $pdf_settings['shop_email'] ); ?>" />
                             </div>
                             <div class="eop-settings-field">
-                                <label for="eop_shop_address_line_2"><?php esc_html_e( 'Endereco da loja, linha 2', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_shop_address_line_2" class="eop-settings-field__readonly" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_address_line_2]" value="<?php echo esc_attr( $pdf_settings['shop_address_line_2'] ); ?>" readonly aria-readonly="true" />
+                                <label for="eop_shop_postcode"><?php esc_html_e( 'Endereco (CEP)', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_shop_postcode" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_postcode]" value="<?php echo esc_attr( $pdf_settings['shop_postcode'] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_shop_address_line_1"><?php esc_html_e( 'Endereco linha 1', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_shop_address_line_1" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_address_line_1]" value="<?php echo esc_attr( $pdf_settings['shop_address_line_1'] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_shop_address_line_2"><?php esc_html_e( 'Endereco linha 2', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_shop_address_line_2" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_address_line_2]" value="<?php echo esc_attr( $pdf_settings['shop_address_line_2'] ); ?>" />
                             </div>
                             <div class="eop-settings-field">
                                 <label for="eop_shop_city"><?php esc_html_e( 'Cidade', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_shop_city" class="eop-settings-field__readonly" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_city]" value="<?php echo esc_attr( $pdf_settings['shop_city'] ); ?>" readonly aria-readonly="true" />
+                                <input id="eop_shop_city" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_city]" value="<?php echo esc_attr( $pdf_settings['shop_city'] ); ?>" />
                             </div>
                             <div class="eop-settings-field">
-                                <label for="eop_shop_state"><?php esc_html_e( 'Estado', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_shop_state" class="eop-settings-field__readonly" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_state]" value="<?php echo esc_attr( $pdf_settings['shop_state'] ); ?>" readonly aria-readonly="true" />
+                                <label for="eop_shop_state"><?php esc_html_e( 'Estado (UF)', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_shop_state" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_state]" value="<?php echo esc_attr( $pdf_settings['shop_state'] ); ?>" />
                             </div>
                             <div class="eop-settings-field">
-                                <label for="eop_shop_postcode"><?php esc_html_e( 'CEP', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_shop_postcode" class="eop-settings-field__readonly" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_postcode]" value="<?php echo esc_attr( $pdf_settings['shop_postcode'] ); ?>" readonly aria-readonly="true" />
-                            </div>
-                            <div class="eop-settings-field">
-                                <label for="eop_shop_country"><?php esc_html_e( 'Pais', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_shop_country" class="eop-settings-field__readonly" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_country]" value="<?php echo esc_attr( $pdf_settings['shop_country'] ); ?>" readonly aria-readonly="true" />
+                                <label for="eop_shop_country"><?php esc_html_e( 'Pais (ISO2)', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_shop_country" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_country]" value="<?php echo esc_attr( $pdf_settings['shop_country'] ); ?>" />
                             </div>
                             <div class="eop-settings-field">
                                 <label for="eop_shop_phone"><?php esc_html_e( 'Telefone da loja', EOP_TEXT_DOMAIN ); ?></label>
                                 <input id="eop_shop_phone" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_phone]" value="<?php echo esc_attr( $pdf_settings['shop_phone'] ); ?>" />
                             </div>
                             <div class="eop-settings-field">
-                                <label for="eop_shop_email"><?php esc_html_e( 'E-mail da loja', EOP_TEXT_DOMAIN ); ?></label>
-                                <input id="eop_shop_email" type="email" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_email]" value="<?php echo esc_attr( $pdf_settings['shop_email'] ); ?>" />
-                            </div>
-                            <div class="eop-settings-field">
-                                <label for="eop_shop_vat_number"><?php esc_html_e( 'Documento / VAT', EOP_TEXT_DOMAIN ); ?></label>
+                                <label for="eop_shop_vat_number"><?php esc_html_e( 'CNPJ / Documento', EOP_TEXT_DOMAIN ); ?></label>
                                 <input id="eop_shop_vat_number" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[shop_vat_number]" value="<?php echo esc_attr( $pdf_settings['shop_vat_number'] ); ?>" />
                             </div>
                             <div class="eop-settings-field">

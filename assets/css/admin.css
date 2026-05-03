@@ -914,6 +914,80 @@ body.eop-admin-spa-screen.is-plugin-fullscreen #wpcontent {
   color: #fff;
 }
 
+.eop-performance-audit {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(0, 3, 75, 0.08);
+  border-radius: 24px;
+  background: linear-gradient(180deg, #fff 0%, #f8faff 100%);
+  box-shadow: 0 18px 40px rgba(15, 37, 87, 0.08);
+}
+
+.eop-performance-audit__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.eop-performance-audit__header h2 {
+  margin: 0 0 6px;
+  padding: 0;
+  border: 0;
+}
+
+.eop-performance-audit__header p {
+  margin: 0;
+  color: #52607a;
+}
+
+.eop-performance-audit__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.eop-performance-audit__summary-card {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid #dfe7fb;
+  border-radius: 16px;
+  background: #f7faff;
+}
+
+.eop-performance-audit__summary-card span {
+  color: #5f6b85;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.eop-performance-audit__summary-card strong {
+  color: #11162f;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.eop-performance-audit__table-wrap {
+  overflow-x: auto;
+}
+
+.eop-performance-audit__table {
+  min-width: 720px;
+}
+
+.eop-performance-audit__table td,
+.eop-performance-audit__table th {
+  vertical-align: top;
+}
+
+.eop-performance-audit__table small {
+  color: #62708b;
+}
+
 .eop-admin-view-main,
 .eop-settings-page--embedded .eop-settings-form,
 .eop-pdf-admin__sidebar,

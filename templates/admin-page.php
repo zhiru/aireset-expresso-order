@@ -3,7 +3,6 @@ defined( 'ABSPATH' ) || exit;
 
 $settings            = EOP_Settings::get_all();
 $font_css            = method_exists( 'EOP_Settings', 'get_font_css_family' ) ? EOP_Settings::get_font_css_family( $settings['font_family'] ) : "'Segoe UI', sans-serif";
-$order_statuses      = function_exists( 'wc_get_order_statuses' ) ? wc_get_order_statuses() : array();
 $initial_view        = EOP_Admin_Page::normalize_view( isset( $_GET['view'] ) ? wp_unslash( $_GET['view'] ) : '' );
 $license_manager     = class_exists( 'EOP_License_Manager' ) ? EOP_License_Manager::get_instance() : null;
 $can_manage_settings = current_user_can( 'manage_options' );
@@ -16,12 +15,18 @@ $pdf_preview_args    = array(
 $general_views = array(
     'settings-store-info',
     'settings-general-config',
-    'settings-confirmation-flow',
     'settings-order-link-style',
     'settings-proposal-link-style',
+    'settings-customer-experience',
     'settings-texts',
 );
+$confirmation_views = array(
+	'settings-confirmation-general',
+	'settings-confirmation-documents',
+	'settings-confirmation-preview',
+);
 $is_general_view = in_array( $initial_view, $general_views, true );
+$is_confirmation_view = in_array( $initial_view, $confirmation_views, true );
 $general_nav_items = array(
     'settings-store-info' => array(
         'label' => __( 'Informacoes sobre a loja', EOP_TEXT_DOMAIN ),
@@ -31,10 +36,6 @@ $general_nav_items = array(
         'label' => __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ),
         'icon'  => 'dashicons-admin-settings',
     ),
-    'settings-confirmation-flow' => array(
-        'label' => __( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ),
-        'icon'  => 'dashicons-yes-alt',
-    ),
     'settings-order-link-style' => array(
         'label' => __( 'Visual do Link do Pedido', EOP_TEXT_DOMAIN ),
         'icon'  => 'dashicons-art',
@@ -43,20 +44,44 @@ $general_nav_items = array(
         'label' => __( 'Visual do Link de Proposta', EOP_TEXT_DOMAIN ),
         'icon'  => 'dashicons-format-image',
     ),
+    'settings-customer-experience' => array(
+        'label' => __( 'Experiencia do Cliente', EOP_TEXT_DOMAIN ),
+        'icon'  => 'dashicons-format-gallery',
+    ),
     'settings-texts' => array(
         'label' => __( 'Textos', EOP_TEXT_DOMAIN ),
         'icon'  => 'dashicons-edit-large',
     ),
 );
+$confirmation_nav_items = array(
+    'settings-confirmation-general' => array(
+        'label' => __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ),
+        'icon'  => 'dashicons-admin-settings',
+    ),
+    'settings-confirmation-documents' => array(
+        'label' => __( 'Documentos', EOP_TEXT_DOMAIN ),
+        'icon'  => 'dashicons-media-document',
+    ),
+    'settings-confirmation-preview' => array(
+        'label' => __( 'Preview', EOP_TEXT_DOMAIN ),
+        'icon'  => 'dashicons-visibility',
+    ),
+);
 $lazy_views = array(
+    'new-order',
+    'orders',
     'pdf',
     'settings-store-info',
     'settings-general-config',
-    'settings-confirmation-flow',
+    'settings-confirmation-general',
+    'settings-confirmation-documents',
+    'settings-confirmation-preview',
     'settings-order-link-style',
     'settings-proposal-link-style',
+    'settings-customer-experience',
     'settings-texts',
     'documentation',
+    'export-import',
     'license',
 );
 $render_lazy_placeholder = static function ( $title ) {
@@ -70,6 +95,15 @@ $render_lazy_placeholder = static function ( $title ) {
     </div>
     <?php
 };
+
+$performance_initial_metrics = class_exists( 'EOP_Performance_Audit' )
+    ? EOP_Performance_Audit::get_request_metrics(
+        'spa_bootstrap',
+        array(
+            'view' => $initial_view,
+        )
+    )
+    : array();
 ?>
 <style>
     .eop-admin-spa {
@@ -139,6 +173,33 @@ $render_lazy_placeholder = static function ( $title ) {
                         </div>
                     </div>
                 <?php endif; ?>
+                <?php if ( $can_manage_settings ) : ?>
+                    <div class="eop-admin-spa-nav__group eop-admin-spa-nav__group--confirmation<?php echo $is_confirmation_view ? ' is-open' : ''; ?>">
+                        <button
+                            type="button"
+                            class="eop-pdv-nav__item eop-admin-spa-nav__item eop-admin-spa-nav__group-toggle<?php echo $is_confirmation_view ? ' is-active' : ''; ?>"
+                            data-eop-nav-toggle="confirmation"
+                            aria-selected="<?php echo $is_confirmation_view ? 'true' : 'false'; ?>"
+                            aria-expanded="<?php echo $is_confirmation_view ? 'true' : 'false'; ?>"
+                        >
+                            <span class="eop-admin-spa-nav__icon dashicons dashicons-yes-alt" aria-hidden="true"></span>
+                            <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ); ?></span>
+                            <span class="eop-admin-spa-nav__group-arrow dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
+                        </button>
+
+                        <div class="eop-admin-spa-nav__submenu"<?php echo $is_confirmation_view ? '' : ' hidden'; ?>>
+                            <?php foreach ( $confirmation_nav_items as $view_key => $nav_item ) : ?>
+                                <button
+                                    type="button"
+                                    class="eop-admin-spa-nav__submenu-item<?php echo $initial_view === $view_key ? ' is-active' : ''; ?>"
+                                    data-eop-view-target="<?php echo esc_attr( $view_key ); ?>"
+                                >
+                                    <span class="eop-admin-spa-nav__submenu-label"><?php echo esc_html( $nav_item['label'] ); ?></span>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
                 <?php if ( ! empty( $pdf_tabs ) ) : ?>
                     <div class="eop-admin-spa-nav__group eop-admin-spa-nav__group--pdf<?php echo 'pdf' === $initial_view ? ' is-open' : ''; ?>">
                         <button
@@ -177,6 +238,10 @@ $render_lazy_placeholder = static function ( $title ) {
                         <span class="eop-admin-spa-nav__icon dashicons dashicons-book-alt" aria-hidden="true"></span>
                         <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Documentacao', EOP_TEXT_DOMAIN ); ?></span>
                     </button>
+                    <button type="button" class="eop-pdv-nav__item eop-admin-spa-nav__item<?php echo 'export-import' === $initial_view ? ' is-active' : ''; ?>" data-eop-view-target="export-import" aria-selected="<?php echo 'export-import' === $initial_view ? 'true' : 'false'; ?>">
+                        <span class="eop-admin-spa-nav__icon dashicons dashicons-migrate" aria-hidden="true"></span>
+                        <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Exportar e Importar', EOP_TEXT_DOMAIN ); ?></span>
+                    </button>
                     <button type="button" class="eop-pdv-nav__item eop-admin-spa-nav__item<?php echo 'license' === $initial_view ? ' is-active' : ''; ?>" data-eop-view-target="license" aria-selected="<?php echo 'license' === $initial_view ? 'true' : 'false'; ?>">
                         <span class="eop-admin-spa-nav__icon dashicons dashicons-admin-network" aria-hidden="true"></span>
                         <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Licenca', EOP_TEXT_DOMAIN ); ?></span>
@@ -188,318 +253,50 @@ $render_lazy_placeholder = static function ( $title ) {
         <div class="eop-admin-spa__content">
             <div id="eop-notices"></div>
 
-            <section class="eop-pdv-view<?php echo 'new-order' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="new-order"<?php echo 'new-order' === $initial_view ? '' : ' hidden'; ?>>
-                <input type="hidden" id="eop-edit-order-id" value="0" />
-
-                <div class="eop-admin-view-header">
-                    <div class="eop-admin-view-copy">
-                        <span class="eop-admin-view-kicker"><?php esc_html_e( 'Operacao comercial', EOP_TEXT_DOMAIN ); ?></span>
-                        <div class="eop-admin-view-title-row">
-                            <h2 class="eop-admin-view-title">
-                                <span class="dashicons dashicons-cart" aria-hidden="true"></span>
-                                <span><?php esc_html_e( 'Novo pedido', EOP_TEXT_DOMAIN ); ?></span>
-                            </h2>
+            <?php if ( $can_manage_settings ) : ?>
+                <section
+                    class="eop-card eop-performance-audit"
+                    id="eop-performance-audit"
+                    data-eop-performance-initial="<?php echo esc_attr( wp_json_encode( $performance_initial_metrics ) ); ?>"
+                >
+                    <div class="eop-performance-audit__header">
+                        <div>
+                            <h2><?php esc_html_e( 'Baseline de performance', EOP_TEXT_DOMAIN ); ?></h2>
+                            <p><?php esc_html_e( 'Auditoria inicial da sessao para medir shell, views lazy, PDF e pedidos antes das proximas fases de otimizacao.', EOP_TEXT_DOMAIN ); ?></p>
                         </div>
-                        <p class="eop-admin-view-desc"><?php esc_html_e( 'Monte o pedido, ajuste cliente, frete e descontos sem sair do fluxo principal do painel.', EOP_TEXT_DOMAIN ); ?></p>
-                    </div>
-                </div>
-
-                <div class="eop-admin-view-main">
-
-                <div class="eop-editing-banner" id="eop-editing-banner" hidden>
-                    <div>
-                        <strong id="eop-editing-title"><?php esc_html_e( 'Editando pedido', EOP_TEXT_DOMAIN ); ?></strong>
-                        <p><?php esc_html_e( 'Voce esta ajustando um pedido existente dentro do painel.', EOP_TEXT_DOMAIN ); ?></p>
-                    </div>
-                    <button type="button" class="eop-btn" id="eop-cancel-edit"><?php esc_html_e( 'Cancelar edicao', EOP_TEXT_DOMAIN ); ?></button>
-                </div>
-
-                <div class="eop-pdv-grid">
-                    <div class="eop-pdv-main">
-                        <div class="eop-card">
-                            <h2><?php esc_html_e( 'Produtos', EOP_TEXT_DOMAIN ); ?></h2>
-                            <div class="eop-item-defaults">
-                                <div class="eop-item-defaults__title"><?php esc_html_e( 'Acoes em massa', EOP_TEXT_DOMAIN ); ?></div>
-                                <div class="eop-field">
-                                    <label for="eop-default-item-quantity"><?php esc_html_e( 'Quantidade', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input type="number" id="eop-default-item-quantity" min="1" step="1" value="1" inputmode="numeric" />
-                                </div>
-                                <div class="eop-field">
-                                    <label for="eop-default-item-discount"><?php esc_html_e( 'Desconto', EOP_TEXT_DOMAIN ); ?></label>
-                                    <div class="eop-item-discount-group eop-item-defaults__discount-group">
-                                        <input type="text" id="eop-default-item-discount" class="eop-discount-text-input" value="" placeholder="" inputmode="decimal" />
-                                        <span class="eop-item-discount-suffix" id="eop-default-item-discount-suffix" hidden></span>
-                                    </div>
-                                </div>
-                                <div class="eop-field eop-item-defaults__action">
-                                    <button type="button" id="eop-apply-item-defaults" class="eop-btn"><?php esc_html_e( 'Aplicar', EOP_TEXT_DOMAIN ); ?></button>
-                                </div>
-                            </div>
-                            <div class="eop-field">
-                                <select id="eop-product-search" style="width:100%"></select>
-                            </div>
-
-                            <div class="eop-items-list" id="eop-items-body">
-                                <div class="eop-items-empty"><?php esc_html_e( 'Nenhum produto adicionado.', EOP_TEXT_DOMAIN ); ?></div>
-                            </div>
-                        </div>
+                        <button type="button" class="button button-secondary" id="eop-performance-clear-session"><?php esc_html_e( 'Limpar baseline da sessao', EOP_TEXT_DOMAIN ); ?></button>
                     </div>
 
-                    <div class="eop-pdv-sidebar">
-                        <div class="eop-card eop-accordion">
-                            <button type="button" class="eop-accordion__toggle" aria-expanded="false">
-                                <h2><?php esc_html_e( 'Cliente (opcional)', EOP_TEXT_DOMAIN ); ?></h2>
-                                <span class="eop-accordion__icon" aria-hidden="true">+</span>
-                            </button>
-                            <div class="eop-accordion__body" hidden>
-                                <div class="eop-field">
-                                    <label for="eop-document"><?php esc_html_e( 'CPF / CNPJ', EOP_TEXT_DOMAIN ); ?></label>
-                                    <div class="eop-input-group">
-                                        <input type="text" id="eop-document" placeholder="000.000.000-00" autocomplete="off" />
-                                        <button type="button" id="eop-search-customer" class="eop-btn"><?php esc_html_e( 'Buscar', EOP_TEXT_DOMAIN ); ?></button>
-                                    </div>
-                                    <span id="eop-customer-status" class="eop-status"></span>
-                                </div>
+                    <div class="eop-performance-audit__summary" id="eop-performance-summary"></div>
 
-                                <input type="hidden" id="eop-user-id" value="0" />
-
-                                <div class="eop-field">
-                                    <label for="eop-name"><?php esc_html_e( 'Nome', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input type="text" id="eop-name" />
-                                </div>
-
-                                <div class="eop-field">
-                                    <label for="eop-email"><?php esc_html_e( 'E-mail', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input type="email" id="eop-email" />
-                                </div>
-
-                                <div class="eop-field">
-                                    <label for="eop-phone"><?php esc_html_e( 'WhatsApp', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input type="tel" id="eop-phone" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="eop-card">
-                            <div class="eop-accordion eop-totals-accordion">
-                                <button type="button" class="eop-accordion__toggle eop-totals-detail-toggle" aria-expanded="false">
-                                    <span><?php esc_html_e( 'Ver detalhes de pagamento', EOP_TEXT_DOMAIN ); ?></span>
-                                    <span class="eop-accordion__icon" aria-hidden="true">+</span>
-                                </button>
-                                <div class="eop-accordion__body" hidden>
-                                    <div class="eop-shipping-box">
-                                        <button type="button" id="eop-shipping-toggle" class="eop-shipping-toggle" aria-expanded="false" aria-controls="eop-shipping-panel">
-                                            <span class="eop-shipping-toggle__copy">
-                                                <strong><?php esc_html_e( 'Entrega e frete', EOP_TEXT_DOMAIN ); ?></strong>
-                                                <small id="eop-shipping-summary"><?php esc_html_e( 'Clique para calcular com o endereco do cliente.', EOP_TEXT_DOMAIN ); ?></small>
-                                            </span>
-                                            <span class="eop-shipping-toggle__icon" aria-hidden="true">+</span>
-                                        </button>
-
-                                        <div class="eop-shipping-panel" id="eop-shipping-panel" hidden>
-                                            <div class="eop-shipping-panel__intro">
-                                                <strong><?php esc_html_e( 'Como funciona', EOP_TEXT_DOMAIN ); ?></strong>
-                                                <p><?php esc_html_e( 'Preencha o CEP para buscar endereco automaticamente, complete o numero e calcule as opcoes de frete.', EOP_TEXT_DOMAIN ); ?></p>
-                                            </div>
-
-                                            <div class="eop-shipping-panel__status" id="eop-shipping-address-status"></div>
-
-                                            <div class="eop-field-row">
-                                                <div class="eop-field">
-                                                    <label for="eop-shipping-postcode"><?php esc_html_e( 'CEP', EOP_TEXT_DOMAIN ); ?></label>
-                                                    <input type="text" id="eop-shipping-postcode" placeholder="00000-000" inputmode="numeric" />
-                                                </div>
-                                                <div class="eop-field">
-                                                    <label for="eop-shipping-state"><?php esc_html_e( 'Estado', EOP_TEXT_DOMAIN ); ?></label>
-                                                    <input type="text" id="eop-shipping-state" placeholder="SP" />
-                                                </div>
-                                            </div>
-
-                                            <div class="eop-field-row">
-                                                <div class="eop-field">
-                                                    <label for="eop-shipping-city"><?php esc_html_e( 'Cidade', EOP_TEXT_DOMAIN ); ?></label>
-                                                    <input type="text" id="eop-shipping-city" />
-                                                </div>
-                                                <div class="eop-field">
-                                                    <label for="eop-shipping-number"><?php esc_html_e( 'Numero', EOP_TEXT_DOMAIN ); ?></label>
-                                                    <input type="text" id="eop-shipping-number" />
-                                                </div>
-                                            </div>
-
-                                            <div class="eop-field">
-                                                <label for="eop-shipping-address"><?php esc_html_e( 'Endereco', EOP_TEXT_DOMAIN ); ?></label>
-                                                <input type="text" id="eop-shipping-address" />
-                                            </div>
-
-                                            <div class="eop-field-row">
-                                                <div class="eop-field">
-                                                    <label for="eop-shipping-neighborhood"><?php esc_html_e( 'Bairro', EOP_TEXT_DOMAIN ); ?></label>
-                                                    <input type="text" id="eop-shipping-neighborhood" />
-                                                </div>
-                                                <div class="eop-field">
-                                                    <label for="eop-shipping-address-2"><?php esc_html_e( 'Complemento', EOP_TEXT_DOMAIN ); ?></label>
-                                                    <input type="text" id="eop-shipping-address-2" />
-                                                </div>
-                                            </div>
-
-                                            <div class="eop-field">
-                                                <button type="button" id="eop-calc-shipping" class="eop-btn eop-btn-primary eop-btn-block"><?php esc_html_e( 'Buscar opcoes de frete', EOP_TEXT_DOMAIN ); ?></button>
-                                            </div>
-
-                                            <div id="eop-shipping-rates" class="eop-shipping-rates"></div>
-                                        </div>
-                                    </div>
-
-                                    <input type="hidden" id="eop-shipping" value="0" />
-
-                                    <div class="eop-field">
-                                        <label for="eop-discount"><?php esc_html_e( 'Desconto geral', EOP_TEXT_DOMAIN ); ?></label>
-                                        <input type="text" id="eop-discount" class="eop-discount-text-input" value="" placeholder="10% ou 10" inputmode="decimal" />
-                                    </div>
-
-                                    <div class="eop-totals">
-                                        <div class="eop-total-row">
-                                            <span><?php esc_html_e( 'Subtotal:', EOP_TEXT_DOMAIN ); ?></span>
-                                            <span id="eop-subtotal">R$ 0,00</span>
-                                        </div>
-                                        <div class="eop-total-row">
-                                            <span><?php esc_html_e( 'Frete:', EOP_TEXT_DOMAIN ); ?></span>
-                                            <span id="eop-shipping-total">R$ 0,00</span>
-                                        </div>
-                                        <div class="eop-total-row">
-                                            <span><?php esc_html_e( 'Desconto:', EOP_TEXT_DOMAIN ); ?></span>
-                                            <span id="eop-discount-total">- R$ 0,00</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="eop-totals-grand-always">
-                                <div class="eop-total-row eop-total-grand">
-                                    <span><?php esc_html_e( 'Total:', EOP_TEXT_DOMAIN ); ?></span>
-                                    <span id="eop-grand-total">R$ 0,00</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="eop-card">
-                            <div class="eop-field">
-                                <label for="eop-status"><?php esc_html_e( 'Status', EOP_TEXT_DOMAIN ); ?></label>
-                                <select id="eop-status">
-                                    <option value="completed"><?php esc_html_e( 'Concluido', EOP_TEXT_DOMAIN ); ?></option>
-                                    <option value="pending"><?php esc_html_e( 'Pendente', EOP_TEXT_DOMAIN ); ?></option>
-                                    <option value="processing"><?php esc_html_e( 'Processando', EOP_TEXT_DOMAIN ); ?></option>
-                                    <option value="on-hold"><?php esc_html_e( 'Aguardando', EOP_TEXT_DOMAIN ); ?></option>
-                                </select>
-                            </div>
-
-                            <button type="button" id="eop-submit" class="eop-btn eop-btn-primary eop-btn-block">
-                                <?php esc_html_e( 'Finalizar e Gerar PDF', EOP_TEXT_DOMAIN ); ?>
-                            </button>
-                        </div>
-
-                        <div class="eop-card eop-post-flow-card" id="eop-post-flow-card">
-                            <div class="eop-post-flow-card__head">
-                                <div>
-                                    <h2><?php esc_html_e( 'Fluxo complementar do cliente', EOP_TEXT_DOMAIN ); ?></h2>
-                                    <p id="eop-post-flow-subtitle"><?php esc_html_e( 'O resumo complementar aparece quando um pedido existente entra em modo de edicao.', EOP_TEXT_DOMAIN ); ?></p>
-                                </div>
-                                <span class="eop-post-flow-badge is-inactive" id="eop-post-flow-badge"><?php esc_html_e( 'Inativo', EOP_TEXT_DOMAIN ); ?></span>
-                            </div>
-
-                            <div class="eop-post-flow-card__stats" id="eop-post-flow-stats"></div>
-
-                            <div class="eop-post-flow-card__section">
-                                <h3><?php esc_html_e( 'Contrato', EOP_TEXT_DOMAIN ); ?></h3>
-                                <p id="eop-post-flow-contract"><?php esc_html_e( 'Nenhum aceite registrado.', EOP_TEXT_DOMAIN ); ?></p>
-                            </div>
-
-                            <div class="eop-post-flow-card__section">
-                                <h3><?php esc_html_e( 'Documentos para assinatura', EOP_TEXT_DOMAIN ); ?></h3>
-                                <div class="eop-post-flow-list" id="eop-post-flow-signature-documents"></div>
-                            </div>
-
-                            <div class="eop-post-flow-card__section">
-                                <h3><?php esc_html_e( 'Dados do pedido', EOP_TEXT_DOMAIN ); ?></h3>
-                                <div class="eop-post-flow-list" id="eop-post-flow-order-data"></div>
-                            </div>
-
-                            <div class="eop-post-flow-card__section">
-                                <h3><?php esc_html_e( 'Anexo', EOP_TEXT_DOMAIN ); ?></h3>
-                                <div class="eop-post-flow-list" id="eop-post-flow-attachment"></div>
-                            </div>
-
-                            <div class="eop-post-flow-card__section">
-                                <h3><?php esc_html_e( 'Produtos', EOP_TEXT_DOMAIN ); ?></h3>
-                                <div class="eop-post-flow-list" id="eop-post-flow-products"></div>
-                            </div>
-
-                            <div class="eop-post-flow-card__actions">
-                                <a class="eop-btn" id="eop-post-flow-public-link" href="#" target="_blank" rel="noopener" hidden><?php esc_html_e( 'Abrir link publico', EOP_TEXT_DOMAIN ); ?></a>
-                                <a class="eop-btn eop-btn-secondary" id="eop-post-flow-pdf-link" href="#" target="_blank" rel="noopener" hidden><?php esc_html_e( 'Baixar PDF complementar', EOP_TEXT_DOMAIN ); ?></a>
-                            </div>
-                        </div>
+                    <div class="eop-performance-audit__table-wrap">
+                        <table class="widefat striped eop-performance-audit__table">
+                            <thead>
+                                <tr>
+                                    <th><?php esc_html_e( 'Fluxo', EOP_TEXT_DOMAIN ); ?></th>
+                                    <th><?php esc_html_e( 'Origem', EOP_TEXT_DOMAIN ); ?></th>
+                                    <th><?php esc_html_e( 'Tempo total', EOP_TEXT_DOMAIN ); ?></th>
+                                    <th><?php esc_html_e( 'PHP', EOP_TEXT_DOMAIN ); ?></th>
+                                    <th><?php esc_html_e( 'Resposta', EOP_TEXT_DOMAIN ); ?></th>
+                                    <th><?php esc_html_e( 'Pico memoria', EOP_TEXT_DOMAIN ); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody id="eop-performance-table-body">
+                                <tr>
+                                    <td colspan="6"><?php esc_html_e( 'Nenhuma medicao registrada ainda nesta sessao.', EOP_TEXT_DOMAIN ); ?></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                </div>
-                </div>
+                </section>
+            <?php endif; ?>
+
+            <section class="eop-pdv-view<?php echo 'new-order' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="new-order" data-eop-lazy="true" data-eop-lazy-loaded="false"<?php echo 'new-order' === $initial_view ? '' : ' hidden'; ?>>
+                <?php $render_lazy_placeholder( __( 'Novo pedido', EOP_TEXT_DOMAIN ) ); ?>
             </section>
 
-            <section class="eop-pdv-view<?php echo 'orders' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="orders"<?php echo 'orders' === $initial_view ? '' : ' hidden'; ?>>
-                <div class="eop-admin-view-header">
-                    <div class="eop-admin-view-copy">
-                        <span class="eop-admin-view-kicker"><?php esc_html_e( 'Gestao comercial', EOP_TEXT_DOMAIN ); ?></span>
-                        <div class="eop-admin-view-title-row">
-                            <h2 class="eop-admin-view-title">
-                                <span class="dashicons dashicons-list-view" aria-hidden="true"></span>
-                                <span><?php esc_html_e( 'Pedidos', EOP_TEXT_DOMAIN ); ?></span>
-                            </h2>
-                        </div>
-                        <p class="eop-admin-view-desc"><?php esc_html_e( 'Acompanhe pedidos e propostas da equipe comercial com os atalhos principais do fluxo.', EOP_TEXT_DOMAIN ); ?></p>
-                    </div>
-                </div>
-
-                <div class="eop-admin-view-main">
-                <div class="eop-orders-browser">
-                    <div class="eop-card eop-orders-browser__controls">
-                        <div class="eop-orders-browser__top">
-                            <div>
-                                <h2><?php esc_html_e( 'Pedidos criados', EOP_TEXT_DOMAIN ); ?></h2>
-                                <p><?php esc_html_e( 'Acompanhe propostas e pedidos sem sair da tela de vendas.', EOP_TEXT_DOMAIN ); ?></p>
-                            </div>
-                            <button type="button" class="eop-btn" id="eop-orders-refresh"><?php esc_html_e( 'Atualizar', EOP_TEXT_DOMAIN ); ?></button>
-                        </div>
-
-                        <div class="eop-orders-browser__filters">
-                            <div class="eop-field">
-                                <label for="eop-orders-search"><?php esc_html_e( 'Buscar', EOP_TEXT_DOMAIN ); ?></label>
-                                <input type="search" id="eop-orders-search" placeholder="<?php esc_attr_e( 'Pedido, cliente ou e-mail', EOP_TEXT_DOMAIN ); ?>" />
-                            </div>
-                            <div class="eop-field">
-                                <label for="eop-orders-status-filter"><?php esc_html_e( 'Status', EOP_TEXT_DOMAIN ); ?></label>
-                                <select id="eop-orders-status-filter">
-                                    <option value="any"><?php esc_html_e( 'Todos', EOP_TEXT_DOMAIN ); ?></option>
-                                    <?php foreach ( $order_statuses as $status_key => $status_label ) : ?>
-                                        <option value="<?php echo esc_attr( str_replace( 'wc-', '', $status_key ) ); ?>"><?php echo esc_html( $status_label ); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="eop-field">
-                                <label for="eop-orders-flow-filter"><?php esc_html_e( 'Fluxo complementar', EOP_TEXT_DOMAIN ); ?></label>
-                                <select id="eop-orders-flow-filter">
-                                    <option value="any"><?php esc_html_e( 'Todos', EOP_TEXT_DOMAIN ); ?></option>
-                                    <option value="active"><?php esc_html_e( 'Com fluxo ativo', EOP_TEXT_DOMAIN ); ?></option>
-                                    <option value="pending"><?php esc_html_e( 'Pendentes', EOP_TEXT_DOMAIN ); ?></option>
-                                    <option value="completed"><?php esc_html_e( 'Concluidos', EOP_TEXT_DOMAIN ); ?></option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="eop-orders-browser__summary" id="eop-orders-summary"></div>
-                    <div class="eop-orders-browser__list" id="eop-orders-list"></div>
-                    <div class="eop-orders-browser__pagination" id="eop-orders-pagination"></div>
-                </div>
-                </div>
+            <section class="eop-pdv-view<?php echo 'orders' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="orders" data-eop-lazy="true" data-eop-lazy-loaded="false"<?php echo 'orders' === $initial_view ? '' : ' hidden'; ?>>
+                <?php $render_lazy_placeholder( __( 'Pedidos', EOP_TEXT_DOMAIN ) ); ?>
             </section>
 
             <section class="eop-pdv-view<?php echo 'pdf' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="pdf" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'pdf' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'pdf' === $initial_view ? '' : ' hidden'; ?>>
@@ -549,16 +346,44 @@ $render_lazy_placeholder = static function ( $title ) {
                     </div>
                 </section>
 
-                <section class="eop-pdv-view<?php echo 'settings-confirmation-flow' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-confirmation-flow" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-confirmation-flow' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-confirmation-flow' === $initial_view ? '' : ' hidden'; ?>>
+                <section class="eop-pdv-view<?php echo 'settings-confirmation-general' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-confirmation-general" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-confirmation-general' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-confirmation-general' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
-                        <h2><?php esc_html_e( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ); ?></h2>
-                        <p><?php esc_html_e( 'Edite a jornada complementar apos a proposta em uma tela propria, com contrato, anexos e personalizacao.', EOP_TEXT_DOMAIN ); ?></p>
+						<h2><?php esc_html_e( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ); ?></h2>
+                        <p><?php esc_html_e( 'Controle regras gerais, aceite, upload, personalizacao e conclusao do fluxo complementar.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
-                    <?php if ( 'settings-confirmation-flow' === $initial_view ) : ?>
-                        <?php EOP_Settings::render_embedded_page( 'confirmation-flow' ); ?>
+                    <?php if ( 'settings-confirmation-general' === $initial_view ) : ?>
+                        <?php EOP_Settings::render_embedded_page( 'confirmation-flow-general' ); ?>
                     <?php else : ?>
-                        <?php $render_lazy_placeholder( __( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ) ); ?>
+                        <?php $render_lazy_placeholder( __( 'Fluxo de Confirmacao - Geral', EOP_TEXT_DOMAIN ) ); ?>
+                    <?php endif; ?>
+                    </div>
+                </section>
+
+                <section class="eop-pdv-view<?php echo 'settings-confirmation-documents' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-confirmation-documents" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-confirmation-documents' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-confirmation-documents' === $initial_view ? '' : ' hidden'; ?>>
+                    <div class="eop-admin-panel-head">
+                        <h2><?php esc_html_e( 'Documentos', EOP_TEXT_DOMAIN ); ?></h2>
+                        <p><?php esc_html_e( 'Gerencie a listagem de documentos do contrato com cadastro, edicao e arquivos para conversao automatica.', EOP_TEXT_DOMAIN ); ?></p>
+                    </div>
+                    <div class="eop-admin-view-main">
+                    <?php if ( 'settings-confirmation-documents' === $initial_view ) : ?>
+                        <?php EOP_Settings::render_embedded_page( 'confirmation-flow-documents' ); ?>
+                    <?php else : ?>
+                        <?php $render_lazy_placeholder( __( 'Fluxo de Confirmacao - Documentos', EOP_TEXT_DOMAIN ) ); ?>
+                    <?php endif; ?>
+                    </div>
+                </section>
+
+                <section class="eop-pdv-view<?php echo 'settings-confirmation-preview' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-confirmation-preview" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-confirmation-preview' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-confirmation-preview' === $initial_view ? '' : ' hidden'; ?>>
+                    <div class="eop-admin-panel-head">
+						<h2><?php esc_html_e( 'Preview', EOP_TEXT_DOMAIN ); ?></h2>
+                        <p><?php esc_html_e( 'Ajuste o visual da etapa contratual com uma leitura previa da pagina publica.', EOP_TEXT_DOMAIN ); ?></p>
+                    </div>
+                    <div class="eop-admin-view-main">
+                    <?php if ( 'settings-confirmation-preview' === $initial_view ) : ?>
+                        <?php EOP_Settings::render_embedded_page( 'confirmation-flow-preview' ); ?>
+                    <?php else : ?>
+                        <?php $render_lazy_placeholder( __( 'Fluxo de Confirmacao - Preview', EOP_TEXT_DOMAIN ) ); ?>
                     <?php endif; ?>
                     </div>
                 </section>
@@ -591,6 +416,20 @@ $render_lazy_placeholder = static function ( $title ) {
                     </div>
                 </section>
 
+                <section class="eop-pdv-view<?php echo 'settings-customer-experience' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-customer-experience" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-customer-experience' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-customer-experience' === $initial_view ? '' : ' hidden'; ?>>
+                    <div class="eop-admin-panel-head">
+                        <h2><?php esc_html_e( 'Experiencia do Cliente', EOP_TEXT_DOMAIN ); ?></h2>
+                        <p><?php esc_html_e( 'Separe o design da pagina confirmada e do fluxo complementar em uma view exclusiva dentro da SPA.', EOP_TEXT_DOMAIN ); ?></p>
+                    </div>
+                    <div class="eop-admin-view-main">
+                    <?php if ( 'settings-customer-experience' === $initial_view ) : ?>
+                        <?php EOP_Settings::render_embedded_page( 'customer-experience' ); ?>
+                    <?php else : ?>
+                        <?php $render_lazy_placeholder( __( 'Experiencia do Cliente', EOP_TEXT_DOMAIN ) ); ?>
+                    <?php endif; ?>
+                    </div>
+                </section>
+
                 <section class="eop-pdv-view<?php echo 'settings-texts' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-texts" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-texts' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-texts' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
                         <h2><?php esc_html_e( 'Textos e mensagens', EOP_TEXT_DOMAIN ); ?></h2>
@@ -615,6 +454,20 @@ $render_lazy_placeholder = static function ( $title ) {
                         <?php EOP_PDF_Admin_Page::render_embedded_page( 'documentation' ); ?>
                     <?php else : ?>
                         <?php $render_lazy_placeholder( __( 'Documentacao', EOP_TEXT_DOMAIN ) ); ?>
+                    <?php endif; ?>
+                    </div>
+                </section>
+
+                <section class="eop-pdv-view<?php echo 'export-import' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="export-import" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'export-import' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'export-import' === $initial_view ? '' : ' hidden'; ?>>
+                    <div class="eop-admin-panel-head">
+                        <h2><?php esc_html_e( 'Exportar e Importar', EOP_TEXT_DOMAIN ); ?></h2>
+                        <p><?php esc_html_e( 'Centralize backup, restauracao e importacao de documentos do fluxo complementar em uma area propria da SPA.', EOP_TEXT_DOMAIN ); ?></p>
+                    </div>
+                    <div class="eop-admin-view-main">
+                    <?php if ( 'export-import' === $initial_view ) : ?>
+                        <?php if ( class_exists( 'EOP_Settings_Portability' ) ) { EOP_Settings_Portability::render_page(); } ?>
+                    <?php else : ?>
+                        <?php $render_lazy_placeholder( __( 'Exportar e Importar', EOP_TEXT_DOMAIN ) ); ?>
                     <?php endif; ?>
                     </div>
                 </section>

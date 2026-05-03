@@ -33,6 +33,31 @@ class EOP_Settings {
             'proposal_text_size'          => '16',
             'border_radius'               => '18',
             'font_family'                 => 'Montserrat:400,700',
+            'customer_experience_font_family' => 'Montserrat:400,700',
+            'customer_experience_background_color' => '#edf2fb',
+            'customer_experience_hero_background_color' => '#0f1b35',
+            'customer_experience_panel_background_color' => '#ffffff',
+            'customer_experience_sidebar_background_color' => '#f6f8fc',
+            'customer_experience_accent_color' => '#d78a2f',
+            'customer_experience_text_color' => '#16243a',
+            'customer_experience_muted_color' => '#66768d',
+            'customer_experience_title_size' => '46',
+            'customer_experience_text_size' => '16',
+            'customer_experience_eyebrow' => 'Experiencia do cliente',
+            'customer_experience_title' => 'Sua proposta esta pronta para seguir',
+            'customer_experience_description' => 'Confira os detalhes finais, valide os documentos e conclua a etapa atual em uma unica jornada.',
+            'customer_experience_total_label' => 'Investimento aprovado',
+            'customer_experience_total_note' => 'Assim que a etapa atual for concluida, o pedido segue para o time responsavel.',
+            'customer_experience_items_eyebrow' => '',
+            'customer_experience_items_title' => 'Itens',
+            'customer_experience_summary_eyebrow' => 'Contexto rapido',
+            'customer_experience_summary_title' => 'Visao do pedido',
+            'customer_experience_financial_eyebrow' => '',
+            'customer_experience_financial_title' => 'Resumo',
+            'customer_experience_actions_eyebrow' => 'Proxima acao',
+            'customer_experience_actions_title' => 'Como seguir agora',
+            'customer_experience_progress_label' => 'Mapa da jornada',
+            'customer_experience_progress_note' => 'As proximas etapas sao liberadas em sequencia para evitar retrabalho.',
             'panel_title'                 => 'Pedido Expresso',
             'panel_subtitle'              => 'Monte o pedido, gere a proposta e compartilhe com o cliente.',
             'proposal_title'              => 'Sua proposta esta pronta',
@@ -80,6 +105,20 @@ class EOP_Settings {
 
     public static function get_post_confirmation_document_slots() {
         return array();
+    }
+
+    public static function get_confirmation_flow_preview_data( $settings = array() ) {
+        $settings = is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
+
+        if ( class_exists( 'EOP_Post_Confirmation_Flow' ) && method_exists( 'EOP_Post_Confirmation_Flow', 'get_admin_contract_preview_payload' ) ) {
+            return EOP_Post_Confirmation_Flow::get_admin_contract_preview_payload( $settings );
+        }
+
+        return array(
+            'document_count'       => 0,
+            'additional_documents' => 0,
+            'primary_document'     => array(),
+        );
     }
 
     public static function get_post_confirmation_document_fields( $settings = array() ) {
@@ -257,6 +296,31 @@ class EOP_Settings {
             'proposal_text_size'           => (string) max( 12, min( 24, absint( $input['proposal_text_size'] ?? $defaults['proposal_text_size'] ) ) ),
             'border_radius'                => (string) max( 0, min( 48, absint( $input['border_radius'] ?? $defaults['border_radius'] ) ) ),
             'font_family'                  => self::sanitize_font_family( $input['font_family'] ?? $defaults['font_family'], $defaults['font_family'] ),
+            'customer_experience_font_family' => self::sanitize_font_family( $input['customer_experience_font_family'] ?? $defaults['customer_experience_font_family'], $defaults['customer_experience_font_family'] ),
+            'customer_experience_background_color' => self::sanitize_color( $input['customer_experience_background_color'] ?? $defaults['customer_experience_background_color'], $defaults['customer_experience_background_color'] ),
+            'customer_experience_hero_background_color' => self::sanitize_color( $input['customer_experience_hero_background_color'] ?? $defaults['customer_experience_hero_background_color'], $defaults['customer_experience_hero_background_color'] ),
+            'customer_experience_panel_background_color' => self::sanitize_color( $input['customer_experience_panel_background_color'] ?? $defaults['customer_experience_panel_background_color'], $defaults['customer_experience_panel_background_color'] ),
+            'customer_experience_sidebar_background_color' => self::sanitize_color( $input['customer_experience_sidebar_background_color'] ?? $defaults['customer_experience_sidebar_background_color'], $defaults['customer_experience_sidebar_background_color'] ),
+            'customer_experience_accent_color' => self::sanitize_color( $input['customer_experience_accent_color'] ?? $defaults['customer_experience_accent_color'], $defaults['customer_experience_accent_color'] ),
+            'customer_experience_text_color' => self::sanitize_color( $input['customer_experience_text_color'] ?? $defaults['customer_experience_text_color'], $defaults['customer_experience_text_color'] ),
+            'customer_experience_muted_color' => self::sanitize_color( $input['customer_experience_muted_color'] ?? $defaults['customer_experience_muted_color'], $defaults['customer_experience_muted_color'] ),
+            'customer_experience_title_size' => (string) max( 24, min( 76, absint( $input['customer_experience_title_size'] ?? $defaults['customer_experience_title_size'] ) ) ),
+            'customer_experience_text_size' => (string) max( 13, min( 24, absint( $input['customer_experience_text_size'] ?? $defaults['customer_experience_text_size'] ) ) ),
+            'customer_experience_eyebrow' => sanitize_text_field( $input['customer_experience_eyebrow'] ?? $defaults['customer_experience_eyebrow'] ),
+            'customer_experience_title' => sanitize_text_field( $input['customer_experience_title'] ?? $defaults['customer_experience_title'] ),
+            'customer_experience_description' => sanitize_textarea_field( $input['customer_experience_description'] ?? $defaults['customer_experience_description'] ),
+            'customer_experience_total_label' => sanitize_text_field( $input['customer_experience_total_label'] ?? $defaults['customer_experience_total_label'] ),
+            'customer_experience_total_note' => sanitize_textarea_field( $input['customer_experience_total_note'] ?? $defaults['customer_experience_total_note'] ),
+            'customer_experience_items_eyebrow' => sanitize_text_field( $input['customer_experience_items_eyebrow'] ?? $defaults['customer_experience_items_eyebrow'] ),
+            'customer_experience_items_title' => sanitize_text_field( $input['customer_experience_items_title'] ?? $defaults['customer_experience_items_title'] ),
+            'customer_experience_summary_eyebrow' => sanitize_text_field( $input['customer_experience_summary_eyebrow'] ?? $defaults['customer_experience_summary_eyebrow'] ),
+            'customer_experience_summary_title' => sanitize_text_field( $input['customer_experience_summary_title'] ?? $defaults['customer_experience_summary_title'] ),
+            'customer_experience_financial_eyebrow' => sanitize_text_field( $input['customer_experience_financial_eyebrow'] ?? $defaults['customer_experience_financial_eyebrow'] ),
+            'customer_experience_financial_title' => sanitize_text_field( $input['customer_experience_financial_title'] ?? $defaults['customer_experience_financial_title'] ),
+            'customer_experience_actions_eyebrow' => sanitize_text_field( $input['customer_experience_actions_eyebrow'] ?? $defaults['customer_experience_actions_eyebrow'] ),
+            'customer_experience_actions_title' => sanitize_text_field( $input['customer_experience_actions_title'] ?? $defaults['customer_experience_actions_title'] ),
+            'customer_experience_progress_label' => sanitize_text_field( $input['customer_experience_progress_label'] ?? $defaults['customer_experience_progress_label'] ),
+            'customer_experience_progress_note' => sanitize_textarea_field( $input['customer_experience_progress_note'] ?? $defaults['customer_experience_progress_note'] ),
             'panel_title'                  => sanitize_text_field( $input['panel_title'] ?? $defaults['panel_title'] ),
             'panel_subtitle'               => sanitize_textarea_field( $input['panel_subtitle'] ?? $defaults['panel_subtitle'] ),
             'proposal_title'               => sanitize_text_field( $input['proposal_title'] ?? $defaults['proposal_title'] ),
@@ -402,21 +466,24 @@ class EOP_Settings {
             'locked_no_results'            => __( 'Nenhum produto encontrado.', EOP_TEXT_DOMAIN ),
             'document_add'                 => __( 'Adicionar documento', EOP_TEXT_DOMAIN ),
             'document_remove'              => __( 'Remover documento', EOP_TEXT_DOMAIN ),
-            'document_media_title'         => __( 'Selecionar PDF do documento', EOP_TEXT_DOMAIN ),
-            'document_media_button'        => __( 'Usar este PDF', EOP_TEXT_DOMAIN ),
-            'document_pdf_empty'           => __( 'Nenhum PDF anexado ainda.', EOP_TEXT_DOMAIN ),
-            'document_select_pdf'          => __( 'Selecionar PDF', EOP_TEXT_DOMAIN ),
-            'document_change_pdf'          => __( 'Trocar PDF', EOP_TEXT_DOMAIN ),
+            'document_media_title'         => __( 'Selecionar arquivo do documento', EOP_TEXT_DOMAIN ),
+            'document_media_button'        => __( 'Usar este arquivo', EOP_TEXT_DOMAIN ),
+            'document_pdf_empty'           => __( 'Nenhum arquivo anexado ainda.', EOP_TEXT_DOMAIN ),
+            'document_select_pdf'          => __( 'Selecionar arquivo', EOP_TEXT_DOMAIN ),
+            'document_change_pdf'          => __( 'Trocar arquivo', EOP_TEXT_DOMAIN ),
             'document_editor_placeholder'  => __( 'Escreva ou cole aqui o texto completo do documento. A formatacao sera preservada no PDF gerado.', EOP_TEXT_DOMAIN ),
             'document_type_editor'         => __( 'Texto formatado', EOP_TEXT_DOMAIN ),
-            'document_type_attachment'     => __( 'PDF anexado', EOP_TEXT_DOMAIN ),
+            'document_type_attachment'     => __( 'Arquivo anexado', EOP_TEXT_DOMAIN ),
             'document_title_label'         => __( 'Titulo do documento', EOP_TEXT_DOMAIN ),
             'document_description_label'   => __( 'Descricao curta', EOP_TEXT_DOMAIN ),
             'document_source_label'        => __( 'Origem do documento', EOP_TEXT_DOMAIN ),
             'document_body_label'          => __( 'Conteudo do documento', EOP_TEXT_DOMAIN ),
-            'document_attachment_label'    => __( 'Arquivo PDF base', EOP_TEXT_DOMAIN ),
-            'document_visual_label'        => __( 'Botao de visualizacao', EOP_TEXT_DOMAIN ),
-            'document_download_label'      => __( 'Botao de download', EOP_TEXT_DOMAIN ),
+            'document_attachment_label'    => __( 'Arquivo base (PDF, DOC ou DOCX)', EOP_TEXT_DOMAIN ),
+			'document_edit'                => __( 'Editar documento', EOP_TEXT_DOMAIN ),
+			'document_close'               => __( 'Fechar edicao', EOP_TEXT_DOMAIN ),
+			'document_new_title'           => __( 'Novo documento', EOP_TEXT_DOMAIN ),
+			'document_summary_editor'      => __( 'Texto editavel com placeholders e formatacao preservada na geracao.', EOP_TEXT_DOMAIN ),
+			'document_summary_attachment'  => __( 'Arquivo base pronto para gerar o documento final no pedido.', EOP_TEXT_DOMAIN ),
         );
     }
 
@@ -519,13 +586,14 @@ class EOP_Settings {
         $legacy_map = array(
             'settings'        => 'general-config',
             'settings-styles' => 'order-link-style',
+            'confirmation-flow' => 'confirmation-flow-general',
         );
 
         if ( isset( $legacy_map[ $section ] ) ) {
             $section = $legacy_map[ $section ];
         }
 
-        $allowed = array( 'all', 'general', 'general-config', 'confirmation-flow', 'styles', 'order-link-style', 'proposal-link-style', 'texts' );
+        $allowed = array( 'all', 'general', 'general-config', 'confirmation-flow-general', 'confirmation-flow-documents', 'confirmation-flow-preview', 'styles', 'order-link-style', 'proposal-link-style', 'customer-experience', 'texts' );
 
         return in_array( $section, $allowed, true ) ? $section : 'all';
     }
@@ -535,8 +603,8 @@ class EOP_Settings {
         $section_key    = sanitize_key( (string) $section_key );
 
         $section_groups = array(
-            'general' => array( 'general-config', 'confirmation-flow' ),
-            'styles'  => array( 'order-link-style', 'proposal-link-style' ),
+            'general' => array( 'general-config', 'confirmation-flow-general', 'confirmation-flow-documents', 'confirmation-flow-preview' ),
+            'styles'  => array( 'order-link-style', 'proposal-link-style', 'customer-experience' ),
         );
 
         if ( 'all' === $active_section || $active_section === $section_key ) {
@@ -548,6 +616,139 @@ class EOP_Settings {
         }
 
         return false;
+    }
+
+    private static function render_signature_document_item( $index, $document ) {
+        $index           = absint( $index );
+        $document        = is_array( $document ) ? $document : array();
+        $title           = (string) ( $document['title'] ?? '' );
+        $source_type     = in_array( $document['source_type'] ?? 'editor', array( 'editor', 'attachment' ), true ) ? $document['source_type'] : 'editor';
+        $attachment_id   = absint( $document['attachment_id'] ?? 0 );
+        $attachment_name = $attachment_id > 0 ? get_the_title( $attachment_id ) : '';
+        $body_id         = 'eop_signature_document_body_' . $index;
+        ?>
+        <div class="eop-signature-document" data-signature-document data-index="<?php echo esc_attr( $index ); ?>">
+            <div class="eop-signature-document__header">
+                <div>
+                    <span class="eop-signature-document__eyebrow"><?php echo esc_html( sprintf( __( 'Documento %d', EOP_TEXT_DOMAIN ), $index + 1 ) ); ?></span>
+                    <strong class="eop-signature-document__heading"><?php echo esc_html( '' !== $title ? $title : __( 'Novo documento', EOP_TEXT_DOMAIN ) ); ?></strong>
+                </div>
+                <button type="button" class="button-link-delete eop-signature-document__remove" data-signature-document-remove><?php esc_html_e( 'Excluir', EOP_TEXT_DOMAIN ); ?></button>
+            </div>
+            <div class="eop-signature-document__grid">
+                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][key]" value="<?php echo esc_attr( $document['key'] ?? '' ); ?>" />
+                <div class="eop-settings-field">
+                    <label><?php esc_html_e( 'Titulo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                    <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][title]" value="<?php echo esc_attr( $title ); ?>" />
+                </div>
+                <div class="eop-settings-field">
+                    <label><?php esc_html_e( 'Tipo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                    <select name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][source_type]" data-signature-document-source>
+                        <option value="editor" <?php selected( $source_type, 'editor' ); ?>><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></option>
+                        <option value="attachment" <?php selected( $source_type, 'attachment' ); ?>><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></option>
+                    </select>
+                </div>
+                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][description]" value="<?php echo esc_attr( $document['description'] ?? '' ); ?>" />
+                <div class="eop-settings-field is-full eop-signature-document__panel<?php echo 'attachment' === $source_type ? '' : ' is-hidden'; ?>" data-signature-document-panel="attachment">
+                    <label><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                    <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][attachment_id]" value="<?php echo esc_attr( $attachment_id ); ?>" data-signature-document-attachment-id />
+                    <div class="eop-signature-document__attachment-shell">
+                        <div class="eop-signature-document__attachment-name" data-signature-document-attachment-name><?php echo esc_html( $attachment_name ? $attachment_name : __( 'Nenhum arquivo anexado ainda.', EOP_TEXT_DOMAIN ) ); ?></div>
+                        <div class="eop-signature-document__attachment-actions">
+                            <button type="button" class="button button-secondary" data-signature-document-attachment-select><?php echo $attachment_name ? esc_html__( 'Trocar arquivo', EOP_TEXT_DOMAIN ) : esc_html__( 'Selecionar arquivo', EOP_TEXT_DOMAIN ); ?></button>
+                            <button type="button" class="button-link-delete<?php echo $attachment_name ? '' : ' is-hidden'; ?>" data-signature-document-attachment-remove><?php esc_html_e( 'Remover arquivo', EOP_TEXT_DOMAIN ); ?></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="eop-settings-field is-full eop-signature-document__panel<?php echo 'editor' === $source_type ? '' : ' is-hidden'; ?>" data-signature-document-panel="editor">
+                    <label><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                    <textarea id="<?php echo esc_attr( $body_id ); ?>" class="eop-signature-document__editor" data-signature-document-editor name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][body]"><?php echo esc_textarea( $document['body'] ?? '' ); ?></textarea>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    private static function render_confirmation_documents_section( $signature_documents ) {
+        $signature_documents = is_array( $signature_documents ) ? array_values( $signature_documents ) : array();
+        ?>
+        <section class="eop-settings-card eop-signature-documents-card">
+            <h2><?php esc_html_e( 'Documentos do contrato', EOP_TEXT_DOMAIN ); ?></h2>
+            <p><?php esc_html_e( 'Use uma listagem clara para cadastrar, revisar e editar os documentos do fluxo. Cada item pode ser texto livre, PDF pronto, DOC ou DOCX.', EOP_TEXT_DOMAIN ); ?></p>
+            <div class="eop-signature-documents" data-signature-documents data-option-key="<?php echo esc_attr( self::OPTION_KEY ); ?>" data-next-index="<?php echo esc_attr( count( $signature_documents ) ); ?>">
+                <div class="eop-signature-documents__toolbar">
+                    <div class="eop-signature-documents__intro">
+                        <span><?php esc_html_e( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ); ?></span>
+                        <h3><?php esc_html_e( 'Listagem de documentos', EOP_TEXT_DOMAIN ); ?></h3>
+                        <p><?php esc_html_e( 'Cada documento aparece como um card. Escolha se ele sera escrito no editor ou enviado como arquivo.', EOP_TEXT_DOMAIN ); ?></p>
+                    </div>
+                    <button type="button" class="button eop-signature-documents__create" data-signature-document-add><?php esc_html_e( 'Cadastrar documento', EOP_TEXT_DOMAIN ); ?></button>
+                </div>
+                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__sentinel]" value="1" />
+                <div class="eop-signature-documents__empty<?php echo ! empty( $signature_documents ) ? ' is-hidden' : ''; ?>" data-signature-documents-empty>
+                    <strong><?php esc_html_e( 'Nenhum documento cadastrado ainda.', EOP_TEXT_DOMAIN ); ?></strong>
+                    <p><?php esc_html_e( 'Clique em cadastrar documento para criar o primeiro item do fluxo contratual.', EOP_TEXT_DOMAIN ); ?></p>
+                </div>
+                <div class="eop-signature-documents__list" data-signature-documents-list>
+                    <?php foreach ( $signature_documents as $index => $document ) : ?>
+                        <?php self::render_signature_document_item( $index, $document ); ?>
+                    <?php endforeach; ?>
+                </div>
+                <script type="text/template" id="eop-signature-document-template">
+                    <div class="eop-signature-document" data-signature-document data-index="__INDEX__">
+                        <div class="eop-signature-document__header">
+                            <div>
+                                <span class="eop-signature-document__eyebrow"><?php esc_html_e( 'Novo documento', EOP_TEXT_DOMAIN ); ?></span>
+                                <strong class="eop-signature-document__heading"><?php esc_html_e( 'Novo documento', EOP_TEXT_DOMAIN ); ?></strong>
+                            </div>
+                            <button type="button" class="button-link-delete eop-signature-document__remove" data-signature-document-remove><?php esc_html_e( 'Excluir', EOP_TEXT_DOMAIN ); ?></button>
+                        </div>
+                        <div class="eop-signature-document__grid">
+                            <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][key]" value="" />
+                            <div class="eop-settings-field">
+                                <label><?php esc_html_e( 'Titulo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                                <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][title]" value="" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label><?php esc_html_e( 'Tipo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                                <select name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][source_type]" data-signature-document-source>
+                                    <option value="editor"><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="attachment"><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></option>
+                                </select>
+                            </div>
+                            <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][description]" value="" />
+                            <div class="eop-settings-field is-full eop-signature-document__panel is-hidden" data-signature-document-panel="attachment">
+                                <label><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][attachment_id]" value="" data-signature-document-attachment-id />
+                                <div class="eop-signature-document__attachment-shell">
+                                    <div class="eop-signature-document__attachment-name" data-signature-document-attachment-name><?php esc_html_e( 'Nenhum arquivo anexado ainda.', EOP_TEXT_DOMAIN ); ?></div>
+                                    <div class="eop-signature-document__attachment-actions">
+                                        <button type="button" class="button button-secondary" data-signature-document-attachment-select><?php esc_html_e( 'Selecionar arquivo', EOP_TEXT_DOMAIN ); ?></button>
+                                        <button type="button" class="button-link-delete is-hidden" data-signature-document-attachment-remove><?php esc_html_e( 'Remover arquivo', EOP_TEXT_DOMAIN ); ?></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="eop-settings-field is-full eop-signature-document__panel" data-signature-document-panel="editor">
+                                <label><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                                <textarea id="eop_signature_document_body___INDEX__" class="eop-signature-document__editor" data-signature-document-editor name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][body]"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </script>
+                <small class="eop-settings-help"><?php esc_html_e( 'Arquivos Word sao convertidos em PDF quando o documento for gerado para o pedido.', EOP_TEXT_DOMAIN ); ?></small>
+                <?php if ( class_exists( 'EOP_Post_Confirmation_Flow' ) && method_exists( 'EOP_Post_Confirmation_Flow', 'get_contract_placeholder_tokens' ) ) : ?>
+                    <small class="eop-settings-help">
+                        <?php
+                        printf(
+                            esc_html__( 'Placeholders disponiveis: %s', EOP_TEXT_DOMAIN ),
+                            esc_html( implode( ', ', EOP_Post_Confirmation_Flow::get_contract_placeholder_tokens() ) )
+                        );
+                        ?>
+                    </small>
+                <?php endif; ?>
+            </div>
+        </section>
+        <?php
     }
 
     public static function render_page() {
@@ -568,11 +769,20 @@ class EOP_Settings {
             wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
         }
 
-        $section  = self::normalize_admin_section( $section );
-        $settings = self::get_all();
-        $pages    = get_pages();
-        $locked_selector = self::get_post_confirmation_locked_product_selector_state( $settings );
-        $signature_documents = self::get_post_confirmation_contract_documents( $settings );
+        $section                        = self::normalize_admin_section( $section );
+        $settings                       = self::get_all();
+        $should_render_general_config   = self::should_render_admin_section( $section, 'general-config' );
+        $should_render_confirmation_general = self::should_render_admin_section( $section, 'confirmation-flow-general' );
+        $should_render_confirmation_documents = self::should_render_admin_section( $section, 'confirmation-flow-documents' );
+        $should_render_confirmation_preview = self::should_render_admin_section( $section, 'confirmation-flow-preview' );
+        $pages                          = $should_render_general_config ? get_pages() : array();
+        $locked_selector                = $should_render_confirmation_general ? self::get_post_confirmation_locked_product_selector_state( $settings ) : array(
+            'options'          => array(),
+            'missing_tokens'   => array(),
+            'serialized_value' => '',
+        );
+        $signature_documents            = ( $should_render_confirmation_general || $should_render_confirmation_documents || $should_render_confirmation_preview ) ? self::get_post_confirmation_contract_documents( $settings ) : array();
+        $confirmation_preview           = $should_render_confirmation_preview ? self::get_confirmation_flow_preview_data( $settings ) : array();
         ?>
         <div class="eop-settings-page eop-settings-page--embedded">
             <form method="post" action="options.php" class="eop-settings-form">
@@ -676,10 +886,10 @@ class EOP_Settings {
 
                         <?php endif; ?>
 
-                        <?php if ( self::should_render_admin_section( $section, 'confirmation-flow' ) ) : ?>
+                        <?php if ( $should_render_confirmation_general ) : ?>
                         <section class="eop-settings-card">
                             <h2><?php esc_html_e( 'Fluxo complementar apos a proposta', EOP_TEXT_DOMAIN ); ?></h2>
-                            <p><?php esc_html_e( 'Ative a etapa complementar para contrato, anexo e personalizacao dos produtos apos a confirmacao da proposta.', EOP_TEXT_DOMAIN ); ?></p>
+                            <p><?php esc_html_e( 'Centralize aqui as regras gerais, os textos principais e o comportamento do fluxo depois que a proposta ja foi aprovada.', EOP_TEXT_DOMAIN ); ?></p>
                             <div class="eop-settings-grid">
                                 <div class="eop-settings-field is-full">
                                     <span><?php esc_html_e( 'Ativar fluxo complementar', EOP_TEXT_DOMAIN ); ?></span>
@@ -711,125 +921,6 @@ class EOP_Settings {
                                 <div class="eop-settings-field">
                                     <label for="eop_post_confirmation_contract_name_label"><?php esc_html_e( 'Label do nome completo', EOP_TEXT_DOMAIN ); ?></label>
                                     <input id="eop_post_confirmation_contract_name_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_contract_name_label]" value="<?php echo esc_attr( $settings['post_confirmation_contract_name_label'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <label><?php esc_html_e( 'Textos e documentos do contrato', EOP_TEXT_DOMAIN ); ?></label>
-                                    <div class="eop-signature-documents" data-signature-documents data-option-key="<?php echo esc_attr( self::OPTION_KEY ); ?>" data-next-index="<?php echo esc_attr( count( $signature_documents ) ); ?>">
-                                        <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__sentinel]" value="1" />
-                                        <div class="eop-signature-documents__list" data-signature-documents-list>
-                                            <?php foreach ( $signature_documents as $index => $document ) : ?>
-                                                <?php $attachment_name = ! empty( $document['attachment_id'] ) ? get_the_title( $document['attachment_id'] ) : ''; ?>
-                                                <div class="eop-signature-document" data-signature-document data-index="<?php echo esc_attr( $index ); ?>">
-                                                    <div class="eop-signature-document__header">
-                                                        <strong><?php echo esc_html( $document['title'] ); ?></strong>
-                                                        <button type="button" class="button-link-delete" data-signature-document-remove><?php esc_html_e( 'Remover documento', EOP_TEXT_DOMAIN ); ?></button>
-                                                    </div>
-                                                    <div class="eop-signature-document__grid">
-                                                        <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][key]" value="<?php echo esc_attr( $document['key'] ); ?>" />
-                                                        <div class="eop-settings-field">
-                                                            <label><?php esc_html_e( 'Titulo do documento', EOP_TEXT_DOMAIN ); ?></label>
-                                                            <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][title]" value="<?php echo esc_attr( $document['title'] ); ?>" />
-                                                        </div>
-                                                        <div class="eop-settings-field">
-                                                            <label><?php esc_html_e( 'Origem do documento', EOP_TEXT_DOMAIN ); ?></label>
-                                                            <select name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][source_type]" data-signature-document-source>
-                                                                <option value="editor" <?php selected( $document['source_type'], 'editor' ); ?>><?php esc_html_e( 'Texto formatado', EOP_TEXT_DOMAIN ); ?></option>
-                                                                <option value="attachment" <?php selected( $document['source_type'], 'attachment' ); ?>><?php esc_html_e( 'PDF anexado', EOP_TEXT_DOMAIN ); ?></option>
-                                                            </select>
-                                                        </div>
-                                                        <div class="eop-settings-field is-full">
-                                                            <label><?php esc_html_e( 'Descricao curta', EOP_TEXT_DOMAIN ); ?></label>
-                                                            <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][description]" value="<?php echo esc_attr( $document['description'] ); ?>" />
-                                                        </div>
-                                                        <div class="eop-settings-field">
-                                                            <label><?php esc_html_e( 'Botao de visualizacao', EOP_TEXT_DOMAIN ); ?></label>
-                                                            <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][view_label]" value="<?php echo esc_attr( $document['view_label'] ); ?>" />
-                                                        </div>
-                                                        <div class="eop-settings-field">
-                                                            <label><?php esc_html_e( 'Botao de download', EOP_TEXT_DOMAIN ); ?></label>
-                                                            <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][button_label]" value="<?php echo esc_attr( $document['button_label'] ); ?>" />
-                                                        </div>
-                                                        <div class="eop-settings-field is-full eop-signature-document__panel<?php echo 'attachment' === $document['source_type'] ? '' : ' is-hidden'; ?>" data-signature-document-panel="attachment">
-                                                            <label><?php esc_html_e( 'Arquivo PDF base', EOP_TEXT_DOMAIN ); ?></label>
-                                                            <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][attachment_id]" value="<?php echo esc_attr( absint( $document['attachment_id'] ) ); ?>" data-signature-document-attachment-id />
-                                                            <div class="eop-signature-document__attachment-shell">
-                                                                <div class="eop-signature-document__attachment-name" data-signature-document-attachment-name><?php echo esc_html( $attachment_name ? $attachment_name : __( 'Nenhum PDF anexado ainda.', EOP_TEXT_DOMAIN ) ); ?></div>
-                                                                <div class="eop-signature-document__attachment-actions">
-                                                                    <button type="button" class="button button-secondary" data-signature-document-attachment-select><?php echo $attachment_name ? esc_html__( 'Trocar PDF', EOP_TEXT_DOMAIN ) : esc_html__( 'Selecionar PDF', EOP_TEXT_DOMAIN ); ?></button>
-                                                                    <button type="button" class="button button-link-delete<?php echo $attachment_name ? '' : ' is-hidden'; ?>" data-signature-document-attachment-remove><?php esc_html_e( 'Remover PDF', EOP_TEXT_DOMAIN ); ?></button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="eop-settings-field is-full eop-signature-document__panel<?php echo 'editor' === $document['source_type'] ? '' : ' is-hidden'; ?>" data-signature-document-panel="editor">
-                                                            <label><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></label>
-                                                            <textarea id="eop_signature_document_body_<?php echo esc_attr( $index ); ?>" class="eop-signature-document__editor" data-signature-document-editor name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][body]"><?php echo esc_textarea( $document['body'] ); ?></textarea>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            <?php endforeach; ?>
-                                        </div>
-                                        <button type="button" class="button button-secondary eop-signature-documents__add" data-signature-document-add><?php esc_html_e( 'Adicionar documento', EOP_TEXT_DOMAIN ); ?></button>
-                                    </div>
-                                    <script type="text/template" id="eop-signature-document-template">
-                                        <div class="eop-signature-document" data-signature-document data-index="__INDEX__">
-                                            <div class="eop-signature-document__header">
-                                                <strong><?php esc_html_e( 'Novo documento', EOP_TEXT_DOMAIN ); ?></strong>
-                                                <button type="button" class="button-link-delete" data-signature-document-remove><?php esc_html_e( 'Remover documento', EOP_TEXT_DOMAIN ); ?></button>
-                                            </div>
-                                            <div class="eop-signature-document__grid">
-                                                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][key]" value="" />
-                                                <div class="eop-settings-field">
-                                                    <label><?php esc_html_e( 'Titulo do documento', EOP_TEXT_DOMAIN ); ?></label>
-                                                    <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][title]" value="" />
-                                                </div>
-                                                <div class="eop-settings-field">
-                                                    <label><?php esc_html_e( 'Origem do documento', EOP_TEXT_DOMAIN ); ?></label>
-                                                    <select name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][source_type]" data-signature-document-source>
-                                                        <option value="editor"><?php esc_html_e( 'Texto formatado', EOP_TEXT_DOMAIN ); ?></option>
-                                                        <option value="attachment"><?php esc_html_e( 'PDF anexado', EOP_TEXT_DOMAIN ); ?></option>
-                                                    </select>
-                                                </div>
-                                                <div class="eop-settings-field is-full">
-                                                    <label><?php esc_html_e( 'Descricao curta', EOP_TEXT_DOMAIN ); ?></label>
-                                                    <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][description]" value="" />
-                                                </div>
-                                                <div class="eop-settings-field">
-                                                    <label><?php esc_html_e( 'Botao de visualizacao', EOP_TEXT_DOMAIN ); ?></label>
-                                                    <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][view_label]" value="<?php echo esc_attr__( 'Visualizar PDF', EOP_TEXT_DOMAIN ); ?>" />
-                                                </div>
-                                                <div class="eop-settings-field">
-                                                    <label><?php esc_html_e( 'Botao de download', EOP_TEXT_DOMAIN ); ?></label>
-                                                    <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][button_label]" value="<?php echo esc_attr__( 'Baixar PDF', EOP_TEXT_DOMAIN ); ?>" />
-                                                </div>
-                                                <div class="eop-settings-field is-full eop-signature-document__panel is-hidden" data-signature-document-panel="attachment">
-                                                    <label><?php esc_html_e( 'Arquivo PDF base', EOP_TEXT_DOMAIN ); ?></label>
-                                                    <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][attachment_id]" value="" data-signature-document-attachment-id />
-                                                    <div class="eop-signature-document__attachment-shell">
-                                                        <div class="eop-signature-document__attachment-name" data-signature-document-attachment-name><?php esc_html_e( 'Nenhum PDF anexado ainda.', EOP_TEXT_DOMAIN ); ?></div>
-                                                        <div class="eop-signature-document__attachment-actions">
-                                                            <button type="button" class="button button-secondary" data-signature-document-attachment-select><?php esc_html_e( 'Selecionar PDF', EOP_TEXT_DOMAIN ); ?></button>
-                                                            <button type="button" class="button button-link-delete is-hidden" data-signature-document-attachment-remove><?php esc_html_e( 'Remover PDF', EOP_TEXT_DOMAIN ); ?></button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="eop-settings-field is-full eop-signature-document__panel" data-signature-document-panel="editor">
-                                                    <label><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></label>
-                                                    <textarea id="eop_signature_document_body___INDEX__" class="eop-signature-document__editor" data-signature-document-editor name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][body]"></textarea>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </script>
-                                    <small class="eop-settings-help"><?php esc_html_e( 'Monte quantos textos ou PDFs quiser. Cada item vira um PDF do contrato e fica salvo no pedido para leitura, download e assinatura externa.', EOP_TEXT_DOMAIN ); ?></small>
-                                    <?php if ( class_exists( 'EOP_Post_Confirmation_Flow' ) && method_exists( 'EOP_Post_Confirmation_Flow', 'get_contract_placeholder_tokens' ) ) : ?>
-                                        <small class="eop-settings-help">
-                                            <?php
-                                            printf(
-                                                esc_html__( 'Placeholders disponiveis: %s', EOP_TEXT_DOMAIN ),
-                                                esc_html( implode( ', ', EOP_Post_Confirmation_Flow::get_contract_placeholder_tokens() ) )
-                                            );
-                                            ?>
-                                        </small>
-                                    <?php endif; ?>
                                 </div>
                                 <div class="eop-settings-field is-full">
                                     <label for="eop_post_confirmation_contract_checkbox_label"><?php esc_html_e( 'Texto do aceite', EOP_TEXT_DOMAIN ); ?></label>
@@ -911,6 +1002,109 @@ class EOP_Settings {
                                     <label for="eop_post_confirmation_completion_description"><?php esc_html_e( 'Descricao da conclusao', EOP_TEXT_DOMAIN ); ?></label>
                                     <textarea id="eop_post_confirmation_completion_description" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_completion_description]"><?php echo esc_textarea( $settings['post_confirmation_completion_description'] ); ?></textarea>
                                 </div>
+                            </div>
+                        </section>
+                        <?php endif; ?>
+
+                        <?php if ( $should_render_confirmation_documents ) : ?>
+                            <?php self::render_confirmation_documents_section( $signature_documents ); ?>
+                        <?php endif; ?>
+
+                        <?php if ( $should_render_confirmation_preview ) : ?>
+                        <section class="eop-settings-card eop-contract-preview-settings">
+                            <h2><?php esc_html_e( 'Visual da pagina de contrato', EOP_TEXT_DOMAIN ); ?></h2>
+                            <p><?php esc_html_e( 'Ajuste o visual da etapa de aceite e veja como a pagina publica vai ficar antes de publicar.', EOP_TEXT_DOMAIN ); ?></p>
+                            <div class="eop-settings-grid">
+                                <div class="eop-settings-field is-full">
+                                    <label for="eop_customer_experience_font_family_preview"><?php esc_html_e( 'Fonte da experiencia publica', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_font_family_preview" class="select_font eop-font-field" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_font_family]" value="<?php echo esc_attr( $settings['customer_experience_font_family'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_title_size_preview"><?php esc_html_e( 'Tamanho do titulo principal (px)', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_title_size_preview" type="number" min="24" max="76" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_title_size]" value="<?php echo esc_attr( $settings['customer_experience_title_size'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_text_size_preview"><?php esc_html_e( 'Tamanho do texto base (px)', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_text_size_preview" type="number" min="13" max="24" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_text_size]" value="<?php echo esc_attr( $settings['customer_experience_text_size'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_background_color_preview"><?php esc_html_e( 'Fundo da pagina', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_background_color_preview" class="eop-color-field" type="text" data-default-color="#edf2fb" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_background_color]" value="<?php echo esc_attr( $settings['customer_experience_background_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_panel_background_color_preview"><?php esc_html_e( 'Fundo dos cards', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_panel_background_color_preview" class="eop-color-field" type="text" data-default-color="#ffffff" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_panel_background_color]" value="<?php echo esc_attr( $settings['customer_experience_panel_background_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_sidebar_background_color_preview"><?php esc_html_e( 'Fundo do resumo lateral', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_sidebar_background_color_preview" class="eop-color-field" type="text" data-default-color="#f6f8fc" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_sidebar_background_color]" value="<?php echo esc_attr( $settings['customer_experience_sidebar_background_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_accent_color_preview"><?php esc_html_e( 'Cor de destaque', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_accent_color_preview" class="eop-color-field" type="text" data-default-color="#d78a2f" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_accent_color]" value="<?php echo esc_attr( $settings['customer_experience_accent_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_text_color_preview"><?php esc_html_e( 'Texto principal', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_text_color_preview" class="eop-color-field" type="text" data-default-color="#16243a" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_text_color]" value="<?php echo esc_attr( $settings['customer_experience_text_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_muted_color_preview"><?php esc_html_e( 'Texto auxiliar', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_muted_color_preview" class="eop-color-field" type="text" data-default-color="#66768d" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_muted_color]" value="<?php echo esc_attr( $settings['customer_experience_muted_color'] ); ?>" />
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="eop-settings-card eop-contract-preview-card">
+                            <h2><?php esc_html_e( 'Preview da etapa contratual', EOP_TEXT_DOMAIN ); ?></h2>
+                            <p><?php esc_html_e( 'Leitura visual da pagina publica com o documento principal, o aceite e o resumo lateral.', EOP_TEXT_DOMAIN ); ?></p>
+                            <div class="eop-contract-preview" style="--eop-preview-bg: <?php echo esc_attr( $settings['customer_experience_background_color'] ); ?>; --eop-preview-panel: <?php echo esc_attr( $settings['customer_experience_panel_background_color'] ); ?>; --eop-preview-side: <?php echo esc_attr( $settings['customer_experience_sidebar_background_color'] ); ?>; --eop-preview-accent: <?php echo esc_attr( $settings['customer_experience_accent_color'] ); ?>; --eop-preview-text: <?php echo esc_attr( $settings['customer_experience_text_color'] ); ?>; --eop-preview-muted: <?php echo esc_attr( $settings['customer_experience_muted_color'] ); ?>; --eop-preview-radius: <?php echo esc_attr( $settings['border_radius'] ); ?>px; font-family: <?php echo esc_attr( self::get_font_css_family( $settings['customer_experience_font_family'] ) ); ?>;">
+                                <div class="eop-contract-preview__main">
+                                    <div class="eop-contract-preview__reader">
+                                        <div class="eop-contract-preview__reader-head">
+                                            <div>
+                                                <strong><?php echo esc_html( $confirmation_preview['primary_document']['title'] ?? __( 'Documento principal', EOP_TEXT_DOMAIN ) ); ?></strong>
+                                                <small><?php echo esc_html( $confirmation_preview['primary_document']['description'] ?? __( 'Documento principal exibido na etapa de aceite.', EOP_TEXT_DOMAIN ) ); ?></small>
+                                            </div>
+                                            <div class="eop-contract-preview__buttons">
+                                                <span class="eop-contract-preview__button is-secondary"><?php echo esc_html( $confirmation_preview['primary_document']['view_label'] ?? __( 'Visualizar PDF', EOP_TEXT_DOMAIN ) ); ?></span>
+                                                <span class="eop-contract-preview__button is-secondary"><?php echo esc_html( $confirmation_preview['primary_document']['button_label'] ?? __( 'Baixar PDF', EOP_TEXT_DOMAIN ) ); ?></span>
+                                            </div>
+                                        </div>
+                                        <div class="eop-contract-preview__reader-body">
+                                            <?php if ( ! empty( $confirmation_preview['primary_document']['preview_url'] ) && 'pdf' === ( $confirmation_preview['primary_document']['preview_type'] ?? '' ) ) : ?>
+                                                <iframe src="<?php echo esc_url( $confirmation_preview['primary_document']['preview_url'] ); ?>#toolbar=0&navpanes=0&scrollbar=1" title="<?php esc_attr_e( 'Preview do documento principal', EOP_TEXT_DOMAIN ); ?>"></iframe>
+                                            <?php elseif ( ! empty( $confirmation_preview['primary_document']['preview_html'] ) ) : ?>
+                                                <div class="eop-contract-preview__reader-copy"><?php echo wp_kses_post( $confirmation_preview['primary_document']['preview_html'] ); ?></div>
+                                            <?php else : ?>
+                                                <div class="eop-contract-preview__reader-empty"><?php esc_html_e( 'Adicione um texto ou anexe um documento para visualizar o contrato aqui.', EOP_TEXT_DOMAIN ); ?></div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+
+                                    <div class="eop-contract-preview__form-card">
+                                        <strong><?php esc_html_e( 'Confirmar e continuar', EOP_TEXT_DOMAIN ); ?></strong>
+                                        <p><?php esc_html_e( 'Informe o nome do responsavel e confirme o aceite para desbloquear as proximas etapas da jornada.', EOP_TEXT_DOMAIN ); ?></p>
+                                        <label>
+                                            <span><?php echo esc_html( $settings['post_confirmation_contract_name_label'] ); ?></span>
+                                            <input type="text" value="<?php echo esc_attr__( 'Nome da empresa ou responsavel', EOP_TEXT_DOMAIN ); ?>" readonly />
+                                        </label>
+                                        <label class="eop-contract-preview__checkbox">
+                                            <input type="checkbox" checked disabled />
+                                            <span><?php echo esc_html( $settings['post_confirmation_contract_checkbox_label'] ); ?></span>
+                                        </label>
+                                        <span class="eop-contract-preview__button"><?php echo esc_html( $settings['post_confirmation_contract_button_label'] ); ?></span>
+                                    </div>
+                                </div>
+
+                                <aside class="eop-contract-preview__sidebar">
+                                    <div class="eop-contract-preview__summary">
+                                        <span><?php esc_html_e( 'Resumo', EOP_TEXT_DOMAIN ); ?></span>
+                                        <strong><?php esc_html_e( 'Contrato pronto para aceite', EOP_TEXT_DOMAIN ); ?></strong>
+                                        <p><?php esc_html_e( 'Os itens ja foram aprovados. Nesta etapa falta apenas a leitura e o aceite do contrato.', EOP_TEXT_DOMAIN ); ?></p>
+                                        <div class="eop-contract-preview__meta-row"><span><?php esc_html_e( 'Documentos', EOP_TEXT_DOMAIN ); ?></span><strong><?php echo esc_html( (string) ( $confirmation_preview['document_count'] ?? 0 ) ); ?></strong></div>
+                                        <div class="eop-contract-preview__meta-row"><span><?php esc_html_e( 'Documentos extras', EOP_TEXT_DOMAIN ); ?></span><strong><?php echo esc_html( (string) ( $confirmation_preview['additional_documents'] ?? 0 ) ); ?></strong></div>
+                                    </div>
+                                </aside>
                             </div>
                         </section>
                         <?php endif; ?>
@@ -1003,6 +1197,115 @@ class EOP_Settings {
                                 <div class="eop-settings-field">
                                     <label for="eop_proposal_text_size"><?php esc_html_e( 'Tamanho do texto base (px)', EOP_TEXT_DOMAIN ); ?></label>
                                     <input id="eop_proposal_text_size" type="number" min="12" max="24" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_text_size]" value="<?php echo esc_attr( $settings['proposal_text_size'] ); ?>" />
+                                </div>
+                            </div>
+                        </section>
+                        <?php endif; ?>
+
+                        <?php if ( self::should_render_admin_section( $section, 'customer-experience' ) ) : ?>
+                        <section class="eop-settings-card">
+                            <h2><?php esc_html_e( 'Experiencia publica confirmada', EOP_TEXT_DOMAIN ); ?></h2>
+                            <p><?php esc_html_e( 'Edite em um unico lugar o visual da pagina confirmada e do fluxo complementar visto pelo cliente.', EOP_TEXT_DOMAIN ); ?></p>
+                            <div class="eop-settings-grid">
+                                <div class="eop-settings-field is-full">
+                                    <label for="eop_customer_experience_font_family"><?php esc_html_e( 'Fonte da experiencia publica', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_font_family" class="select_font eop-font-field" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_font_family]" value="<?php echo esc_attr( $settings['customer_experience_font_family'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_title_size"><?php esc_html_e( 'Tamanho do titulo principal (px)', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_title_size" type="number" min="24" max="76" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_title_size]" value="<?php echo esc_attr( $settings['customer_experience_title_size'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_text_size"><?php esc_html_e( 'Tamanho do texto base (px)', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_text_size" type="number" min="13" max="24" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_text_size]" value="<?php echo esc_attr( $settings['customer_experience_text_size'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_background_color"><?php esc_html_e( 'Fundo da pagina', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_background_color" class="eop-color-field" type="text" data-default-color="#edf2fb" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_background_color]" value="<?php echo esc_attr( $settings['customer_experience_background_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_hero_background_color"><?php esc_html_e( 'Fundo do hero', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_hero_background_color" class="eop-color-field" type="text" data-default-color="#0f1b35" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_hero_background_color]" value="<?php echo esc_attr( $settings['customer_experience_hero_background_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_panel_background_color"><?php esc_html_e( 'Fundo dos cards principais', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_panel_background_color" class="eop-color-field" type="text" data-default-color="#ffffff" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_panel_background_color]" value="<?php echo esc_attr( $settings['customer_experience_panel_background_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_sidebar_background_color"><?php esc_html_e( 'Fundo dos cards laterais', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_sidebar_background_color" class="eop-color-field" type="text" data-default-color="#f6f8fc" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_sidebar_background_color]" value="<?php echo esc_attr( $settings['customer_experience_sidebar_background_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_accent_color"><?php esc_html_e( 'Cor de destaque', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_accent_color" class="eop-color-field" type="text" data-default-color="#d78a2f" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_accent_color]" value="<?php echo esc_attr( $settings['customer_experience_accent_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_text_color"><?php esc_html_e( 'Texto principal', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_text_color" class="eop-color-field" type="text" data-default-color="#16243a" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_text_color]" value="<?php echo esc_attr( $settings['customer_experience_text_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_muted_color"><?php esc_html_e( 'Texto auxiliar', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_muted_color" class="eop-color-field" type="text" data-default-color="#66768d" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_muted_color]" value="<?php echo esc_attr( $settings['customer_experience_muted_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_eyebrow"><?php esc_html_e( 'Label superior', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_eyebrow" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_eyebrow]" value="<?php echo esc_attr( $settings['customer_experience_eyebrow'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field is-full">
+                                    <label for="eop_customer_experience_title"><?php esc_html_e( 'Titulo principal', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_title]" value="<?php echo esc_attr( $settings['customer_experience_title'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field is-full">
+                                    <label for="eop_customer_experience_description"><?php esc_html_e( 'Descricao principal', EOP_TEXT_DOMAIN ); ?></label>
+                                    <textarea id="eop_customer_experience_description" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_description]"><?php echo esc_textarea( $settings['customer_experience_description'] ); ?></textarea>
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_total_label"><?php esc_html_e( 'Label do total em destaque', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_total_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_total_label]" value="<?php echo esc_attr( $settings['customer_experience_total_label'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field is-full">
+                                    <label for="eop_customer_experience_total_note"><?php esc_html_e( 'Texto de apoio do total', EOP_TEXT_DOMAIN ); ?></label>
+                                    <textarea id="eop_customer_experience_total_note" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_total_note]"><?php echo esc_textarea( $settings['customer_experience_total_note'] ); ?></textarea>
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_items_eyebrow"><?php esc_html_e( 'Label da secao de itens', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_items_eyebrow" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_items_eyebrow]" value="<?php echo esc_attr( $settings['customer_experience_items_eyebrow'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_items_title"><?php esc_html_e( 'Titulo da secao de itens', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_items_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_items_title]" value="<?php echo esc_attr( $settings['customer_experience_items_title'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_summary_eyebrow"><?php esc_html_e( 'Label do resumo lateral', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_summary_eyebrow" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_summary_eyebrow]" value="<?php echo esc_attr( $settings['customer_experience_summary_eyebrow'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_summary_title"><?php esc_html_e( 'Titulo do resumo lateral', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_summary_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_summary_title]" value="<?php echo esc_attr( $settings['customer_experience_summary_title'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_financial_eyebrow"><?php esc_html_e( 'Label do resumo financeiro', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_financial_eyebrow" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_financial_eyebrow]" value="<?php echo esc_attr( $settings['customer_experience_financial_eyebrow'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_financial_title"><?php esc_html_e( 'Titulo do resumo financeiro', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_financial_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_financial_title]" value="<?php echo esc_attr( $settings['customer_experience_financial_title'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_actions_eyebrow"><?php esc_html_e( 'Label do card de acao', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_actions_eyebrow" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_actions_eyebrow]" value="<?php echo esc_attr( $settings['customer_experience_actions_eyebrow'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_actions_title"><?php esc_html_e( 'Titulo do card de acao', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_actions_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_actions_title]" value="<?php echo esc_attr( $settings['customer_experience_actions_title'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_progress_label"><?php esc_html_e( 'Titulo do mapa de jornada', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_progress_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_progress_label]" value="<?php echo esc_attr( $settings['customer_experience_progress_label'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field is-full">
+                                    <label for="eop_customer_experience_progress_note"><?php esc_html_e( 'Texto de apoio do mapa de jornada', EOP_TEXT_DOMAIN ); ?></label>
+                                    <textarea id="eop_customer_experience_progress_note" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_progress_note]"><?php echo esc_textarea( $settings['customer_experience_progress_note'] ); ?></textarea>
                                 </div>
                             </div>
                         </section>

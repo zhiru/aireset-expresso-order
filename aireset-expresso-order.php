@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Aireset — Expresso Order
  * Description: Pedido expresso para vendedores com busca de cliente, inclusao rapida de produtos e geracao de pedido no WooCommerce.
- * Version: 1.1.57
+ * Version: 1.1.63
  * Author: Aireset Agencia Web
  * Author URI: https://aireset.com.br
  * Requires Plugins: woocommerce
@@ -14,7 +14,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'EOP_VERSION', '1.1.57' );
+if ( ! defined( 'EOP_REQUEST_START' ) ) {
+	define( 'EOP_REQUEST_START', microtime( true ) );
+}
+
+define( 'EOP_VERSION', '1.1.63' );
 define( 'EOP_PLUGIN_FILE', __FILE__ );
 define( 'EOP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EOP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -58,6 +62,7 @@ register_deactivation_hook( __FILE__, 'eop_deactivate' );
 require_once EOP_PLUGIN_DIR . 'includes/trait-eop-license-guard.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-page-installer.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-admin-page.php';
+require_once EOP_PLUGIN_DIR . 'includes/class-performance-audit.php';
 
 
 /* License gate */
@@ -85,6 +90,7 @@ require_once EOP_PLUGIN_DIR . 'includes/class-order-creator.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-pdf-admin-page.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-pdf-settings.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-settings.php';
+require_once EOP_PLUGIN_DIR . 'includes/class-settings-portability.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-shipping-calculator.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-shortcode.php';
 require_once EOP_PLUGIN_DIR . 'includes/class-public-proposal.php';
@@ -125,6 +131,7 @@ function eop_init() {
 	EOP_WC_PDF_Integration::init();
 	EOP_Shipping_Calculator::init();
 	EOP_Settings::init();
+	EOP_Settings_Portability::init();
 	EOP_Shortcode::init();
 	EOP_Public_Proposal::init();
 	EOP_Orders_Page::init();

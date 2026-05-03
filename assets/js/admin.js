@@ -13,6 +13,7 @@
     var ordersLoaded = false;
     var ordersPage = 1;
     var currentEditingOrderId = 0;
+    var pendingEditOrderId = 0;
     var editLoadToken = 0;
     var postFlowRequestToken = 0;
     var lazyViewRequestToken = 0;
@@ -199,6 +200,18 @@
 
         $view.attr('data-eop-lazy-loaded', 'true').removeClass('is-loading');
 
+        if (viewName === 'new-order') {
+            initializeNewOrderView($view);
+
+            if (pendingEditOrderId > 0) {
+                var queuedOrderId = pendingEditOrderId;
+
+                pendingEditOrderId = 0;
+                loadOrderForEditing(queuedOrderId);
+                return;
+            }
+        }
+
         if (viewName === 'pdf') {
             syncPdfSettingsFormSnapshot($view);
         }
@@ -242,6 +255,7 @@
         var cacheKey = getLazyViewCacheKey(url);
         var cached = readCache(sessionStore, cacheKey, 5 * 60 * 1000);
         var $view = getLazyViewShell(viewName);
+        var startedAt = window.performance && window.performance.now ? window.performance.now() : Date.now();
 
         lazyViewRequestToken = requestToken;
 
@@ -252,18 +266,61 @@
         $view.addClass('is-loading');
 
         if (cached && hydrateLazyView(viewName, cached, settings)) {
+            recordPerformanceEntry({
+                flow: 'Lazy view',
+                context: viewName,
+                source: 'session-cache',
+                totalMs: (window.performance && window.performance.now ? window.performance.now() : Date.now()) - startedAt,
+                phpMs: 0,
+                responseBytes: cached.length,
+                peakMemoryMb: 0
+            });
             return;
         }
 
-        $.get(url)
+        $.ajax({
+            url: eop_vars.ajax_url,
+            method: 'GET',
+            dataType: 'json',
+            data: {
+                action: 'eop_load_admin_view',
+                nonce: eop_vars.nonce,
+                view_name: viewName,
+                pdf_tab: (new URL(url, window.location.origin)).searchParams.get('pdf_tab') || '',
+                document: (new URL(url, window.location.origin)).searchParams.get('document') || '',
+                preview_order: (new URL(url, window.location.origin)).searchParams.get('preview_order') || ''
+            }
+        })
             .done(function (response) {
+                var completedAt = window.performance && window.performance.now ? window.performance.now() : Date.now();
+                var serverMetrics = {};
+                var responseHtml = '';
+
                 if (requestToken !== lazyViewRequestToken) {
                     return;
                 }
 
-                writeCache(sessionStore, cacheKey, response);
+                if (!response || !response.success || !response.data || !response.data.html) {
+                    window.location.href = url;
+                    return;
+                }
 
-                if (!hydrateLazyView(viewName, response, settings)) {
+                responseHtml = response.data.html;
+                serverMetrics = response.data._performance || {};
+                writeCache(sessionStore, cacheKey, responseHtml);
+
+                recordPerformanceEntry({
+                    flow: 'Lazy view',
+                    context: viewName,
+                    source: 'network',
+                    totalMs: completedAt - startedAt,
+                    phpMs: serverMetrics.php_ms || 0,
+                    responseBytes: serverMetrics.response_bytes || responseHtml.length,
+                    peakMemoryMb: serverMetrics.peak_memory_mb || 0,
+                    queries: serverMetrics.queries || 0
+                });
+
+                if (!hydrateLazyView(viewName, responseHtml, settings)) {
                     window.location.href = url;
                 }
             })
@@ -362,8 +419,255 @@
         removeCache(localStore, getDraftCacheKey());
     }
 
+    function initProductSearch($scope) {
+        var $root = $scope && $scope.length ? $scope : $(document);
+        var $field = $root.find('#eop-product-search').first();
+
+        if (!$field.length || $field.hasClass('select2-hidden-accessible')) {
+            return;
+        }
+
+        $field.select2({
+            placeholder: i18n.search_product,
+            minimumInputLength: 3,
+            allowClear: true,
+            ajax: {
+                url: eop_vars.ajax_url,
+                dataType: 'json',
+                delay: 300,
+                data: function (params) {
+                    return {
+                        action: 'eop_search_products',
+                        nonce: eop_vars.nonce,
+                        term: params.term
+                    };
+                },
+                processResults: function (data) {
+                    return data;
+                },
+                cache: true
+            }
+        });
+    }
+
+    function initializeNewOrderView($scope) {
+        initProductSearch($scope);
+        syncDefaultDiscountFieldUi();
+        updateEditingState();
+
+        if (currentEditingOrderId > 0) {
+            renderItems();
+            recalcTotals();
+            return;
+        }
+
+        restoreDraftState();
+        renderItems();
+        recalcTotals();
+    }
+
     sessionStore = getStorage('session');
     localStore = getStorage('local');
+
+    var performanceAuditConfig = eop_vars.performance_audit || {};
+    var performanceAuditEnabled = Boolean(performanceAuditConfig.enabled);
+
+    function getPerformanceEntriesKey() {
+        return getCacheKey('performance', 'entries');
+    }
+
+    function getPerformanceSessionIdKey() {
+        return getCacheKey('performance', 'session-id');
+    }
+
+    function ensurePerformanceSessionId() {
+        var currentId = readCache(sessionStore, getPerformanceSessionIdKey());
+
+        if (currentId) {
+            return currentId;
+        }
+
+        currentId = 'sess-' + Date.now();
+        writeCache(sessionStore, getPerformanceSessionIdKey(), currentId);
+        return currentId;
+    }
+
+    function readPerformanceEntries() {
+        var entries = readCache(sessionStore, getPerformanceEntriesKey());
+
+        return Array.isArray(entries) ? entries : [];
+    }
+
+    function writePerformanceEntries(entries) {
+        writeCache(sessionStore, getPerformanceEntriesKey(), entries);
+    }
+
+    function formatPerformanceMs(value) {
+        if (typeof value !== 'number' || isNaN(value) || value <= 0) {
+            return '-';
+        }
+
+        return value.toFixed(1) + ' ms';
+    }
+
+    function formatPerformanceBytes(value) {
+        var bytes = parseInt(value, 10);
+
+        if (!bytes || isNaN(bytes) || bytes <= 0) {
+            return '-';
+        }
+
+        if (bytes >= 1048576) {
+            return (bytes / 1048576).toFixed(2) + ' MB';
+        }
+
+        return (bytes / 1024).toFixed(1) + ' KB';
+    }
+
+    function formatPerformanceMemory(value) {
+        var numeric = parseFloat(value);
+
+        if (!numeric || isNaN(numeric) || numeric <= 0) {
+            return '-';
+        }
+
+        return numeric.toFixed(2) + ' MB';
+    }
+
+    function safeJsonLength(value) {
+        try {
+            return JSON.stringify(value || '').length;
+        } catch (err) {
+            return 0;
+        }
+    }
+
+    function recordPerformanceEntry(entry) {
+        var entries;
+
+        if (!performanceAuditEnabled || !sessionStore || !entry) {
+            return;
+        }
+
+        entries = readPerformanceEntries();
+        entry.recordedAt = entry.recordedAt || new Date().toISOString();
+        entry.sessionId = ensurePerformanceSessionId();
+        entries.unshift(entry);
+        writePerformanceEntries(entries.slice(0, 40));
+        renderPerformanceAuditPanel();
+    }
+
+    function buildPerformanceSummaryCards(entries) {
+        var summary = [];
+        var latest = entries.length ? entries[0] : null;
+        var assetSummary = performanceAuditConfig.asset_summary || {};
+        var totalAssetBytes = parseInt(assetSummary.total_bytes || 0, 10) || 0;
+        var navigationEntry = window.performance && window.performance.getEntriesByType ? window.performance.getEntriesByType('navigation')[0] : null;
+
+        summary.push(
+            '<div class="eop-performance-audit__summary-card">' +
+                '<span>' + escapeHtml(i18n.performance_summary_assets || 'Assets atuais') + '</span>' +
+                '<strong>' + escapeHtml(formatPerformanceBytes(totalAssetBytes)) + '</strong>' +
+            '</div>'
+        );
+
+        if (latest && typeof latest.queries !== 'undefined') {
+            summary.push(
+                '<div class="eop-performance-audit__summary-card">' +
+                    '<span>' + escapeHtml(i18n.performance_summary_queries || 'Queries') + '</span>' +
+                    '<strong>' + escapeHtml(String(latest.queries)) + '</strong>' +
+                '</div>'
+            );
+        }
+
+        if (navigationEntry && navigationEntry.duration) {
+            summary.push(
+                '<div class="eop-performance-audit__summary-card">' +
+                    '<span>' + escapeHtml(i18n.performance_summary_navigation || 'Navegacao inicial') + '</span>' +
+                    '<strong>' + escapeHtml(formatPerformanceMs(navigationEntry.duration)) + '</strong>' +
+                '</div>'
+            );
+        }
+
+        return summary.join('');
+    }
+
+    function renderPerformanceAuditPanel() {
+        var $panel = $('#eop-performance-audit');
+        var $body = $('#eop-performance-table-body');
+        var entries;
+        var rows = '';
+
+        if (!performanceAuditEnabled || !$panel.length || !$body.length) {
+            return;
+        }
+
+        entries = readPerformanceEntries();
+        $('#eop-performance-summary').html(buildPerformanceSummaryCards(entries));
+
+        if (!entries.length) {
+            $body.html('<tr><td colspan="6">' + escapeHtml(i18n.performance_empty || 'Nenhuma medicao registrada ainda nesta sessao.') + '</td></tr>');
+            return;
+        }
+
+        entries.forEach(function (entry) {
+            rows += '<tr>' +
+                '<td><strong>' + escapeHtml(entry.flow || '-') + '</strong><br><small>' + escapeHtml(entry.context || '') + '</small></td>' +
+                '<td>' + escapeHtml(entry.source || 'network') + '</td>' +
+                '<td>' + escapeHtml(formatPerformanceMs(entry.totalMs)) + '</td>' +
+                '<td>' + escapeHtml(formatPerformanceMs(entry.phpMs)) + '</td>' +
+                '<td>' + escapeHtml(formatPerformanceBytes(entry.responseBytes)) + '</td>' +
+                '<td>' + escapeHtml(formatPerformanceMemory(entry.peakMemoryMb)) + '</td>' +
+            '</tr>';
+        });
+
+        $body.html(rows);
+    }
+
+    function registerInitialPerformanceBaseline() {
+        var $panel = $('#eop-performance-audit');
+        var initialMetrics = null;
+        var navigationEntry;
+        var assetSummary;
+
+        if (!performanceAuditEnabled || !$panel.length) {
+            return;
+        }
+
+        try {
+            initialMetrics = JSON.parse($panel.attr('data-eop-performance-initial') || '{}');
+        } catch (err) {
+            initialMetrics = null;
+        }
+
+        if (!initialMetrics || !initialMetrics.scope) {
+            renderPerformanceAuditPanel();
+            return;
+        }
+
+        assetSummary = performanceAuditConfig.asset_summary || {};
+        navigationEntry = window.performance && window.performance.getEntriesByType ? window.performance.getEntriesByType('navigation')[0] : null;
+
+        recordPerformanceEntry({
+            flow: 'SPA bootstrap',
+            context: initialMetrics.view || currentView,
+            source: 'initial',
+            totalMs: navigationEntry && navigationEntry.duration ? navigationEntry.duration : initialMetrics.php_ms,
+            phpMs: initialMetrics.php_ms,
+            responseBytes: navigationEntry && navigationEntry.transferSize ? navigationEntry.transferSize : parseInt(assetSummary.total_bytes || 0, 10),
+            peakMemoryMb: initialMetrics.peak_memory_mb,
+            queries: initialMetrics.queries || 0
+        });
+    }
+
+    function clearPerformanceEntries() {
+        if (!sessionStore) {
+            return;
+        }
+
+        removeCache(sessionStore, getPerformanceEntriesKey());
+        renderPerformanceAuditPanel();
+    }
 
     function getDefaultDiscountFieldConfig() {
         if (discountMode === 'percent') {
@@ -534,15 +838,24 @@
         var generalViews = [
             'settings-store-info',
             'settings-general-config',
-            'settings-confirmation-flow',
             'settings-order-link-style',
             'settings-proposal-link-style',
+            'settings-customer-experience',
             'settings-texts'
         ];
+		var confirmationViews = [
+			'settings-confirmation-general',
+			'settings-confirmation-documents',
+			'settings-confirmation-preview'
+		];
 
         if (generalViews.indexOf(String(viewName || '')) !== -1) {
             return 'general';
         }
+
+		if (confirmationViews.indexOf(String(viewName || '')) !== -1) {
+			return 'confirmation';
+		}
 
         if (String(viewName || '') === 'pdf') {
             return 'pdf';
@@ -702,6 +1015,7 @@
         var $admin = $('.eop-pdf-admin').first();
         var preservePreview = settings.preservePreview !== false && $admin.hasClass('is-preview-open');
         var cachedShell = readCache(sessionStore, getPdfCacheKey(url), 5 * 60 * 1000);
+        var startedAt = window.performance && window.performance.now ? window.performance.now() : Date.now();
 
         function applyPdfShell(shellHtml) {
             var $nextShell = $(shellHtml);
@@ -742,6 +1056,15 @@
         }
 
         if (cachedShell) {
+            recordPerformanceEntry({
+                flow: 'PDF tab',
+                context: String((new URL(url, window.location.origin)).searchParams.get('pdf_tab') || 'display'),
+                source: 'session-cache',
+                totalMs: (window.performance && window.performance.now ? window.performance.now() : Date.now()) - startedAt,
+                phpMs: 0,
+                responseBytes: cachedShell.length,
+                peakMemoryMb: 0
+            });
             applyPdfShell(cachedShell);
             return;
         }
@@ -756,6 +1079,8 @@
         })
             .done(function (response) {
                 var shellHtml;
+                var perf = {};
+                var completedAt = window.performance && window.performance.now ? window.performance.now() : Date.now();
 
                 if (!response || !response.success || !response.data || !response.data.html) {
                     window.location.href = url;
@@ -763,7 +1088,18 @@
                 }
 
                 shellHtml = response.data.html;
+                perf = response.data._performance || {};
                 writeCache(sessionStore, getPdfCacheKey(url), shellHtml);
+                recordPerformanceEntry({
+                    flow: 'PDF tab',
+                    context: response.data.tab || String((new URL(url, window.location.origin)).searchParams.get('pdf_tab') || 'display'),
+                    source: 'network',
+                    totalMs: completedAt - startedAt,
+                    phpMs: perf.php_ms || 0,
+                    responseBytes: perf.response_bytes || shellHtml.length,
+                    peakMemoryMb: perf.peak_memory_mb || 0,
+                    queries: perf.queries || 0
+                });
                 applyPdfShell(shellHtml);
             })
             .fail(function () {
@@ -937,11 +1273,15 @@
         [
             'settings-store-info',
             'settings-general-config',
-            'settings-confirmation-flow',
+            'settings-confirmation-general',
+            'settings-confirmation-documents',
+            'settings-confirmation-preview',
             'settings-order-link-style',
             'settings-proposal-link-style',
+            'settings-customer-experience',
             'settings-texts',
-            'documentation'
+            'documentation',
+            'export-import'
         ].forEach(function (viewName) {
             if ($('[data-eop-view="' + viewName + '"]').length) {
                 views.push(viewName);
@@ -1031,7 +1371,7 @@
 
         syncSidebarState(targetView);
 
-        if (targetView === 'orders' && !ordersLoaded) {
+        if (targetView === 'orders' && !ordersLoaded && !isLazyViewPending(targetView)) {
             loadOrdersList(1);
         }
 
@@ -1145,6 +1485,7 @@
         var status = $('#eop-orders-status-filter').val() || 'any';
         var postConfirmationFlow = $('#eop-orders-flow-filter').val() || 'any';
         var cachedResponse = readCache(sessionStore, getOrdersCacheKey(requestedPage, search, status, postConfirmationFlow), 60 * 1000);
+        var startedAt = window.performance && window.performance.now ? window.performance.now() : Date.now();
 
         ordersPage = requestedPage;
         $('#eop-orders-list').html('<div class="eop-card eop-orders-empty-state">' + escapeHtml(i18n.orders_loading || 'Carregando pedidos...') + '</div>');
@@ -1152,6 +1493,15 @@
 
         if (cachedResponse) {
             ordersLoaded = true;
+            recordPerformanceEntry({
+                flow: 'Orders list',
+                context: 'page ' + requestedPage,
+                source: 'session-cache',
+                totalMs: (window.performance && window.performance.now ? window.performance.now() : Date.now()) - startedAt,
+                phpMs: 0,
+                responseBytes: safeJsonLength(cachedResponse),
+                peakMemoryMb: 0
+            });
             renderOrdersSummary(cachedResponse.pagination.total_items, cachedResponse.viewer);
             renderOrdersList(cachedResponse.orders || [], cachedResponse.viewer || {});
             renderOrdersPagination(cachedResponse.pagination.page, cachedResponse.pagination.total_pages);
@@ -1166,6 +1516,9 @@
             status: status,
             post_confirmation_flow: postConfirmationFlow
         }, function (res) {
+            var perf = (res && res.data && res.data._performance) || {};
+            var completedAt = window.performance && window.performance.now ? window.performance.now() : Date.now();
+
             if (!res.success) {
                 $('#eop-orders-list').html('<div class="eop-card eop-orders-empty-state">' + escapeHtml((res.data && res.data.message) || i18n.orders_error || 'Nao foi possivel carregar os pedidos agora.') + '</div>');
                 return;
@@ -1173,6 +1526,16 @@
 
             ordersLoaded = true;
             writeCache(sessionStore, getOrdersCacheKey(requestedPage, search, status, postConfirmationFlow), res.data);
+            recordPerformanceEntry({
+                flow: 'Orders list',
+                context: 'page ' + requestedPage,
+                source: 'network',
+                totalMs: completedAt - startedAt,
+                phpMs: perf.php_ms || 0,
+                responseBytes: safeJsonLength(res.data),
+                peakMemoryMb: perf.peak_memory_mb || 0,
+                queries: perf.queries || 0
+            });
             renderOrdersSummary(res.data.pagination.total_items, res.data.viewer);
             renderOrdersList(res.data.orders || [], res.data.viewer || {});
             renderOrdersPagination(res.data.pagination.page, res.data.pagination.total_pages);
@@ -1184,6 +1547,15 @@
     function loadOrderForEditing(orderId) {
         var requestToken = editLoadToken + 1;
         var cachedOrder = readCache(sessionStore, getOrderCacheKey(orderId), 2 * 60 * 1000);
+        var startedAt = window.performance && window.performance.now ? window.performance.now() : Date.now();
+
+        if (isLazyViewPending('new-order')) {
+            pendingEditOrderId = parseInt(orderId, 10) || 0;
+            setAppView('new-order');
+            return;
+        }
+
+        pendingEditOrderId = 0;
 
         function applyOrderData(d, fallbackOrderId) {
             var addr = d.shipping_address || {};
@@ -1241,6 +1613,15 @@
         editLoadToken = requestToken;
 
         if (cachedOrder) {
+            recordPerformanceEntry({
+                flow: 'Order edit',
+                context: 'order #' + orderId,
+                source: 'session-cache',
+                totalMs: (window.performance && window.performance.now ? window.performance.now() : Date.now()) - startedAt,
+                phpMs: 0,
+                responseBytes: safeJsonLength(cachedOrder),
+                peakMemoryMb: 0
+            });
             applyOrderData(cachedOrder, orderId);
             return;
         }
@@ -1251,6 +1632,8 @@
             order_id: orderId
         }, function (res) {
             var d;
+            var perf = (res && res.data && res.data._performance) || {};
+            var completedAt = window.performance && window.performance.now ? window.performance.now() : Date.now();
 
             if (requestToken !== editLoadToken) {
                 return;
@@ -1263,6 +1646,16 @@
 
             d = res.data || {};
             writeCache(sessionStore, getOrderCacheKey(orderId), d);
+            recordPerformanceEntry({
+                flow: 'Order edit',
+                context: 'order #' + orderId,
+                source: 'network',
+                totalMs: completedAt - startedAt,
+                phpMs: perf.php_ms || 0,
+                responseBytes: safeJsonLength(d),
+                peakMemoryMb: perf.peak_memory_mb || 0,
+                queries: perf.queries || 0
+            });
             applyOrderData(d, orderId);
         }).fail(function () {
             if (requestToken !== editLoadToken) {
@@ -1791,7 +2184,7 @@
 
     syncNoticeVisibility();
 
-    $('#eop-search-customer').on('click', function () {
+    $(document).on('click', '#eop-search-customer', function () {
         var doc = $('#eop-document').val().replace(/\D/g, '');
 
         if (!doc) {
@@ -1822,36 +2215,14 @@
         });
     });
 
-    $('#eop-document').on('keypress', function (e) {
+    $(document).on('keypress', '#eop-document', function (e) {
         if (e.which === 13) {
             e.preventDefault();
             $('#eop-search-customer').trigger('click');
         }
     });
 
-    $('#eop-product-search').select2({
-        placeholder: i18n.search_product,
-        minimumInputLength: 3,
-        allowClear: true,
-        ajax: {
-            url: eop_vars.ajax_url,
-            dataType: 'json',
-            delay: 300,
-            data: function (params) {
-                return {
-                    action: 'eop_search_products',
-                    nonce: eop_vars.nonce,
-                    term: params.term
-                };
-            },
-            processResults: function (data) {
-                return data;
-            },
-            cache: true
-        }
-    });
-
-    $('#eop-product-search').on('select2:select', function (e) {
+    $(document).on('select2:select', '#eop-product-search', function (e) {
         var selected = e.params.data;
         var defaultQuantity = getDefaultItemQuantity();
         var defaultDiscount = getDefaultItemDiscount();
@@ -1926,11 +2297,11 @@
         renderItems();
     });
 
-    $('#eop-apply-item-defaults').on('click', function () {
+    $(document).on('click', '#eop-apply-item-defaults', function () {
         applyItemDefaultsToAll();
     });
 
-    $('#eop-shipping, #eop-discount').on('input change', recalcTotals);
+    $(document).on('input change', '#eop-shipping, #eop-discount', recalcTotals);
 
     $(document).on('change input', '.eop-item-discount', function () {
         var $card = $(this).closest('.eop-item-card');
@@ -1943,7 +2314,7 @@
         recalcTotals();
     });
 
-    $('#eop-shipping-toggle').on('click', function () {
+    $(document).on('click', '#eop-shipping-toggle', function () {
         var isOpen = $(this).attr('aria-expanded') === 'true';
 
         setShippingPanelState(!isOpen);
@@ -1953,7 +2324,7 @@
         }
     });
 
-    $('#eop-shipping-postcode').on('input', function () {
+    $(document).on('input', '#eop-shipping-postcode', function () {
         var formatted = formatPostcode($(this).val());
         var digits = sanitizePostcode(formatted);
 
@@ -1966,11 +2337,11 @@
         }
     });
 
-    $('#eop-shipping-postcode').on('blur', function () {
+    $(document).on('blur', '#eop-shipping-postcode', function () {
         lookupPostcode(true);
     });
 
-    $('#eop-shipping-state, #eop-shipping-city, #eop-shipping-address, #eop-shipping-number, #eop-shipping-neighborhood, #eop-shipping-address-2').on('input change', function () {
+    $(document).on('input change', '#eop-shipping-state, #eop-shipping-city, #eop-shipping-address, #eop-shipping-number, #eop-shipping-neighborhood, #eop-shipping-address-2', function () {
         if (selectedShippingRate) {
             clearShippingSelection(true);
         } else {
@@ -1978,7 +2349,7 @@
         }
     });
 
-    $('#eop-calc-shipping').on('click', function () {
+    $(document).on('click', '#eop-calc-shipping', function () {
         var $btn = $(this);
         shippingAddress = getShippingAddress();
 
@@ -2041,7 +2412,7 @@
         }
     });
 
-    $('#eop-submit').on('click', function () {
+    $(document).on('click', '#eop-submit', function () {
         var $btn;
         var orderData;
         var requestAction;
@@ -2130,12 +2501,12 @@
         });
     });
 
-    $('#eop-new-order').on('click', function () {
+    $(document).on('click', '#eop-new-order', function () {
         resetForm();
         setAppView('new-order');
     });
 
-    $('#eop-cancel-edit').on('click', function () {
+    $(document).on('click', '#eop-cancel-edit', function () {
         resetForm();
         showNotice(i18n.edit_cancel || 'Edicao cancelada.', 'success');
     });
@@ -2277,23 +2648,23 @@
         persistDraftState();
     });
 
-    $('#eop-orders-refresh').on('click', function () {
+    $(document).on('click', '#eop-orders-refresh', function () {
         removeCacheByPrefix(sessionStore, getCacheKey('orders-list', ''));
         loadOrdersList(1);
     });
 
-    $('#eop-orders-search').on('keydown', function (e) {
+    $(document).on('keydown', '#eop-orders-search', function (e) {
         if (e.key === 'Enter') {
             e.preventDefault();
             loadOrdersList(1);
         }
     });
 
-    $('#eop-orders-status-filter').on('change', function () {
+    $(document).on('change', '#eop-orders-status-filter', function () {
         loadOrdersList(1);
     });
 
-    $('#eop-orders-flow-filter').on('change', function () {
+    $(document).on('change', '#eop-orders-flow-filter', function () {
         loadOrdersList(1);
     });
 
@@ -2305,7 +2676,7 @@
         loadOrdersList($(this).data('page'));
     });
 
-    $('#eop-success-modal').on('click', function (e) {
+    $(document).on('click', '#eop-success-modal', function (e) {
         if (e.target === this) {
             $(this).hide();
         }
@@ -2355,7 +2726,10 @@
         var bootstrapOrderId = parseInt(params.get('order_id') || '0', 10) || 0;
 
         restorePluginFullscreen();
+        initProductSearch($(document));
         syncSidebarState(bootstrapView);
+        renderPerformanceAuditPanel();
+        registerInitialPerformanceBaseline();
 
         setAppView(bootstrapView, { replaceState: true, skipLazy: true });
 
@@ -2370,6 +2744,10 @@
         if (bootstrapAction === 'edit' && bootstrapOrderId > 0) {
             loadOrderForEditing(bootstrapOrderId);
         }
+
+        $(document).on('click', '#eop-performance-clear-session', function () {
+            clearPerformanceEntries();
+        });
     });
 
     $(document).on('keydown', function (e) {

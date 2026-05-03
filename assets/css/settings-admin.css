@@ -116,6 +116,22 @@ body.eop-settings-screen .error {
   border: 1px solid #bbf7d0;
 }
 
+.eop-settings-feedback--error {
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+}
+
+.eop-portability-summary-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #5b6784;
+}
+
+.eop-portability-summary-list li + li {
+  margin-top: 6px;
+}
+
 .eop-settings-sections {
   display: grid;
   gap: 22px;
@@ -135,6 +151,168 @@ body.eop-settings-screen .error {
 .eop-settings-card p {
   margin: 0 0 18px;
   color: #5b6784;
+}
+
+.eop-contract-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  gap: 18px;
+  padding: 18px;
+  border-radius: 24px;
+  background: var(--eop-preview-bg, #edf2fb);
+}
+
+.eop-contract-preview__main,
+.eop-contract-preview__sidebar {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.eop-contract-preview__reader,
+.eop-contract-preview__form-card,
+.eop-contract-preview__summary {
+  padding: 20px;
+  border: 1px solid #dde5f4;
+  border-radius: 22px;
+  background: var(--eop-preview-panel, #ffffff);
+  box-shadow: 0 18px 36px rgba(16, 24, 40, 0.06);
+}
+
+.eop-contract-preview__summary {
+  background: var(--eop-preview-side, #f6f8fc);
+}
+
+.eop-contract-preview__reader-head,
+.eop-contract-preview__buttons,
+.eop-contract-preview__meta-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.eop-contract-preview__reader-head {
+  margin-bottom: 14px;
+  align-items: flex-start;
+}
+
+.eop-contract-preview__reader-head strong,
+.eop-contract-preview__form-card strong,
+.eop-contract-preview__summary strong {
+  display: block;
+  color: var(--eop-preview-text, #16243a);
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.eop-contract-preview__reader-head small,
+.eop-contract-preview__form-card p,
+.eop-contract-preview__summary p,
+.eop-contract-preview__summary span,
+.eop-contract-preview__form-card label span {
+  color: var(--eop-preview-muted, #66768d);
+}
+
+.eop-contract-preview__reader-body {
+  min-height: 460px;
+  border: 1px solid #d9e2f2;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.eop-contract-preview__reader-body iframe {
+  display: block;
+  width: 100%;
+  min-height: 460px;
+  border: 0;
+  background: #fff;
+}
+
+.eop-contract-preview__reader-copy,
+.eop-contract-preview__reader-empty {
+  padding: 24px;
+  line-height: 1.7;
+  color: var(--eop-preview-text, #16243a);
+}
+
+.eop-contract-preview__reader-empty {
+  color: var(--eop-preview-muted, #66768d);
+}
+
+.eop-contract-preview__buttons {
+  flex-wrap: wrap;
+}
+
+.eop-contract-preview__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 14px;
+  background: var(--eop-preview-accent, #d78a2f);
+  color: #fff;
+  font-weight: 700;
+}
+
+.eop-contract-preview__button.is-secondary {
+  background: #fff;
+  color: var(--eop-preview-text, #16243a);
+  border: 1px solid #d7deed;
+}
+
+.eop-contract-preview__form-card {
+  display: grid;
+  gap: 14px;
+}
+
+.eop-contract-preview__form-card label {
+  display: grid;
+  gap: 8px;
+}
+
+.eop-contract-preview__form-card input[type="text"] {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 16px;
+  border: 1px solid #d7deed;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.eop-contract-preview__checkbox {
+  display: flex !important;
+  gap: 10px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 16px;
+  background: #f6f8fc;
+  border: 1px solid #d7deed;
+}
+
+.eop-contract-preview__summary {
+  display: grid;
+  gap: 12px;
+}
+
+.eop-contract-preview__summary > span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.eop-contract-preview__meta-row {
+  padding-top: 12px;
+  border-top: 1px solid #d7deed;
+}
+
+@media (max-width: 960px) {
+  .eop-contract-preview {
+    grid-template-columns: 1fr;
+  }
 }
 
 .eop-settings-grid {
@@ -305,6 +483,148 @@ body.eop-settings-screen .error {
   display: none;
 }
 
+.eop-signature-documents {
+  display: grid;
+  gap: 18px;
+}
+
+.eop-signature-documents__toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 22px;
+  border: 1px solid #dce5fb;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #f6f9ff 0%, #ffffff 100%);
+}
+
+.eop-signature-documents__intro span,
+.eop-signature-document__eyebrow {
+  display: inline-block;
+  color: #3657a5;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.eop-signature-documents__intro h3,
+.eop-signature-document__heading {
+  margin: 8px 0 6px;
+  color: #11162f;
+  font-size: 24px;
+  line-height: 1.05;
+}
+
+.eop-signature-documents__intro p {
+  margin: 0;
+  max-width: 68ch;
+  color: #5b6784;
+}
+
+.eop-signature-documents__create.button {
+  min-height: 46px;
+  padding: 0 18px;
+  border-color: #bacbfd;
+  border-radius: 14px;
+  background: #fff;
+  color: #15327c;
+  font-weight: 700;
+}
+
+.eop-signature-documents__create.button:hover,
+.eop-signature-documents__create.button:focus {
+  border-color: #8eabff;
+  color: #10265f;
+}
+
+.eop-signature-documents__empty {
+  padding: 22px;
+  border: 1px dashed #cad6f8;
+  border-radius: 20px;
+  background: #fbfcff;
+}
+
+.eop-signature-documents__empty.is-hidden,
+.eop-signature-document__panel.is-hidden {
+  display: none;
+}
+
+.eop-signature-documents__empty strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #11162f;
+  font-size: 18px;
+}
+
+.eop-signature-documents__empty p {
+  margin: 0;
+  color: #5b6784;
+}
+
+.eop-signature-documents__list {
+  display: grid;
+  gap: 14px;
+}
+
+.eop-signature-document {
+  border: 1px solid #e1e8fb;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(0, 3, 75, 0.05);
+  overflow: hidden;
+  padding: 20px 22px 22px;
+}
+
+.eop-signature-document__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.eop-signature-document__remove {
+  color: #b42318;
+  text-decoration: none;
+}
+
+.eop-signature-document__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.eop-signature-document__attachment-shell {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #dce5fb;
+  border-radius: 16px;
+  background: #f8faff;
+}
+
+.eop-signature-document__attachment-name {
+  color: #43506c;
+  font-weight: 700;
+}
+
+.eop-signature-document__attachment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.eop-signature-document__attachment-actions .button-link-delete.is-hidden {
+  display: none;
+}
+
+.eop-signature-document__editor {
+  min-height: 240px !important;
+}
+
 .eop-settings-switch-shell {
   display: flex;
   flex-direction: column;
@@ -391,6 +711,15 @@ body.eop-settings-screen .error {
   .eop-settings-grid {
     grid-template-columns: 1fr;
   }
+	.eop-signature-documents__toolbar,
+	.eop-signature-document__header,
+	.eop-signature-document__grid {
+	  grid-template-columns: 1fr;
+	}
+	.eop-signature-documents__toolbar,
+	.eop-signature-document__header {
+	  display: grid;
+	}
   .eop-settings-panel {
     position: static;
   }

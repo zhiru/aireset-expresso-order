@@ -89,6 +89,7 @@ class EOP_Admin_Page {
         add_action( 'admin_menu', array( __CLASS__, 'register_page' ) );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_menu_flyout_assets' ) );
+        add_action( 'wp_ajax_eop_load_admin_view', array( __CLASS__, 'ajax_load_admin_view' ) );
         add_filter( 'admin_body_class', array( __CLASS__, 'filter_admin_body_class' ) );
     }
 
@@ -117,11 +118,15 @@ class EOP_Admin_Page {
             'pdf'       => current_user_can( 'edit_shop_orders' ),
             'settings-store-info'        => current_user_can( 'manage_options' ),
             'settings-general-config'    => current_user_can( 'manage_options' ),
-            'settings-confirmation-flow' => current_user_can( 'manage_options' ),
+            'settings-confirmation-general' => current_user_can( 'manage_options' ),
+            'settings-confirmation-documents' => current_user_can( 'manage_options' ),
+            'settings-confirmation-preview' => current_user_can( 'manage_options' ),
             'settings-order-link-style'  => current_user_can( 'manage_options' ),
             'settings-proposal-link-style' => current_user_can( 'manage_options' ),
+            'settings-customer-experience' => current_user_can( 'manage_options' ),
             'settings-texts'             => current_user_can( 'manage_options' ),
             'documentation'              => current_user_can( 'manage_options' ),
+            'export-import'              => current_user_can( 'manage_options' ),
             'license'                    => current_user_can( 'manage_options' ),
         );
 
@@ -134,6 +139,7 @@ class EOP_Admin_Page {
         $legacy_map = array(
             'settings'        => 'settings-general-config',
             'settings-styles' => 'settings-order-link-style',
+            'settings-confirmation-flow' => 'settings-confirmation-general',
         );
 
         if ( isset( $legacy_map[ $view ] ) ) {
@@ -177,6 +183,233 @@ class EOP_Admin_Page {
         }
 
         return $urls;
+    }
+
+    private static function render_template( $template_name ) {
+        $template_path = EOP_PLUGIN_DIR . 'templates/' . ltrim( (string) $template_name, '/\\' );
+
+        if ( ! file_exists( $template_path ) ) {
+            return;
+        }
+
+        require $template_path;
+    }
+
+    private static function get_lazy_view_definitions() {
+        return array(
+            'new-order' => array(
+                'renderer' => function () {
+                    self::render_template( 'admin-view-new-order.php' );
+                },
+                'wrapped'  => false,
+            ),
+            'orders' => array(
+                'renderer' => function () {
+                    self::render_template( 'admin-view-orders.php' );
+                },
+                'wrapped'  => false,
+            ),
+            'pdf' => array(
+                'title' => __( 'PDF', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Configure documentos, preview e comportamento do modulo PDF sem sair do shell original do Pedido Expresso.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    if ( class_exists( 'EOP_PDF_Admin_Page' ) ) {
+                        EOP_PDF_Admin_Page::render_embedded_page();
+                    }
+                },
+            ),
+            'settings-store-info' => array(
+                'title' => __( 'Informacoes sobre a loja', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Centralize logo, dados institucionais e informacoes exibidas nos documentos do Pedido Expresso.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    EOP_PDF_Admin_Page::render_embedded_page( 'store' );
+                },
+            ),
+            'settings-general-config' => array(
+                'title' => __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Mantenha em um bloco proprio as regras operacionais do plugin, paginas publicas e comportamento comercial principal.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    EOP_Settings::render_embedded_page( 'general-config' );
+                },
+            ),
+            'settings-confirmation-general' => array(
+				'title' => __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Controle regras gerais, textos-base e o comportamento do aceite complementar apos a proposta.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    EOP_Settings::render_embedded_page( 'confirmation-flow-general' );
+                },
+            ),
+            'settings-confirmation-documents' => array(
+				'title' => __( 'Documentos', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Gerencie os documentos do contrato, anexos Word/PDF e os textos que serao convertidos em PDF no pedido.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    EOP_Settings::render_embedded_page( 'confirmation-flow-documents' );
+                },
+            ),
+            'settings-confirmation-preview' => array(
+				'title' => __( 'Preview', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Edite visualmente a etapa contratual com foco em leitura, aceite e resumo lateral.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    EOP_Settings::render_embedded_page( 'confirmation-flow-preview' );
+                },
+            ),
+            'settings-order-link-style' => array(
+                'title' => __( 'Visual do Link do Pedido', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Separe a identidade visual principal do shell e do link do pedido para ajustes rapidos de marca.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    EOP_Settings::render_embedded_page( 'order-link-style' );
+                },
+            ),
+            'settings-proposal-link-style' => array(
+                'title' => __( 'Visual do Link de Proposta', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Ajuste o visual publico da proposta sem misturar essas opcoes com o restante do admin.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    EOP_Settings::render_embedded_page( 'proposal-link-style' );
+                },
+            ),
+            'settings-customer-experience' => array(
+                'title' => __( 'Experiencia do Cliente', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Separe o design da pagina confirmada e do fluxo complementar em uma view exclusiva dentro da SPA.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    EOP_Settings::render_embedded_page( 'customer-experience' );
+                },
+            ),
+            'settings-texts' => array(
+                'title' => __( 'Textos e mensagens', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Mantenha em uma pagina propria os titulos, descricoes e labels usados no painel e na proposta publica.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    EOP_Settings::render_embedded_page( 'texts' );
+                },
+            ),
+            'documentation' => array(
+                'title' => __( 'Documentacao', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Consulte em uma area propria o efeito real de cada configuracao do modulo de documentos.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    EOP_PDF_Admin_Page::render_embedded_page( 'documentation' );
+                },
+            ),
+            'export-import' => array(
+                'title' => __( 'Exportar e Importar', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Baixe um pacote completo das configuracoes do plugin ou importe documentos e backups sem sair da SPA.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    if ( class_exists( 'EOP_Settings_Portability' ) ) {
+                        EOP_Settings_Portability::render_page();
+                    }
+                },
+            ),
+            'license' => array(
+                'title' => __( 'Licenca', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Consulte a validade da assinatura e administre a ativacao do plugin sem sair do painel.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    $license_manager = class_exists( 'EOP_License_Manager' ) ? EOP_License_Manager::get_instance() : null;
+
+                    echo '<div class="eop-admin-license-shell">';
+
+                    if ( $license_manager ) {
+                        $license_manager->activated();
+                    }
+
+                    echo '</div>';
+                },
+            ),
+        );
+    }
+
+    private static function can_access_view( $view ) {
+        return in_array( $view, self::get_available_views(), true );
+    }
+
+    private static function prepare_request_context_for_view( $view ) {
+        $_GET['page'] = 'eop-pedido-expresso';
+        $_GET['view'] = $view;
+
+        if ( 'pdf' === $view ) {
+            $_GET['pdf_tab']  = isset( $_REQUEST['pdf_tab'] ) ? sanitize_key( wp_unslash( $_REQUEST['pdf_tab'] ) ) : 'display';
+            $_GET['document'] = isset( $_REQUEST['document'] ) && 'proposal' === sanitize_key( wp_unslash( $_REQUEST['document'] ) ) ? 'proposal' : 'order';
+
+            $preview_order = absint( $_REQUEST['preview_order'] ?? 0 );
+
+            if ( $preview_order > 0 ) {
+                $_GET['preview_order'] = $preview_order;
+            } else {
+                unset( $_GET['preview_order'] );
+            }
+        }
+    }
+
+    private static function render_lazy_view_html( $view ) {
+        $definitions = self::get_lazy_view_definitions();
+
+        if ( empty( $definitions[ $view ]['renderer'] ) || ! is_callable( $definitions[ $view ]['renderer'] ) ) {
+            return '';
+        }
+
+        $title       = isset( $definitions[ $view ]['title'] ) ? (string) $definitions[ $view ]['title'] : '';
+        $description = isset( $definitions[ $view ]['description'] ) ? (string) $definitions[ $view ]['description'] : '';
+        $is_wrapped  = ! isset( $definitions[ $view ]['wrapped'] ) || false !== $definitions[ $view ]['wrapped'];
+
+        ob_start();
+        if ( $is_wrapped ) {
+            ?>
+            <section class="eop-pdv-view is-active" data-eop-view="<?php echo esc_attr( $view ); ?>" data-eop-lazy="true" data-eop-lazy-loaded="true">
+                <div class="eop-admin-panel-head">
+                    <h2><?php echo esc_html( $title ); ?></h2>
+                    <p><?php echo esc_html( $description ); ?></p>
+                </div>
+                <div class="eop-admin-view-main">
+                    <?php call_user_func( $definitions[ $view ]['renderer'] ); ?>
+                </div>
+            </section>
+            <?php
+        } else {
+            call_user_func( $definitions[ $view ]['renderer'] );
+        }
+
+        return (string) ob_get_clean();
+    }
+
+    public static function ajax_load_admin_view() {
+        check_ajax_referer( 'eop_nonce', 'nonce' );
+
+        $view = self::normalize_view( isset( $_REQUEST['view_name'] ) ? wp_unslash( $_REQUEST['view_name'] ) : '' );
+
+        if ( ! self::can_access_view( $view ) ) {
+            wp_send_json_error(
+                array(
+                    'message' => __( 'Acesso negado.', EOP_TEXT_DOMAIN ),
+                ),
+                403
+            );
+        }
+
+        self::prepare_request_context_for_view( $view );
+
+        $html = self::render_lazy_view_html( $view );
+
+        if ( '' === $html ) {
+            wp_send_json_error(
+                array(
+                    'message' => __( 'View administrativa indisponivel.', EOP_TEXT_DOMAIN ),
+                ),
+                400
+            );
+        }
+
+        wp_send_json_success(
+            array(
+                'view' => $view,
+                'html' => $html,
+                '_performance' => class_exists( 'EOP_Performance_Audit' )
+                    ? EOP_Performance_Audit::get_request_metrics(
+                        'admin_view',
+                        array(
+                            'view'           => $view,
+                            'response_bytes' => strlen( $html ),
+                        )
+                    )
+                    : array(),
+            )
+        );
     }
 
     /**
@@ -225,6 +458,11 @@ class EOP_Admin_Page {
         wp_enqueue_style( 'eop-frontend', EOP_PLUGIN_URL . 'assets/css/frontend.css', array(), EOP_VERSION );
         wp_enqueue_style( 'eop-pdf-admin', EOP_PLUGIN_URL . 'assets/css/pdf-admin.css', array( 'eop-admin' ), EOP_VERSION );
         wp_enqueue_script( 'eop-admin', EOP_PLUGIN_URL . 'assets/js/admin.js', array( 'jquery', 'select2' ), EOP_VERSION, true );
+
+        $performance_asset_handles = array(
+            'styles'  => array( 'select2', 'eop-admin', 'eop-frontend', 'eop-pdf-admin', 'eop-coloris', 'eop-settings-admin' ),
+            'scripts' => array( 'select2', 'eop-admin', 'eop-coloris', 'eop-settings-admin' ),
+        );
 
         $font_css_path = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/css/jquery.fontselect.css';
         $font_js_path  = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/js/jquery.fontselect.js';
@@ -287,6 +525,10 @@ class EOP_Admin_Page {
             'initial_view'  => self::normalize_view( isset( $_GET['view'] ) ? wp_unslash( $_GET['view'] ) : '' ),
             'view_url_base' => self::get_view_url(),
             'view_urls'     => self::get_view_urls(),
+            'performance_audit' => array(
+                'enabled'       => current_user_can( 'manage_options' ),
+                'asset_summary' => class_exists( 'EOP_Performance_Audit' ) ? EOP_Performance_Audit::summarize_assets( $performance_asset_handles['styles'], $performance_asset_handles['scripts'] ) : array(),
+            ),
             'i18n'          => array(
                 'search_product'   => __( 'Buscar produto por nome ou SKU...', EOP_TEXT_DOMAIN ),
                 'no_items'         => __( 'Nenhum produto adicionado.', EOP_TEXT_DOMAIN ),
@@ -379,6 +621,19 @@ class EOP_Admin_Page {
                 'focus_mode_label_enter' => __( 'Modo foco', EOP_TEXT_DOMAIN ),
                 'focus_mode_label_exit' => __( 'Sair do foco', EOP_TEXT_DOMAIN ),
                 'lazy_loading_view' => __( 'Carregando tela...', EOP_TEXT_DOMAIN ),
+                'performance_title' => __( 'Baseline de performance', EOP_TEXT_DOMAIN ),
+                'performance_subtitle' => __( 'Mede a abertura da SPA, trocas de view, PDF e requests principais desta sessao.', EOP_TEXT_DOMAIN ),
+                'performance_empty' => __( 'Nenhuma medicao registrada ainda nesta sessao.', EOP_TEXT_DOMAIN ),
+                'performance_clear' => __( 'Limpar baseline da sessao', EOP_TEXT_DOMAIN ),
+                'performance_col_flow' => __( 'Fluxo', EOP_TEXT_DOMAIN ),
+                'performance_col_source' => __( 'Origem', EOP_TEXT_DOMAIN ),
+                'performance_col_total' => __( 'Tempo total', EOP_TEXT_DOMAIN ),
+                'performance_col_php' => __( 'PHP', EOP_TEXT_DOMAIN ),
+                'performance_col_response' => __( 'Resposta', EOP_TEXT_DOMAIN ),
+                'performance_col_memory' => __( 'Pico memoria', EOP_TEXT_DOMAIN ),
+                'performance_summary_assets' => __( 'Assets atuais', EOP_TEXT_DOMAIN ),
+                'performance_summary_queries' => __( 'Queries', EOP_TEXT_DOMAIN ),
+                'performance_summary_navigation' => __( 'Navegacao inicial', EOP_TEXT_DOMAIN ),
             ),
         ) );
     }
@@ -476,16 +731,6 @@ class EOP_Admin_Page {
                     ),
                 ),
                 array(
-                    'key'   => 'eop-view-settings-confirmation-flow',
-                    'label' => __( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ),
-                    'icon'  => 'dashicons-yes-alt',
-                    'url'   => self::get_view_url( 'settings-confirmation-flow' ),
-                    'query' => array(
-                        'page' => 'eop-pedido-expresso',
-                        'view' => 'settings-confirmation-flow',
-                    ),
-                ),
-                array(
                     'key'   => 'eop-view-settings-order-link-style',
                     'label' => __( 'Estilo do Link do Pedido', EOP_TEXT_DOMAIN ),
                     'icon'  => 'dashicons-art',
@@ -506,6 +751,16 @@ class EOP_Admin_Page {
                     ),
                 ),
                 array(
+                    'key'   => 'eop-view-settings-customer-experience',
+                    'label' => __( 'Experiencia do Cliente', EOP_TEXT_DOMAIN ),
+                    'icon'  => 'dashicons-format-gallery',
+                    'url'   => self::get_view_url( 'settings-customer-experience' ),
+                    'query' => array(
+                        'page' => 'eop-pedido-expresso',
+                        'view' => 'settings-customer-experience',
+                    ),
+                ),
+                array(
                     'key'   => 'eop-view-settings-texts',
                     'label' => __( 'Textos', EOP_TEXT_DOMAIN ),
                     'icon'  => 'dashicons-edit-large',
@@ -513,6 +768,39 @@ class EOP_Admin_Page {
                     'query' => array(
                         'page' => 'eop-pedido-expresso',
                         'view' => 'settings-texts',
+                    ),
+                ),
+            );
+
+            $confirmation_children = array(
+                array(
+                    'key'   => 'eop-view-settings-confirmation-general',
+                    'label' => __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ),
+                    'icon'  => 'dashicons-admin-settings',
+                    'url'   => self::get_view_url( 'settings-confirmation-general' ),
+                    'query' => array(
+                        'page' => 'eop-pedido-expresso',
+                        'view' => 'settings-confirmation-general',
+                    ),
+                ),
+                array(
+                    'key'   => 'eop-view-settings-confirmation-documents',
+                    'label' => __( 'Documentos', EOP_TEXT_DOMAIN ),
+                    'icon'  => 'dashicons-media-document',
+                    'url'   => self::get_view_url( 'settings-confirmation-documents' ),
+                    'query' => array(
+                        'page' => 'eop-pedido-expresso',
+                        'view' => 'settings-confirmation-documents',
+                    ),
+                ),
+                array(
+                    'key'   => 'eop-view-settings-confirmation-preview',
+                    'label' => __( 'Preview', EOP_TEXT_DOMAIN ),
+                    'icon'  => 'dashicons-visibility',
+                    'url'   => self::get_view_url( 'settings-confirmation-preview' ),
+                    'query' => array(
+                        'page' => 'eop-pedido-expresso',
+                        'view' => 'settings-confirmation-preview',
                     ),
                 ),
             );
@@ -645,6 +933,17 @@ class EOP_Admin_Page {
                             'view' => 'settings-general-config',
                         ),
                         'children' => $general_children,
+                    ),
+                    array(
+                        'key'   => 'eop-view-confirmation-flow',
+                        'label' => __( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ),
+                        'icon'  => 'dashicons-yes-alt',
+                        'url'   => self::get_view_url( 'settings-confirmation-general' ),
+                        'query' => array(
+                            'page' => 'eop-pedido-expresso',
+                            'view' => 'settings-confirmation-general',
+                        ),
+                        'children' => $confirmation_children,
                     ),
                 ),
                 $items,
