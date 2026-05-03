@@ -222,7 +222,7 @@ class EOP_Post_Confirmation_Flow {
 		$attachment_url    = $attachment_id ? wp_get_attachment_url( $attachment_id ) : '';
 		$product_counts    = self::get_product_completion_counts( $order, $state );
 		$contract_text     = self::get_contract_text( $order, $state );
-		$signature_documents = self::get_signature_documents( $order, $state, 'admin' === $context );
+		$signature_documents = self::get_signature_documents( $order, $state, 'admin' === $context, 'admin' !== $context );
 		$products_payload  = array();
 
 		foreach ( $order->get_items( 'line_item' ) as $item ) {
@@ -309,31 +309,32 @@ class EOP_Post_Confirmation_Flow {
 	}
 
 	public static function get_list_summary( WC_Order $order ) {
-		$state  = self::get_state( $order );
-		$stage  = self::get_current_stage( $order, $state );
-		$counts = self::get_product_completion_counts( $order, $state );
-		$order_data_rows = self::get_order_data_rows( $order );
-		$total_documents = count( $order_data_rows );
-		$done_documents  = count( array_filter( wp_list_pluck( $order_data_rows, 'filled' ) ) );
-		$attachment_id   = absint( $state['attachment']['id'] ?? 0 );
+		$state             = self::get_state( $order );
+		$active_for_order  = self::is_enabled_for_order( $order );
+		$stage             = self::get_list_summary_stage( $order, $active_for_order );
+		$counts            = self::get_list_product_completion_counts( $order, $state );
+		$order_data_counts = self::get_list_order_data_counts( $order );
+		$attachment_id     = absint( $order->get_meta( '_eop_post_confirmation_attachment_id', true ) );
+		$contract_accepted = '' !== trim( (string) $order->get_meta( '_eop_post_confirmation_contract_accepted_at', true ) )
+			|| '' !== trim( (string) $order->get_meta( '_eop_post_confirmation_contract_accepted_name', true ) );
 
 		return apply_filters(
 			'eop_post_confirmation_list_summary',
 			array(
-				'active_for_order' => self::is_enabled_for_order( $order ),
+				'active_for_order' => $active_for_order,
 				'current_stage'    => $stage,
 				'stage_label'      => self::get_stage_label( $stage ),
 				'completed'        => 'completed' === $stage,
 				'contract'         => array(
-					'accepted' => ! empty( $state['contract']['accepted'] ),
+					'accepted' => $contract_accepted,
 				),
 				'documents'        => array(
-					'completed' => $done_documents,
-					'total'     => $total_documents,
+					'completed' => $order_data_counts['filled'],
+					'total'     => $order_data_counts['total'],
 				),
 				'order_data'       => array(
-					'filled' => $done_documents,
-					'total'  => $total_documents,
+					'filled' => $order_data_counts['filled'],
+					'total'  => $order_data_counts['total'],
 				),
 				'attachment'       => array(
 					'required' => self::requires_attachment(),
@@ -347,6 +348,84 @@ class EOP_Post_Confirmation_Flow {
 			),
 			$order,
 			$state
+		);
+	}
+
+	private static function get_list_summary_stage( WC_Order $order, $active_for_order ) {
+		if ( ! $active_for_order ) {
+			return 'inactive';
+		}
+
+		if ( 'yes' !== (string) $order->get_meta( '_eop_proposal_confirmed', true ) ) {
+			return 'awaiting_confirmation';
+		}
+
+		if ( self::order_requires_payment( $order ) ) {
+			return 'payment';
+		}
+
+		$saved_stage = sanitize_key( (string) $order->get_meta( '_eop_post_confirmation_flow_stage', true ) );
+
+		if ( 'yes' === (string) $order->get_meta( self::META_FLAG, true ) ) {
+			return 'completed';
+		}
+
+		return in_array( $saved_stage, array( 'payment', 'contract', 'upload', 'products', 'completed' ), true ) ? $saved_stage : 'contract';
+	}
+
+	private static function get_list_order_data_counts( WC_Order $order ) {
+		$values = array(
+			trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() ),
+			self::get_order_customer_document( $order ),
+			$order->get_billing_email(),
+			$order->get_billing_phone(),
+			$order->get_billing_company(),
+			self::get_order_meta_value( $order, array( '_billing_ie', 'billing_ie' ) ),
+			self::get_order_address_label( $order, 'billing' ),
+			self::get_order_address_label( $order, 'shipping' ),
+			$order->get_payment_method_title(),
+		);
+
+		$filled = 0;
+
+		foreach ( $values as $value ) {
+			if ( '' !== trim( wp_strip_all_tags( (string) $value ) ) ) {
+				$filled++;
+			}
+		}
+
+		return array(
+			'filled' => $filled,
+			'total'  => count( $values ),
+		);
+	}
+
+	private static function get_list_product_completion_counts( WC_Order $order, $state ) {
+		$editable = 0;
+		$locked   = 0;
+		$done     = 0;
+
+		foreach ( $order->get_items( 'line_item' ) as $item ) {
+			if ( ! $item instanceof WC_Order_Item_Product ) {
+				continue;
+			}
+
+			if ( 'yes' === (string) $item->get_meta( '_eop_custom_name_locked', true ) ) {
+				$locked++;
+				continue;
+			}
+
+			$editable++;
+
+			if ( '' !== trim( self::get_item_custom_name( $item, $state ) ) ) {
+				$done++;
+			}
+		}
+
+		return array(
+			'editable'  => $editable,
+			'locked'    => $locked,
+			'completed' => $done,
 		);
 	}
 
@@ -717,6 +796,15 @@ class EOP_Post_Confirmation_Flow {
 		$title    = self::get_stage_title( $stage, $settings );
 		$steps    = self::get_progress_steps( $order, $state );
 		$stats    = self::get_status_cards( $order, $state );
+		$is_contract_stage = 'contract' === $stage;
+		$totals   = class_exists( 'EOP_Order_Creator' ) ? EOP_Order_Creator::sync_order_totals( $order ) : array( 'total' => $order->get_total() );
+		$total_rows = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_document_total_rows( $totals, 'proposal' ) : array();
+		$experience_accent = $settings['customer_experience_accent_color'] ?? $settings['primary_color'];
+		$experience_text   = $settings['customer_experience_text_color'] ?? $settings['proposal_text_color'];
+		$experience_muted  = $settings['customer_experience_muted_color'] ?? $settings['proposal_muted_color'];
+		$experience_panel  = $settings['customer_experience_panel_background_color'] ?? $settings['proposal_card_color'];
+		$experience_side   = $settings['customer_experience_sidebar_background_color'] ?? '#f6f8fc';
+		$experience_hero   = $settings['customer_experience_hero_background_color'] ?? $settings['primary_color'];
 		$heading_note = 'contract' === $stage
 			? __( 'A proposta ja foi confirmada. Agora basta registrar o aceite do contrato para liberar as proximas etapas.', EOP_TEXT_DOMAIN )
 			: __( 'Conclua a etapa atual para o fluxo continuar sem precisar voltar para esta proposta depois.', EOP_TEXT_DOMAIN );
@@ -724,76 +812,103 @@ class EOP_Post_Confirmation_Flow {
 		ob_start();
 		?>
 		<style>
-			.eop-post-flow{margin-top:26px;padding:26px;border:1px solid rgba(219,226,255,.86);border-radius:30px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(246,248,255,.96));box-shadow:0 24px 56px rgba(23,32,51,.08)}
+			.eop-post-flow{margin-top:30px;padding:24px;border:1px solid rgba(15,27,53,.08);border-radius:32px;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(247,249,252,.98));box-shadow:0 28px 64px rgba(15,27,53,.1)}
+			.eop-post-flow--stage-contract{margin-top:0;padding:0;border:none;background:transparent;box-shadow:none}
 			.eop-post-flow__layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:22px;align-items:start}
 			.eop-post-flow__main,.eop-post-flow__sidebar{display:grid;gap:18px;align-content:start}
 			.eop-post-flow__sidebar{position:sticky;top:18px}
-			.eop-post-flow__heading,.eop-post-flow__stage-intro,.eop-post-flow__contract,.eop-post-flow__upload-card,.eop-post-flow__acceptance-card,.eop-post-flow__panel,.eop-post-flow__product-card,.eop-post-flow__completion-item{border:1px solid rgba(219,226,255,.86);border-radius:24px;background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(246,248,255,.94));box-shadow:0 14px 30px rgba(23,32,51,.06)}
-			.eop-post-flow__heading{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding:24px}
+			.eop-post-flow--stage-contract .eop-post-flow__layout{grid-template-columns:minmax(0,1.24fr) minmax(260px,.76fr);gap:18px}
+			.eop-post-flow--stage-contract .eop-post-flow__sidebar{position:static}
+			.eop-post-flow__heading,.eop-post-flow__stage-intro,.eop-post-flow__contract,.eop-post-flow__upload-card,.eop-post-flow__acceptance-card,.eop-post-flow__panel,.eop-post-flow__product-card,.eop-post-flow__completion-item{border:1px solid rgba(15,27,53,.08);border-radius:28px;background:<?php echo esc_attr( $experience_panel ); ?>;box-shadow:0 16px 36px rgba(15,27,53,.06)}
+			.eop-post-flow__heading{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding:28px;background:linear-gradient(135deg,<?php echo esc_attr( $experience_hero ); ?> 0%,rgba(15,27,53,.92) 55%,rgba(15,27,53,.82) 100%);color:#fff;border-color:transparent;box-shadow:0 24px 48px rgba(15,27,53,.2)}
 			.eop-post-flow__heading-copy{display:grid;gap:10px;max-width:62ch}
-			.eop-post-flow__eyebrow{display:block;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
-			.eop-post-flow__title{margin:0;font-size:34px;line-height:1.02;letter-spacing:-.05em;color:<?php echo esc_attr( $settings['proposal_text_color'] ); ?>}
-			.eop-post-flow__heading-note{margin:0;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:15px;line-height:1.6}
-			.eop-post-flow__badge{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:999px;background:#eef4ff;color:<?php echo esc_attr( $settings['primary_color'] ); ?>;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
-			.eop-post-flow__stage-intro{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;padding:22px}
+			.eop-post-flow__eyebrow{display:block;color:rgba(255,255,255,.72);font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+			.eop-post-flow__title{margin:0;font-size:36px;line-height:1.02;letter-spacing:-.05em;color:#fff}
+			.eop-post-flow__heading-note{margin:0;color:rgba(255,255,255,.82);font-size:15px;line-height:1.6}
+			.eop-post-flow__badge{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;border:1px solid rgba(255,255,255,.16)}
+			.eop-post-flow__stage-intro{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;padding:18px 20px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(247,249,252,.98))}
 			.eop-post-flow__stage-copy{display:grid;gap:10px}
-			.eop-post-flow__text{margin:0;color:<?php echo esc_attr( $settings['proposal_text_color'] ); ?>;font-size:30px;line-height:1.04;letter-spacing:-.05em;font-weight:800}
-			.eop-post-flow__helper{margin:0;max-width:64ch;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:15px;line-height:1.65}
-			.eop-post-flow__stage-pills{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;max-width:320px}
-			.eop-post-flow__stage-pill{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;border-radius:999px;background:#edf2ff;color:<?php echo esc_attr( $settings['primary_color'] ); ?>;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;text-align:center}
-			.eop-post-flow__stage-pill.is-muted{background:#f5f7fb;color:<?php echo esc_attr( $settings['proposal_text_color'] ); ?>}
-			.eop-post-flow__contract,.eop-post-flow__acceptance-card,.eop-post-flow__panel{padding:22px}
-			.eop-post-flow__contract{line-height:1.75}
-			.eop-post-flow__contract h1,.eop-post-flow__contract h2,.eop-post-flow__contract h3{margin:0 0 12px;font-size:22px;line-height:1.15;letter-spacing:-.03em}
+			.eop-post-flow__text{margin:0;color:<?php echo esc_attr( $experience_text ); ?>;font-size:24px;line-height:1.08;letter-spacing:-.04em;font-weight:800}
+			.eop-post-flow__helper{margin:0;max-width:54ch;color:<?php echo esc_attr( $experience_muted ); ?>;font-size:14px;line-height:1.55}
+			.eop-post-flow__stage-pills{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:280px}
+			.eop-post-flow__stage-pill{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 12px;border-radius:999px;background:rgba(215,138,47,.12);color:<?php echo esc_attr( $experience_accent ); ?>;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-align:center}
+			.eop-post-flow__stage-pill.is-muted{background:#f5f7fb;color:<?php echo esc_attr( $experience_text ); ?>}
+			.eop-post-flow__contract,.eop-post-flow__acceptance-card,.eop-post-flow__panel{padding:20px}
+			.eop-post-flow__contract{line-height:1.75;color:<?php echo esc_attr( $experience_text ); ?>}
+			.eop-post-flow__contract h1,.eop-post-flow__contract h2,.eop-post-flow__contract h3{margin:0 0 12px;font-size:20px;line-height:1.15;letter-spacing:-.03em}
 			.eop-post-flow__contract p{margin:0 0 12px}
 			.eop-post-flow__contract p:last-child{margin-bottom:0}
+			.eop-post-flow__document-reader{display:grid;gap:14px;padding:18px;border:1px solid rgba(15,27,53,.08);border-radius:28px;background:<?php echo esc_attr( $experience_panel ); ?>;box-shadow:0 16px 36px rgba(15,27,53,.06)}
+			.eop-post-flow__document-reader-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
+			.eop-post-flow__document-reader-head strong{display:block;font-size:19px;line-height:1.16;letter-spacing:-.03em;color:<?php echo esc_attr( $experience_text ); ?>}
+			.eop-post-flow__document-reader-head small{display:block;margin-top:8px;color:<?php echo esc_attr( $experience_muted ); ?>;font-size:14px;line-height:1.55}
+			.eop-post-flow__document-reader-frame{overflow:hidden;min-height:clamp(340px,58vh,640px);border:1px solid rgba(15,27,53,.1);border-radius:22px;background:#fff}
+			.eop-post-flow__document-reader-frame iframe{display:block;width:100%;min-height:clamp(340px,58vh,640px);border:0;background:#fff}
 			.eop-post-flow__documents-grid,.eop-post-flow__products-grid,.eop-post-flow__completion-grid,.eop-post-flow__stats-grid,.eop-post-flow__progress-list{display:grid;gap:12px}
-			.eop-post-flow__documents-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+			.eop-post-flow__documents-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 			.eop-post-flow__actions{display:flex;flex-wrap:wrap;gap:12px}
 			.eop-post-flow__actions .eop-proposal-button{flex:1 1 180px}
-			.eop-post-flow__upload-card{display:grid;gap:10px;padding:18px}
+			.eop-post-flow__upload-card{display:grid;gap:8px;padding:16px;background:<?php echo esc_attr( $experience_side ); ?>}
 			.eop-post-flow__upload-card strong{font-size:18px;line-height:1.14;letter-spacing:-.03em}
-			.eop-post-flow__upload-card small{color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:13px;line-height:1.55}
-			.eop-post-flow__acceptance-card{display:grid;gap:16px;background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(241,244,255,.97))}
+			.eop-post-flow__upload-card small{color:<?php echo esc_attr( $experience_muted ); ?>;font-size:13px;line-height:1.55}
+			.eop-post-flow__acceptance-card{display:grid;gap:14px;background:linear-gradient(180deg,<?php echo esc_attr( $experience_side ); ?>,rgba(255,255,255,.98))}
 			.eop-post-flow__acceptance-head{display:grid;gap:6px}
-			.eop-post-flow__acceptance-head strong{font-size:24px;line-height:1.05;letter-spacing:-.04em}
-			.eop-post-flow__acceptance-head small{color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:14px;line-height:1.55}
-			.eop-post-flow__form{display:grid;gap:16px}
+			.eop-post-flow__acceptance-head strong{font-size:22px;line-height:1.05;letter-spacing:-.04em}
+			.eop-post-flow__acceptance-head small{color:<?php echo esc_attr( $experience_muted ); ?>;font-size:14px;line-height:1.55}
+			.eop-post-flow__form{display:grid;gap:14px}
 			.eop-post-flow__field{display:grid;gap:8px}
-			.eop-post-flow__field span{color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
-			.eop-post-flow__field input,.eop-post-flow__field textarea{width:100%;min-height:58px;padding:16px 18px;border:1px solid rgba(219,226,255,.88);border-radius:18px;background:#fff;color:<?php echo esc_attr( $settings['proposal_text_color'] ); ?>;font:inherit;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
-			.eop-post-flow__field input:focus,.eop-post-flow__field textarea:focus{outline:none;border-color:<?php echo esc_attr( $settings['primary_color'] ); ?>;box-shadow:0 0 0 5px rgba(0,3,75,.08);transform:translateY(-1px)}
-			.eop-post-flow__checkbox{display:flex;gap:12px;align-items:flex-start;padding:16px 18px;border-radius:18px;background:#f8faff;border:1px solid rgba(219,226,255,.82);font-weight:700;line-height:1.5}
-			.eop-post-flow__checkbox input{margin-top:4px;accent-color:<?php echo esc_attr( $settings['primary_color'] ); ?>;transform:scale(1.08)}
-			.eop-post-flow__form--acceptance .eop-proposal-button{width:100%;min-height:58px;font-size:16px}
-			.eop-post-flow__panel-label{display:block;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
-			.eop-post-flow__panel-note{margin:8px 0 0;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:13px;line-height:1.55}
-			.eop-post-flow__progress-item{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:start;padding:14px;border-radius:18px;background:#f8faff;border:1px solid transparent}
+			.eop-post-flow__field span{color:<?php echo esc_attr( $experience_muted ); ?>;font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+			.eop-post-flow__field input,.eop-post-flow__field textarea{width:100%;min-height:54px;padding:14px 16px;border:1px solid rgba(15,27,53,.1);border-radius:18px;background:#fff;color:<?php echo esc_attr( $experience_text ); ?>;font:inherit;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+			.eop-post-flow__field input:focus,.eop-post-flow__field textarea:focus{outline:none;border-color:<?php echo esc_attr( $experience_accent ); ?>;box-shadow:0 0 0 5px rgba(215,138,47,.12);transform:translateY(-1px)}
+			.eop-post-flow__checkbox{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:18px;background:<?php echo esc_attr( $experience_side ); ?>;border:1px solid rgba(15,27,53,.08);font-weight:700;line-height:1.45}
+			.eop-post-flow__checkbox input{margin-top:4px;accent-color:<?php echo esc_attr( $experience_accent ); ?>;transform:scale(1.08)}
+			.eop-post-flow__form--acceptance .eop-proposal-button{width:100%;min-height:54px;font-size:15px}
+			.eop-post-flow__panel{background:<?php echo esc_attr( $experience_side ); ?>}
+			.eop-post-flow__panel-label{display:block;color:<?php echo esc_attr( $experience_muted ); ?>;font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+			.eop-post-flow__panel-note{margin:8px 0 0;color:<?php echo esc_attr( $experience_muted ); ?>;font-size:13px;line-height:1.55}
+			.eop-post-flow__progress-item{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:start;padding:14px;border-radius:18px;background:rgba(255,255,255,.88);border:1px solid transparent}
 			.eop-post-flow__progress-item strong{display:block;font-size:14px;line-height:1.3}
-			.eop-post-flow__progress-item small{display:block;margin-top:4px;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:12px;line-height:1.45}
-			.eop-post-flow__progress-item.is-current{background:#eef4ff;border-color:rgba(0,3,75,.1);box-shadow:0 10px 22px rgba(0,3,75,.06)}
+			.eop-post-flow__progress-item small{display:block;margin-top:4px;color:<?php echo esc_attr( $experience_muted ); ?>;font-size:12px;line-height:1.45}
+			.eop-post-flow__progress-item.is-current{background:rgba(215,138,47,.12);border-color:rgba(215,138,47,.2);box-shadow:0 10px 22px rgba(215,138,47,.08)}
 			.eop-post-flow__progress-item.is-completed{background:#f3fbf4}
-			.eop-post-flow__progress-index{display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:15px;background:#e6ebf9;color:<?php echo esc_attr( $settings['primary_color'] ); ?>;font-size:14px;font-weight:900}
+			.eop-post-flow__progress-index{display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:15px;background:#e9edf5;color:<?php echo esc_attr( $experience_text ); ?>;font-size:14px;font-weight:900}
 			.eop-post-flow__progress-item.is-completed .eop-post-flow__progress-index{background:#dff3e3;color:#227547}
-			.eop-post-flow__progress-item.is-current .eop-post-flow__progress-index{background:<?php echo esc_attr( $settings['primary_color'] ); ?>;color:#fff}
-			.eop-post-flow__stat-card{padding:14px 16px;border-radius:18px;background:#f8faff;border:1px solid rgba(219,226,255,.84)}
-			.eop-post-flow__stat-card span{display:block;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
-			.eop-post-flow__stat-card strong{display:block;margin-top:7px;font-size:24px;line-height:1;letter-spacing:-.05em}
-			.eop-post-flow__stat-card small{display:block;margin-top:6px;color:<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>;font-size:12px;line-height:1.45}
-			@media (max-width: 960px){.eop-post-flow__layout{grid-template-columns:1fr}.eop-post-flow__sidebar{position:static}.eop-post-flow__stage-intro{grid-template-columns:1fr}.eop-post-flow__stage-pills{justify-content:flex-start;max-width:none}}
-			@media (max-width: 720px){.eop-post-flow{padding:18px;border-radius:24px}.eop-post-flow__heading,.eop-post-flow__stage-intro,.eop-post-flow__contract,.eop-post-flow__acceptance-card,.eop-post-flow__panel{padding:18px}.eop-post-flow__heading{flex-direction:column}.eop-post-flow__title{font-size:28px}.eop-post-flow__text{font-size:24px}.eop-post-flow__actions .eop-proposal-button{flex-basis:100%}}
+			.eop-post-flow__progress-item.is-current .eop-post-flow__progress-index{background:<?php echo esc_attr( $experience_accent ); ?>;color:#fff}
+			.eop-post-flow__stat-card{padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.92);border:1px solid rgba(15,27,53,.08)}
+			.eop-post-flow__stat-card span{display:block;color:<?php echo esc_attr( $experience_muted ); ?>;font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+			.eop-post-flow__stat-card strong{display:block;margin-top:7px;font-size:24px;line-height:1;letter-spacing:-.05em;color:<?php echo esc_attr( $experience_text ); ?>}
+			.eop-post-flow__stat-card small{display:block;margin-top:6px;color:<?php echo esc_attr( $experience_muted ); ?>;font-size:12px;line-height:1.45}
+			.eop-post-flow__summary-hero{display:grid;gap:4px;padding:16px 18px;border-radius:22px;background:linear-gradient(135deg,<?php echo esc_attr( $experience_hero ); ?> 0%,rgba(15,27,53,.92) 100%);color:#fff;box-shadow:0 18px 40px rgba(15,27,53,.16)}
+			.eop-post-flow__summary-hero span{display:block;color:rgba(255,255,255,.7);font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+			.eop-post-flow__summary-hero strong{display:block;font-size:32px;line-height:1;letter-spacing:-.05em;color:#fff}
+			.eop-post-flow__summary-hero p{margin:0;color:rgba(255,255,255,.82);font-size:12px;line-height:1.45}
+			.eop-post-flow__summary-totals{display:grid;gap:8px}
+			.eop-post-flow__summary-total-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(15,27,53,.08);color:<?php echo esc_attr( $experience_text ); ?>;align-items:flex-start}
+			.eop-post-flow__summary-total-row:last-child{border-bottom:none;padding-bottom:0}
+			.eop-post-flow__summary-total-row span:first-child{color:<?php echo esc_attr( $experience_muted ); ?>;font-size:13px;font-weight:700}
+			.eop-post-flow__summary-total-row span:last-child{font-weight:800}
+			.eop-post-flow__summary-value{display:grid;justify-items:end;gap:2px;text-align:right}
+			.eop-post-flow__summary-value strong{font-size:16px;line-height:1.1;color:<?php echo esc_attr( $experience_text ); ?>}
+			.eop-post-flow__summary-value small{font-size:12px;line-height:1.25;color:<?php echo esc_attr( $experience_muted ); ?>}
+			.eop-post-flow__summary-note{margin:0;color:<?php echo esc_attr( $experience_muted ); ?>;font-size:12px;line-height:1.5}
+			.eop-post-flow__summary-actions{display:grid;gap:10px}
+			.eop-post-flow__summary-actions .eop-proposal-button{width:100%}
+			@media (max-width: 960px){.eop-post-flow__layout{grid-template-columns:1fr}.eop-post-flow__sidebar{position:static}.eop-post-flow__stage-intro,.eop-post-flow__document-reader-head{grid-template-columns:1fr}.eop-post-flow__stage-pills{justify-content:flex-start;max-width:none}.eop-post-flow__summary-actions{grid-template-columns:1fr}}
+			@media (max-width: 720px){.eop-post-flow{padding:16px;border-radius:24px}.eop-post-flow__heading,.eop-post-flow__stage-intro,.eop-post-flow__contract,.eop-post-flow__acceptance-card,.eop-post-flow__panel,.eop-post-flow__document-reader{padding:16px}.eop-post-flow__heading{flex-direction:column}.eop-post-flow__title{font-size:28px}.eop-post-flow__text{font-size:22px}.eop-post-flow__actions{display:grid;grid-template-columns:1fr 1fr}.eop-post-flow__actions .eop-proposal-button{min-width:0;flex:auto;padding:0 12px;font-size:14px}.eop-post-flow__summary-total-row{gap:10px}.eop-post-flow__summary-total-row span:first-child{font-size:12px}.eop-post-flow__summary-value strong{font-size:15px}}
 		</style>
 		<div class="eop-post-flow eop-post-flow--stage-<?php echo esc_attr( $stage ); ?>">
 			<div class="eop-post-flow__layout">
 				<div class="eop-post-flow__main">
-					<div class="eop-post-flow__heading">
-						<div class="eop-post-flow__heading-copy">
-							<span class="eop-post-flow__eyebrow"><?php esc_html_e( 'Etapa complementar do pedido', EOP_TEXT_DOMAIN ); ?></span>
-							<h2 class="eop-post-flow__title"><?php echo esc_html( $title ); ?></h2>
-							<p class="eop-post-flow__heading-note"><?php echo esc_html( $heading_note ); ?></p>
+					<?php if ( ! $is_contract_stage ) : ?>
+						<div class="eop-post-flow__heading">
+							<div class="eop-post-flow__heading-copy">
+								<span class="eop-post-flow__eyebrow"><?php esc_html_e( 'Etapa complementar do pedido', EOP_TEXT_DOMAIN ); ?></span>
+								<h2 class="eop-post-flow__title"><?php echo esc_html( $title ); ?></h2>
+								<p class="eop-post-flow__heading-note"><?php echo esc_html( $heading_note ); ?></p>
+							</div>
+							<span class="eop-post-flow__badge"><?php echo esc_html( strtoupper( self::get_stage_label( $stage ) ) ); ?></span>
 						</div>
-						<span class="eop-post-flow__badge"><?php echo esc_html( strtoupper( self::get_stage_label( $stage ) ) ); ?></span>
-					</div>
+					<?php endif; ?>
 
 					<?php if ( $notice ) : ?>
 						<div class="eop-notice <?php echo 'error' === $notice['type'] ? 'eop-notice-error' : 'eop-notice-success'; ?>">
@@ -821,8 +936,10 @@ class EOP_Post_Confirmation_Flow {
 					<?php endif; ?>
 				</div>
 				<aside class="eop-post-flow__sidebar">
-					<?php self::render_progress_panel( $steps, $stage ); ?>
-					<?php if ( 'contract' !== $stage ) : ?>
+					<?php if ( $is_contract_stage ) : ?>
+						<?php self::render_contract_summary_panel( $order, $total_rows, $pdf_url ); ?>
+					<?php else : ?>
+						<?php self::render_progress_panel( $steps, $stage ); ?>
 						<?php self::render_status_cards_panel( $stats ); ?>
 					<?php endif; ?>
 				</aside>
@@ -1044,8 +1161,17 @@ class EOP_Post_Confirmation_Flow {
 			return;
 		}
 
-		$panel_label = 'contract' === $current_stage ? __( 'Contrato e proximas etapas', EOP_TEXT_DOMAIN ) : __( 'Progresso da jornada', EOP_TEXT_DOMAIN );
-		$panel_note  = 'contract' === $current_stage ? __( 'Depois do aceite, o restante do fluxo aparece em sequencia para o cliente.', EOP_TEXT_DOMAIN ) : '';
+		$settings    = EOP_Settings::get_all();
+		$panel_label = trim( (string) ( $settings['customer_experience_progress_label'] ?? '' ) );
+		$panel_note  = trim( (string) ( $settings['customer_experience_progress_note'] ?? '' ) );
+
+		if ( '' === $panel_label ) {
+			$panel_label = 'contract' === $current_stage ? __( 'Contrato e proximas etapas', EOP_TEXT_DOMAIN ) : __( 'Progresso da jornada', EOP_TEXT_DOMAIN );
+		}
+
+		if ( '' === $panel_note && 'contract' === $current_stage ) {
+			$panel_note = __( 'Depois do aceite, o restante do fluxo aparece em sequencia para o cliente.', EOP_TEXT_DOMAIN );
+		}
 		?>
 		<div class="eop-post-flow__panel eop-post-flow__panel--progress">
 			<span class="eop-post-flow__panel-label"><?php echo esc_html( $panel_label ); ?></span>
@@ -1087,34 +1213,79 @@ class EOP_Post_Confirmation_Flow {
 		<?php
 	}
 
+	private static function render_contract_summary_panel( WC_Order $order, $total_rows, $pdf_url ) {
+		$total_rows = is_array( $total_rows ) ? $total_rows : array();
+		$summary_rows = array_values(
+			array_filter(
+				$total_rows,
+				function ( $row ) {
+					return empty( $row['class'] ) || 'is-grand' !== $row['class'];
+				}
+			)
+		);
+		$summary_rows = self::prepare_contract_summary_rows( $order, $summary_rows );
+		?>
+		<div class="eop-post-flow__panel eop-post-flow__panel--summary">
+			<span class="eop-post-flow__panel-label"><?php esc_html_e( 'Resumo', EOP_TEXT_DOMAIN ); ?></span>
+            <div class="eop-post-flow__summary-totals">
+                <div class="eop-post-flow__summary-total-row">
+                    <span><?php esc_html_e( 'Valor aArovado', EOP_TEXT_DOMAIN ); ?></span>
+                    <strong><?php echo wp_kses_post( wc_price( $order->get_total() ) ); ?></strong>
+                </div>
+                <?php if ( ! empty( $summary_rows ) ) : ?>
+                    <?php foreach ( $summary_rows as $row ) : ?>
+                        <div class="eop-post-flow__summary-total-row">
+                            <span><?php echo esc_html( $row['label'] ); ?></span>
+                            <?php if ( ! empty( $row['main_value'] ) ) : ?>
+                                <div class="eop-post-flow__summary-value">
+                                    <strong><?php echo esc_html( $row['main_value'] ); ?></strong>
+                                    <?php if ( ! empty( $row['sub_value'] ) ) : ?>
+                                        <small><?php echo esc_html( $row['sub_value'] ); ?></small>
+                                    <?php endif; ?>
+                                </div>
+                            <?php else : ?>
+                                <span><?php echo wp_kses_post( $row['value'] ); ?></span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+			<p class="eop-post-flow__summary-note"><?php esc_html_e( 'Depois do aceite, as proximas etapas sao liberadas automaticamente.', EOP_TEXT_DOMAIN ); ?></p>
+			<?php if ( $pdf_url ) : ?>
+				<div class="eop-post-flow__summary-actions">
+					<a class="eop-proposal-button eop-proposal-button--secondary" href="<?php echo esc_url( $pdf_url ); ?>" download="<?php echo esc_attr( $order->get_id() . '.pdf' ); ?>"><?php esc_html_e( 'Baixar proposta', EOP_TEXT_DOMAIN ); ?></a>
+				</div>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
 	private static function render_contract_form( WC_Order $order, $token, $settings, $state ) {
 		$contract_text = self::get_contract_text( $order, $state );
 		$signature_documents = self::get_signature_documents( $order, $state, true );
-		$default_name  = trim( (string) ( $state['contract']['accepted_name'] ?? '' ) );
-
-		if ( '' === $default_name ) {
-			$default_name = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
-		}
+		$default_name  = self::get_prefilled_contract_name( $order, $state );
+		$primary_document = ! empty( $signature_documents ) ? $signature_documents[0] : array();
+		$secondary_documents = count( $signature_documents ) > 1 ? array_slice( $signature_documents, 1 ) : array();
 
 		?>
 		<div class="eop-post-flow__stage-intro">
 			<div class="eop-post-flow__stage-copy">
-				<p class="eop-post-flow__text"><?php esc_html_e( 'Leia o contrato e confirme o aceite.', EOP_TEXT_DOMAIN ); ?></p>
-				<p class="eop-post-flow__helper"><?php esc_html_e( 'Esta e a unica etapa ativa agora. Assim que o aceite for registrado, envio de anexo e personalizacao ficam disponiveis automaticamente.', EOP_TEXT_DOMAIN ); ?></p>
-			</div>
-			<div class="eop-post-flow__stage-pills">
-				<?php if ( ! empty( $signature_documents ) ) : ?>
-					<span class="eop-post-flow__stage-pill"><?php echo esc_html( sprintf( _n( '%d PDF pronto para leitura', '%d PDFs prontos para leitura', count( $signature_documents ), EOP_TEXT_DOMAIN ), count( $signature_documents ) ) ); ?></span>
-				<?php endif; ?>
-				<span class="eop-post-flow__stage-pill is-muted"><?php esc_html_e( 'Aceite com registro de data e IP', EOP_TEXT_DOMAIN ); ?></span>
+				<p class="eop-post-flow__text"><?php esc_html_e( 'Leia o contrato para continuar.', EOP_TEXT_DOMAIN ); ?></p>
+				<p class="eop-post-flow__helper"><?php esc_html_e( 'Depois do aceite, anexo e personalizacao sao liberados automaticamente.', EOP_TEXT_DOMAIN ); ?></p>
 			</div>
 		</div>
-		<?php if ( '' !== trim( wp_strip_all_tags( $contract_text ) ) ) : ?>
+		<?php if ( ! empty( $primary_document['public_view_url'] ) ) : ?>
+			<div class="eop-post-flow__document-reader">
+				<div class="eop-post-flow__document-reader-frame">
+					<iframe src="<?php echo esc_url( $primary_document['public_view_url'] ); ?>#toolbar=1&navpanes=0&scrollbar=1" title="<?php echo esc_attr( $primary_document['title'] ); ?>"></iframe>
+				</div>
+			</div>
+		<?php elseif ( '' !== trim( wp_strip_all_tags( $contract_text ) ) ) : ?>
 			<div class="eop-post-flow__contract"><?php echo wp_kses_post( wpautop( $contract_text ) ); ?></div>
 		<?php endif; ?>
-		<?php if ( ! empty( $signature_documents ) ) : ?>
+		<?php if ( ! empty( $secondary_documents ) ) : ?>
 			<div class="eop-post-flow__documents-grid">
-				<?php foreach ( $signature_documents as $document ) : ?>
+				<?php foreach ( $secondary_documents as $document ) : ?>
 					<div class="eop-post-flow__upload-card">
 						<strong><?php echo esc_html( $document['title'] ); ?></strong>
 						<small><?php echo esc_html( $document['description'] ? $document['description'] : __( 'Documento gerado e salvo no pedido para leitura e assinatura externa.', EOP_TEXT_DOMAIN ) ); ?></small>
@@ -1127,18 +1298,10 @@ class EOP_Post_Confirmation_Flow {
 			</div>
 		<?php endif; ?>
 		<div class="eop-post-flow__acceptance-card">
-			<div class="eop-post-flow__acceptance-head">
-				<strong><?php esc_html_e( 'Confirmar e continuar', EOP_TEXT_DOMAIN ); ?></strong>
-				<small><?php esc_html_e( 'Informe o nome do responsavel e confirme o aceite para desbloquear as proximas etapas da jornada.', EOP_TEXT_DOMAIN ); ?></small>
-			</div>
 			<form method="post" class="eop-post-flow__form eop-post-flow__form--acceptance">
 				<?php wp_nonce_field( 'eop_post_confirmation_contract', 'eop_post_confirmation_nonce' ); ?>
 				<input type="hidden" name="eop_post_confirmation_action" value="contract" />
 				<input type="hidden" name="eop_proposal_token" value="<?php echo esc_attr( $token ); ?>" />
-				<label class="eop-post-flow__field">
-					<span><?php echo esc_html( $settings['post_confirmation_contract_name_label'] ); ?></span>
-					<input type="text" name="eop_contract_name" value="<?php echo esc_attr( $default_name ); ?>" required />
-				</label>
 				<label class="eop-post-flow__checkbox">
 					<input type="checkbox" name="eop_contract_accept" value="yes" required />
 					<span><?php echo esc_html( $settings['post_confirmation_contract_checkbox_label'] ); ?></span>
@@ -1147,6 +1310,46 @@ class EOP_Post_Confirmation_Flow {
 			</form>
 		</div>
 		<?php
+	}
+
+	private static function prepare_contract_summary_rows( WC_Order $order, $rows ) {
+		$rows           = is_array( $rows ) ? $rows : array();
+		$subtotal_value = (float) $order->get_subtotal();
+
+		foreach ( $rows as $index => $row ) {
+			if ( ! is_array( $row ) || 'discount' !== ( $row['key'] ?? '' ) ) {
+				continue;
+			}
+
+			$discount_amount = abs( (float) ( $row['raw'] ?? 0 ) );
+			$discount_percent = $subtotal_value > 0 ? ( $discount_amount / $subtotal_value ) * 100 : 0;
+			$rows[ $index ]['main_value'] = number_format_i18n( $discount_percent, abs( $discount_percent - round( $discount_percent ) ) < 0.01 ? 0 : 2 ) . '%';
+			$rows[ $index ]['sub_value']  = wp_strip_all_tags( wc_price( (float) ( $row['raw'] ?? 0 ) ) );
+		}
+
+		return $rows;
+	}
+
+	private static function get_prefilled_contract_name( WC_Order $order, $state = null ) {
+		$state = is_array( $state ) ? $state : self::get_state( $order );
+		$candidates = array(
+			trim( (string) ( $state['contract']['accepted_name'] ?? '' ) ),
+			trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() ),
+			trim( (string) $order->get_billing_company() ),
+			trim( $order->get_shipping_first_name() . ' ' . $order->get_shipping_last_name() ),
+			trim( (string) $order->get_shipping_company() ),
+			trim( (string) self::get_order_meta_value( $order, array( '_nome_responsavel', 'nome_responsavel', '_responsavel', 'responsavel', '_representante', 'representante', '_nome_socio', 'nome_socio', '_socio', 'socio', '_company_contact', 'company_contact', '_billing_company_contact', 'billing_company_contact' ) ) ),
+		);
+
+		foreach ( $candidates as $candidate ) {
+			$candidate = trim( wp_strip_all_tags( (string) $candidate ) );
+
+			if ( '' !== $candidate ) {
+				return $candidate;
+			}
+		}
+
+		return '';
 	}
 
 	private static function render_upload_form( $token, $settings, $state ) {
@@ -2037,19 +2240,71 @@ class EOP_Post_Confirmation_Flow {
 		);
 	}
 
-	private static function get_signature_documents( WC_Order $order, $state = null, $include_urls = false ) {
+	public static function get_admin_contract_preview_payload( $settings = array() ) {
+		$settings  = is_array( $settings ) ? wp_parse_args( $settings, EOP_Settings::get_defaults() ) : EOP_Settings::get_all();
+		$documents = EOP_Settings::get_post_confirmation_contract_documents( $settings );
+		$primary   = ! empty( $documents ) ? self::get_signature_document_preview_payload( $documents[0] ) : array();
+
+		return array(
+			'document_count'       => count( $documents ),
+			'additional_documents' => max( 0, count( $documents ) - 1 ),
+			'primary_document'     => $primary,
+		);
+	}
+
+	private static function get_signature_document_preview_payload( $template ) {
+		$template      = is_array( $template ) ? $template : array();
+		$attachment_id = absint( $template['attachment_id'] ?? 0 );
+		$mime_type     = $attachment_id ? self::get_attachment_mime_type( $attachment_id ) : '';
+		$preview_type  = 'empty';
+		$preview_url   = '';
+		$preview_html  = '';
+
+		if ( 'attachment' === ( $template['source_type'] ?? 'editor' ) && $attachment_id ) {
+			if ( 'application/pdf' === $mime_type ) {
+				$preview_type = 'pdf';
+				$preview_url  = (string) wp_get_attachment_url( $attachment_id );
+			} else {
+				$extracted_text = self::extract_text_from_attachment( $attachment_id );
+
+				if ( '' !== $extracted_text ) {
+					$preview_type = 'text';
+					$preview_html = wpautop( esc_html( $extracted_text ) );
+				}
+			}
+		} elseif ( '' !== trim( wp_strip_all_tags( (string) ( $template['body'] ?? '' ) ) ) ) {
+			$preview_type = 'text';
+			$preview_html = wpautop( wp_kses_post( (string) $template['body'] ) );
+		}
+
+		return array(
+			'title'        => (string) ( $template['title'] ?? '' ),
+			'description'  => (string) ( $template['description'] ?? '' ),
+			'view_label'   => (string) ( $template['view_label'] ?? __( 'Visualizar PDF', EOP_TEXT_DOMAIN ) ),
+			'button_label' => (string) ( $template['button_label'] ?? __( 'Baixar PDF', EOP_TEXT_DOMAIN ) ),
+			'preview_type' => $preview_type,
+			'preview_url'  => $preview_url,
+			'preview_html' => $preview_html,
+		);
+	}
+
+	private static function get_signature_documents( WC_Order $order, $state = null, $include_urls = false, $ensure_generated = true ) {
 		$state = is_array( $state ) ? $state : self::get_state( $order );
 		$documents = is_array( $state['signature_documents'] ?? null ) ? $state['signature_documents'] : array();
 
-		if ( 'yes' === (string) $order->get_meta( '_eop_proposal_confirmed', true ) ) {
+		if ( $ensure_generated && 'yes' === (string) $order->get_meta( '_eop_proposal_confirmed', true ) ) {
 			$documents = self::ensure_signature_documents_generated( $order );
+		}
+
+		if ( empty( $documents ) && $include_urls ) {
+			$documents = self::get_signature_document_placeholder_records();
 		}
 
 		$documents = array_values(
 			array_filter(
 				$documents,
-				static function ( $document ) {
-					return ! empty( $document['attachment_id'] );
+				static function ( $document ) use ( $include_urls ) {
+					return $include_urls || ! empty( $document['attachment_id'] );
 				}
 			)
 		);
@@ -2070,6 +2325,52 @@ class EOP_Post_Confirmation_Flow {
 				return $document;
 			},
 			$documents
+		);
+	}
+
+	private static function get_signature_document_placeholder_records() {
+		$templates = self::get_signature_document_templates();
+
+		if ( empty( $templates ) ) {
+			return array();
+		}
+
+		return array_values(
+			array_filter(
+				array_map(
+					static function ( $template ) {
+						$record = array(
+							'key'          => sanitize_key( (string) ( $template['key'] ?? '' ) ),
+							'title'        => (string) ( $template['title'] ?? '' ),
+							'description'  => (string) ( $template['description'] ?? '' ),
+							'source_type'  => (string) ( $template['source_type'] ?? 'editor' ),
+							'button_label' => (string) ( $template['button_label'] ?? __( 'Baixar PDF', EOP_TEXT_DOMAIN ) ),
+							'view_label'   => (string) ( $template['view_label'] ?? __( 'Visualizar PDF', EOP_TEXT_DOMAIN ) ),
+							'attachment_id' => 0,
+							'filename'     => '',
+						);
+
+						if ( '' === $record['key'] ) {
+							return array();
+						}
+
+						if ( 'attachment' === $record['source_type'] ) {
+							$attachment_id = absint( $template['attachment_id'] ?? 0 );
+
+							if ( $attachment_id > 0 ) {
+								$record['source_attachment_id'] = $attachment_id;
+								$record['filename']             = wp_basename( (string) get_attached_file( $attachment_id ) );
+							}
+						}
+
+						return $record;
+					},
+					$templates
+				),
+				static function ( $record ) {
+					return ! empty( $record['key'] );
+				}
+			)
 		);
 	}
 
@@ -2115,9 +2416,41 @@ class EOP_Post_Confirmation_Flow {
 		if ( 'attachment' === $record['source_type'] ) {
 			$attachment_id = absint( $template['attachment_id'] ?? 0 );
 			$file_path     = $attachment_id ? get_attached_file( $attachment_id ) : '';
+			$mime_type     = $attachment_id ? self::get_attachment_mime_type( $attachment_id ) : '';
 
 			if ( ! $attachment_id || empty( $file_path ) || ! file_exists( $file_path ) ) {
 				return array();
+			}
+
+			if ( 'application/pdf' !== $mime_type ) {
+				$extracted_text = self::extract_text_from_attachment( $attachment_id );
+
+				if ( '' === $extracted_text ) {
+					return array();
+				}
+
+				$html = self::get_signature_document_html(
+					$order,
+					array_merge(
+						(array) $template,
+						array(
+							'source_type' => 'editor',
+							'body'        => nl2br( esc_html( $extracted_text ) ),
+						)
+					)
+				);
+				$binary = self::build_signature_document_binary( $order, $template, $html );
+				$generated_attachment_id = '' !== $binary ? self::store_generated_signature_document( $order, $template, $binary ) : 0;
+
+				if ( ! $generated_attachment_id ) {
+					return array();
+				}
+
+				$record['attachment_id']        = $generated_attachment_id;
+				$record['source_attachment_id'] = $attachment_id;
+				$record['filename']             = wp_basename( (string) get_attached_file( $generated_attachment_id ) );
+
+				return $record;
 			}
 
 			$record['attachment_id']        = $attachment_id;
@@ -2285,6 +2618,108 @@ class EOP_Post_Confirmation_Flow {
 
 		readfile( $file_path );
 		exit;
+	}
+
+	private static function get_attachment_mime_type( $attachment_id ) {
+		$mime_type = (string) get_post_mime_type( $attachment_id );
+		$file_path = get_attached_file( $attachment_id );
+
+		if ( '' === $mime_type && ! empty( $file_path ) ) {
+			$filetype = wp_check_filetype( $file_path );
+			$mime_type = (string) ( $filetype['type'] ?? '' );
+		}
+
+		return $mime_type;
+	}
+
+	private static function extract_text_from_attachment( $attachment_id ) {
+		$file_path = get_attached_file( $attachment_id );
+		$mime_type = self::get_attachment_mime_type( $attachment_id );
+
+		if ( empty( $file_path ) || ! file_exists( $file_path ) ) {
+			return '';
+		}
+
+		if ( false !== strpos( $mime_type, 'wordprocessingml.document' ) || 'docx' === strtolower( pathinfo( $file_path, PATHINFO_EXTENSION ) ) ) {
+			return self::extract_text_from_docx_file( $file_path );
+		}
+
+		if ( false !== strpos( $mime_type, 'msword' ) || 'doc' === strtolower( pathinfo( $file_path, PATHINFO_EXTENSION ) ) ) {
+			return self::extract_text_from_doc_file( $file_path );
+		}
+
+		return '';
+	}
+
+	private static function extract_text_from_docx_file( $file_path ) {
+		if ( ! class_exists( 'ZipArchive' ) ) {
+			return '';
+		}
+
+		$zip = new ZipArchive();
+
+		if ( true !== $zip->open( $file_path ) ) {
+			return '';
+		}
+
+		$xml = $zip->getFromName( 'word/document.xml' );
+		$zip->close();
+
+		if ( false === $xml || '' === $xml ) {
+			return '';
+		}
+
+		$text = str_replace( array( '</w:p>', '</w:tr>', '</w:tc>' ), array( "\n\n", "\n", ' ' ), $xml );
+		$text = preg_replace( '/<w:tab[^>]*\/>/i', "\t", (string) $text );
+		$text = wp_strip_all_tags( $text );
+
+		return self::normalize_extracted_document_text( $text );
+	}
+
+	private static function extract_text_from_doc_file( $file_path ) {
+		$command_path = self::find_cli_binary( array( 'antiword' ) );
+
+		if ( '' === $command_path ) {
+			return '';
+		}
+
+		$output = array();
+		$return = 0;
+		exec( escapeshellarg( $command_path ) . ' ' . escapeshellarg( $file_path ) . ' 2>&1', $output, $return );
+
+		if ( 0 !== $return || empty( $output ) ) {
+			return '';
+		}
+
+		return self::normalize_extracted_document_text( implode( "\n", $output ) );
+	}
+
+	private static function find_cli_binary( $candidates ) {
+		$paths = array_filter( explode( PATH_SEPARATOR, (string) getenv( 'PATH' ) ) );
+
+		foreach ( (array) $candidates as $candidate ) {
+			foreach ( $paths as $path ) {
+				$path = rtrim( (string) $path, DIRECTORY_SEPARATOR );
+
+				foreach ( array( $path . DIRECTORY_SEPARATOR . $candidate, $path . DIRECTORY_SEPARATOR . $candidate . '.exe' ) as $binary ) {
+					if ( is_file( $binary ) && is_readable( $binary ) ) {
+						return $binary;
+					}
+				}
+			}
+		}
+
+		return '';
+	}
+
+	private static function normalize_extracted_document_text( $text ) {
+		$text = html_entity_decode( (string) $text, ENT_QUOTES, get_bloginfo( 'charset' ) ? get_bloginfo( 'charset' ) : 'UTF-8' );
+		$text = preg_replace( '/\r\n|\r/', "\n", $text );
+		$text = preg_replace( '/\n{3,}/', "\n\n", $text );
+		$text = preg_replace( '/[ \t]+/', ' ', $text );
+		$text = preg_replace( '/ ?\n ?/', "\n", $text );
+
+		return trim( wp_strip_all_tags( (string) $text ) );
 	}
 
 	private static function get_document_fields( $settings = null ) {
