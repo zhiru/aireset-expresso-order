@@ -2,9 +2,10 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
-## 1.1.64 - 2026-05-03
+## 1.1.64 - 2026-05-04
 
-- revisao de manutencao para sincronizar versao e metadados de release do plugin
+- a listagem de documentos de assinatura no admin foi convertida para cards resumidos com titulo, badge do tipo, editar e excluir, removendo a exibicao aberta e pesada do formulario inteiro
+- o editor de cada documento agora abre sob demanda e o resumo do card acompanha alteracoes de titulo e tipo em tempo real, mantendo a UX mais proxima de uma listagem editavel
 
 ## 1.1.63 - 2026-05-03
 

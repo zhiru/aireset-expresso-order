@@ -93,6 +93,20 @@ $woo_general_url = admin_url( 'admin.php?page=wc-settings&tab=general' );
 $documentation_sections = class_exists( 'EOP_PDF_Settings' ) ? EOP_PDF_Settings::get_documentation_sections() : array();
 $current_view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'pdf';
 $show_context_chrome = ! $embedded;
+$pdf_form_view = in_array( $current_view, array( 'pdf', 'settings-store-info' ), true ) ? $current_view : 'pdf';
+$pdf_form_args = array();
+
+if ( 'pdf' === $pdf_form_view ) {
+    $pdf_form_args['pdf_tab'] = $tab;
+
+    if ( $is_document_tab ) {
+        $pdf_form_args['document'] = $document;
+    }
+
+    if ( $preview_order instanceof WC_Order ) {
+        $pdf_form_args['preview_order'] = $preview_order->get_id();
+    }
+}
 ?>
 <style>
     .eop-pdf-admin {
@@ -139,7 +153,11 @@ $show_context_chrome = ! $embedded;
         <div class="eop-pdf-admin__sidebar">
             <?php if ( in_array( $tab, array( 'display', 'store' ), true ) ) : ?>
                 <form method="post" action="options.php" class="eop-pdf-admin__form">
-                    <?php settings_fields( 'eop_pdf_settings_group' ); ?>
+                    <?php if ( $embedded && class_exists( 'EOP_Admin_Page' ) ) : ?>
+                        <?php EOP_Admin_Page::render_option_form_fields( 'eop_pdf_settings_group', $pdf_form_view, $pdf_form_args ); ?>
+                    <?php else : ?>
+                        <?php settings_fields( 'eop_pdf_settings_group' ); ?>
+                    <?php endif; ?>
 
                     <?php if ( $show_context_chrome ) : ?>
                     <div class="eop-pdf-admin__notice">
@@ -303,7 +321,11 @@ $show_context_chrome = ! $embedded;
                 </form>
             <?php elseif ( $is_document_tab ) : ?>
                 <form method="post" action="options.php" class="eop-pdf-admin__form">
-                    <?php settings_fields( 'eop_pdf_settings_group' ); ?>
+                    <?php if ( $embedded && class_exists( 'EOP_Admin_Page' ) ) : ?>
+                        <?php EOP_Admin_Page::render_option_form_fields( 'eop_pdf_settings_group', $pdf_form_view, $pdf_form_args ); ?>
+                    <?php else : ?>
+                        <?php settings_fields( 'eop_pdf_settings_group' ); ?>
+                    <?php endif; ?>
 
                     <?php if ( $show_context_chrome ) : ?>
                     <div class="eop-pdf-admin__document-switcher" aria-label="<?php esc_attr_e( 'Documento em configuracao', EOP_TEXT_DOMAIN ); ?>">
@@ -627,7 +649,11 @@ $show_context_chrome = ! $embedded;
                 </form>
             <?php elseif ( 'edocuments' === $tab ) : ?>
                 <form method="post" action="options.php" class="eop-pdf-admin__form">
-                    <?php settings_fields( 'eop_pdf_settings_group' ); ?>
+                    <?php if ( $embedded && class_exists( 'EOP_Admin_Page' ) ) : ?>
+                        <?php EOP_Admin_Page::render_option_form_fields( 'eop_pdf_settings_group', $pdf_form_view, $pdf_form_args ); ?>
+                    <?php else : ?>
+                        <?php settings_fields( 'eop_pdf_settings_group' ); ?>
+                    <?php endif; ?>
                     <details class="eop-pdf-admin__section" open>
                         <summary><?php esc_html_e( 'Documentos eletrônicos', EOP_TEXT_DOMAIN ); ?></summary>
                         <div class="eop-pdf-admin__grid">
@@ -709,7 +735,11 @@ $show_context_chrome = ! $embedded;
                 </form>
             <?php elseif ( 'advanced' === $tab ) : ?>
                 <form method="post" action="options.php" class="eop-pdf-admin__form">
-                    <?php settings_fields( 'eop_pdf_settings_group' ); ?>
+                    <?php if ( $embedded && class_exists( 'EOP_Admin_Page' ) ) : ?>
+                        <?php EOP_Admin_Page::render_option_form_fields( 'eop_pdf_settings_group', $pdf_form_view, $pdf_form_args ); ?>
+                    <?php else : ?>
+                        <?php settings_fields( 'eop_pdf_settings_group' ); ?>
+                    <?php endif; ?>
                     <details class="eop-pdf-admin__section" open>
                         <summary><?php esc_html_e( 'Configuracoes avancadas', EOP_TEXT_DOMAIN ); ?></summary>
                         <div class="eop-pdf-admin__grid">

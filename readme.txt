@@ -34,12 +34,13 @@ Basta ter o WooCommerce ativo e o plugin instalado; as configuracoes de pedido e
 == Upgrade Notice ==
 
 = 1.1.64 =
-* Revisao de manutencao para sincronizar versao e metadados de release do plugin.
+* Listagem de documentos do fluxo complementar em cards compactos com edicao sob demanda e resumo sincronizado.
 
 == Changelog ==
 
 = 1.1.64 =
-* revisao de manutencao para sincronizar versao e metadados de release do plugin
+* listagem de documentos do fluxo complementar convertida para cards compactos com editar e excluir
+* editor de cada documento passa a abrir sob demanda, com resumo do card atualizado em tempo real
 
 = 1.1.63 =
 * shell admin consolidado com lazy load mais leve para views principais e reorganizacao das secoes do fluxo complementar

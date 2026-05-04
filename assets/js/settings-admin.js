@@ -64,14 +64,17 @@
 
         $scope.find('textarea[data-signature-document-editor]').each(function () {
             var textarea = this;
+            var $textarea = $(textarea);
+            var $document = $textarea.closest('[data-signature-document]');
             var id = String(textarea.id || '');
+            var source = $document.length ? String($document.find('[data-signature-document-source]').val() || 'editor') : 'editor';
 
-            if (!id || $(textarea).data('editorInitialized')) {
+            if (!id || $textarea.data('editorInitialized') || source !== 'editor') {
                 return;
             }
 
             window.wp.editor.initialize(id, buildDocumentEditorSettings());
-            $(textarea).data('editorInitialized', true);
+            $textarea.data('editorInitialized', true);
         });
     }
 
@@ -101,6 +104,38 @@
         }
 
         $empty.toggleClass('is-hidden', $list.find('[data-signature-document]').length > 0);
+    }
+
+    function refreshSignatureDocumentSummary($document) {
+        var title = $.trim(String($document.find('[data-signature-document-title]').first().val() || ''));
+        var sourceLabel = $.trim(String($document.find('[data-signature-document-source] option:selected').text() || ''));
+
+        $document.find('[data-signature-document-heading]').first().text(title || getSettingsVar('document_default_title', 'Novo documento'));
+        $document.find('[data-signature-document-source-label]').first().text(sourceLabel || getSettingsVar('document_source_editor', 'Conteudo do documento'));
+    }
+
+    function setSignatureDocumentExpanded($document, expanded, collapseOthers) {
+        var shouldExpand = Boolean(expanded);
+        var $toggle = $document.find('[data-signature-document-toggle]').first();
+        var $body = $document.find('[data-signature-document-body]').first();
+
+        if (shouldExpand && collapseOthers !== false) {
+            $document.closest('[data-signature-documents]').find('[data-signature-document]').not($document).each(function () {
+                setSignatureDocumentExpanded($(this), false, false);
+            });
+        }
+
+        $document.attr('data-expanded', shouldExpand ? 'true' : 'false');
+        $document.toggleClass('is-expanded', shouldExpand);
+        $document.toggleClass('is-collapsed', !shouldExpand);
+        $body.toggleClass('is-hidden', !shouldExpand);
+        $toggle.attr('aria-expanded', shouldExpand ? 'true' : 'false');
+        $toggle.text(shouldExpand ? getSettingsVar('document_close', 'Fechar') : getSettingsVar('document_edit', 'Editar'));
+
+        if (shouldExpand) {
+            initSignatureEditors($document);
+            updateSignatureDocumentPanels($document);
+        }
     }
 
     function bindMediaUploader() {
@@ -179,8 +214,9 @@
                 $document = $(markup);
                 $list.append($document);
                 $root.attr('data-next-index', String(nextIndex + 1));
+                refreshSignatureDocumentSummary($document);
                 updateSignatureDocumentPanels($document);
-                initSignatureEditors($document);
+                setSignatureDocumentExpanded($document, true);
                 refreshSignatureDocumentsEmptyState($root);
             });
 
@@ -197,7 +233,25 @@
             });
 
             $(document).on('change', '[data-signature-document-source]', function () {
-                updateSignatureDocumentPanels($(this).closest('[data-signature-document]'));
+                var $document = $(this).closest('[data-signature-document]');
+
+                refreshSignatureDocumentSummary($document);
+                updateSignatureDocumentPanels($document);
+
+                if ($document.attr('data-expanded') === 'true') {
+                    initSignatureEditors($document);
+                }
+            });
+
+            $(document).on('input', '[data-signature-document-title]', function () {
+                refreshSignatureDocumentSummary($(this).closest('[data-signature-document]'));
+            });
+
+            $(document).on('click', '[data-signature-document-toggle]', function (event) {
+                var $document = $(this).closest('[data-signature-document]');
+
+                event.preventDefault();
+                setSignatureDocumentExpanded($document, $document.attr('data-expanded') !== 'true');
             });
         }
 
@@ -372,6 +426,65 @@
             }
 
             if (config && config.effect) {
+                $('<span>', {
+                    class: 'eop-help-tip__effect',
+                    text: config.effect
+                }).appendTo($bubble);
+            }
+
+            $tooltip.append($button, $bubble);
+            $label.append($tooltip);
+        });
+    }
+
+    function injectSettingsHelpTooltips($scope) {
+        var helpMap = (window.eop_settings_vars && eop_settings_vars.confirmation_general_help_map) || {};
+        var buttonLabel = (window.eop_settings_vars && eop_settings_vars.help_label) || 'Ajuda da configuracao';
+        var $root = $scope && $scope.length ? $scope : $(document);
+
+        $root.find('[data-eop-help-key]').each(function () {
+            var $label = $(this);
+            var helpKey = String($label.data('eop-help-key') || '');
+            var config = helpMap[helpKey] || null;
+            var $tooltip;
+            var $button;
+            var $bubble;
+
+            if (!config || $label.find('.eop-help-tip').length) {
+                return;
+            }
+
+            $tooltip = $('<span>', {
+                class: 'eop-help-tip'
+            });
+
+            $button = $('<button>', {
+                type: 'button',
+                class: 'eop-help-tip__button',
+                'aria-label': buttonLabel,
+                text: '?'
+            });
+
+            $bubble = $('<span>', {
+                class: 'eop-help-tip__bubble',
+                role: 'tooltip'
+            });
+
+            if (config.label) {
+                $('<strong>', {
+                    class: 'eop-help-tip__title',
+                    text: config.label
+                }).appendTo($bubble);
+            }
+
+            if (config.help) {
+                $('<span>', {
+                    class: 'eop-help-tip__text',
+                    text: config.help
+                }).appendTo($bubble);
+            }
+
+            if (config.effect) {
                 $('<span>', {
                     class: 'eop-help-tip__effect',
                     text: config.effect
@@ -568,13 +681,17 @@
 
         hideExternalNotices();
         injectPdfHelpTooltips($scope);
+		injectSettingsHelpTooltips($scope);
         initColorFields($scope);
         mountColorDefaultButtons($scope);
         initLockedProductsSelector($scope);
-        initSignatureEditors($scope);
         initBinarySwitches($scope);
         $scope.find('[data-signature-document]').each(function () {
-			updateSignatureDocumentPanels($(this));
+            var $document = $(this);
+
+			refreshSignatureDocumentSummary($document);
+			updateSignatureDocumentPanels($document);
+			setSignatureDocumentExpanded($document, $document.attr('data-expanded') === 'true', false);
         });
         $scope.find('[data-signature-documents]').each(function () {
             refreshSignatureDocumentsEmptyState($(this));
@@ -599,7 +716,7 @@
             setColorFieldValue($input, defaultColor);
         });
 
-        $('.eop-settings-switcher').on('click', function () {
+        $(document).on('click', '.eop-settings-switcher[data-target-name]', function () {
             var $button = $(this);
             var targetName = $button.data('target-name');
             var enabledValue = String($button.data('enabled-value') || 'yes');

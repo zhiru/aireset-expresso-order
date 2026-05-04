@@ -8,6 +8,7 @@ class EOP_Settings {
 
     public static function init() {
         add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
+        add_action( 'admin_init', array( __CLASS__, 'maybe_redirect_legacy_request' ) );
         add_action( 'admin_menu', array( __CLASS__, 'register_submenu' ) );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
         add_filter( 'admin_body_class', array( __CLASS__, 'filter_admin_body_class' ) );
@@ -15,59 +16,67 @@ class EOP_Settings {
 
     public static function get_defaults() {
         $defaults = array(
-            'flow_mode'                   => 'proposal',
-            'discount_mode'               => 'both',
-            'enable_checkout_confirmation' => 'no',
-            'order_page_id'               => 0,
-            'proposal_page_id'            => 0,
-            'brand_logo_url'              => '',
-            'primary_color'               => '#00034b',
-            'surface_color'               => '#ffffff',
-            'border_color'                => '#dbe3f0',
-            'proposal_background_color'   => '#f5f7ff',
-            'proposal_card_color'         => '#ffffff',
-            'proposal_text_color'         => '#172033',
-            'proposal_muted_color'        => '#5b6474',
-            'proposal_max_width'          => '1120',
-            'proposal_title_size'         => '40',
-            'proposal_text_size'          => '16',
-            'border_radius'               => '18',
-            'font_family'                 => 'Montserrat:400,700',
-            'customer_experience_font_family' => 'Montserrat:400,700',
-            'customer_experience_background_color' => '#edf2fb',
+            'flow_mode'                              => 'proposal',
+            'discount_mode'                          => 'both',
+            'enable_checkout_confirmation'           => 'no',
+            'order_page_id'                          => 0,
+            'proposal_page_id'                       => 0,
+            'brand_logo_url'                         => '',
+            'primary_color'                          => '#00034b',
+            'surface_color'                          => '#ffffff',
+            'border_color'                           => '#dbe3f0',
+            'proposal_background_color'              => '#f5f7ff',
+            'proposal_card_color'                    => '#ffffff',
+            'proposal_text_color'                    => '#172033',
+            'proposal_muted_color'                   => '#5b6474',
+            'proposal_max_width'                     => '1120',
+            'proposal_title_size'                    => '40',
+            'proposal_text_size'                     => '16',
+            'border_radius'                          => '18',
+            'font_family'                            => 'Montserrat:400,700',
+            'customer_experience_font_family'        => 'Montserrat:400,700',
+            'customer_experience_background_mode'    => 'gradient',
+            'customer_experience_background_color'   => '#edf2fb',
+            'customer_experience_background_secondary_color' => '#f7f9fc',
+            'customer_experience_hero_background_mode' => 'gradient',
             'customer_experience_hero_background_color' => '#0f1b35',
+            'customer_experience_hero_background_secondary_color' => '#243553',
+            'customer_experience_panel_background_mode' => 'solid',
             'customer_experience_panel_background_color' => '#ffffff',
+            'customer_experience_panel_background_secondary_color' => '#f7f9fc',
+            'customer_experience_sidebar_background_mode' => 'solid',
             'customer_experience_sidebar_background_color' => '#f6f8fc',
-            'customer_experience_accent_color' => '#d78a2f',
-            'customer_experience_text_color' => '#16243a',
-            'customer_experience_muted_color' => '#66768d',
-            'customer_experience_title_size' => '46',
-            'customer_experience_text_size' => '16',
-            'customer_experience_eyebrow' => 'Experiencia do cliente',
-            'customer_experience_title' => 'Sua proposta esta pronta para seguir',
-            'customer_experience_description' => 'Confira os detalhes finais, valide os documentos e conclua a etapa atual em uma unica jornada.',
-            'customer_experience_total_label' => 'Investimento aprovado',
-            'customer_experience_total_note' => 'Assim que a etapa atual for concluida, o pedido segue para o time responsavel.',
-            'customer_experience_items_eyebrow' => '',
-            'customer_experience_items_title' => 'Itens',
-            'customer_experience_summary_eyebrow' => 'Contexto rapido',
-            'customer_experience_summary_title' => 'Visao do pedido',
-            'customer_experience_financial_eyebrow' => '',
-            'customer_experience_financial_title' => 'Resumo',
-            'customer_experience_actions_eyebrow' => 'Proxima acao',
-            'customer_experience_actions_title' => 'Como seguir agora',
-            'customer_experience_progress_label' => 'Mapa da jornada',
-            'customer_experience_progress_note' => 'As proximas etapas sao liberadas em sequencia para evitar retrabalho.',
-            'panel_title'                 => 'Pedido Expresso',
-            'panel_subtitle'              => 'Monte o pedido, gere a proposta e compartilhe com o cliente.',
-            'proposal_title'              => 'Sua proposta esta pronta',
-            'proposal_description'        => 'Revise os itens e confirme para continuar.',
-            'proposal_button_label'       => 'Confirmar proposta',
-            'proposal_pay_button_label'   => 'Ir para pagamento',
-            'pdf_company_name'            => get_bloginfo( 'name' ),
-            'pdf_company_document'        => '',
-            'pdf_company_address'         => '',
-            'pdf_footer_note'             => __( 'Documento gerado pelo Aireset Expresso Order.', EOP_TEXT_DOMAIN ),
+            'customer_experience_sidebar_background_secondary_color' => '#ffffff',
+            'customer_experience_accent_color'       => '#d78a2f',
+            'customer_experience_text_color'         => '#16243a',
+            'customer_experience_muted_color'        => '#66768d',
+            'customer_experience_title_size'         => '46',
+            'customer_experience_text_size'          => '16',
+            'customer_experience_eyebrow'            => 'Experiencia do cliente',
+            'customer_experience_title'              => 'Sua proposta esta pronta para seguir',
+            'customer_experience_description'        => 'Confira os detalhes finais, valide os documentos e conclua a etapa atual em uma unica jornada.',
+            'customer_experience_total_label'        => 'Investimento aprovado',
+            'customer_experience_total_note'         => 'Assim que a etapa atual for concluida, o pedido segue para o time responsavel.',
+            'customer_experience_items_eyebrow'      => '',
+            'customer_experience_items_title'        => 'Itens',
+            'customer_experience_summary_eyebrow'    => 'Contexto rapido',
+            'customer_experience_summary_title'      => 'Visao do pedido',
+            'customer_experience_financial_eyebrow'  => '',
+            'customer_experience_financial_title'    => 'Resumo',
+            'customer_experience_actions_eyebrow'    => 'Proxima acao',
+            'customer_experience_actions_title'      => 'Como seguir agora',
+            'customer_experience_progress_label'     => 'Mapa da jornada',
+            'customer_experience_progress_note'      => 'As proximas etapas sao liberadas em sequencia para evitar retrabalho.',
+            'panel_title'                            => 'Pedido Expresso',
+            'panel_subtitle'                         => 'Monte o pedido, gere a proposta e compartilhe com o cliente.',
+            'proposal_title'                         => 'Sua proposta esta pronta',
+            'proposal_description'                   => 'Revise os itens e confirme para continuar.',
+            'proposal_button_label'                  => 'Confirmar proposta',
+            'proposal_pay_button_label'              => 'Ir para pagamento',
+            'pdf_company_name'                       => get_bloginfo( 'name' ),
+            'pdf_company_document'                   => '',
+            'pdf_company_address'                    => '',
+            'pdf_footer_note'                        => __( 'Documento gerado pelo Aireset Expresso Order.', EOP_TEXT_DOMAIN ),
         );
 
         foreach ( self::get_post_confirmation_document_slots() as $slot ) {
@@ -81,6 +90,7 @@ class EOP_Settings {
                 'enable_post_confirmation_flow'             => 'no',
                 'post_confirmation_contract_title'          => __( 'Leia e confirme o contrato abaixo', EOP_TEXT_DOMAIN ),
                 'post_confirmation_contract_body'           => __( 'Use este espaco para inserir o texto contratual que o cliente precisa ler e aceitar antes de continuar.', EOP_TEXT_DOMAIN ),
+                'post_confirmation_contract_document_description' => __( 'Documento principal exibido na etapa de aceite.', EOP_TEXT_DOMAIN ),
                 'post_confirmation_contract_checkbox_label' => __( 'Li e aceito o contrato acima.', EOP_TEXT_DOMAIN ),
                 'post_confirmation_contract_name_label'     => __( 'Nome completo para aceite', EOP_TEXT_DOMAIN ),
                 'post_confirmation_contract_button_label'   => __( 'Confirmar e continuar', EOP_TEXT_DOMAIN ),
@@ -101,6 +111,123 @@ class EOP_Settings {
                 'post_confirmation_completion_description'  => __( 'Recebemos suas informacoes e o pedido seguira para a equipe responsavel.', EOP_TEXT_DOMAIN ),
             )
         );
+    }
+
+    public static function get_all() {
+        return wp_parse_args( get_option( self::OPTION_KEY, array() ), self::get_defaults() );
+    }
+
+    public static function get( $key, $default = null ) {
+        $settings = self::get_all();
+
+        return array_key_exists( $key, $settings ) ? $settings[ $key ] : $default;
+    }
+
+    public static function register_settings() {
+        register_setting( 'eop_settings_group', self::OPTION_KEY, array( __CLASS__, 'sanitize_settings' ) );
+    }
+
+    public static function sanitize_settings( $input ) {
+        $defaults                      = self::get_defaults();
+        $existing                      = self::get_all();
+        $input                         = is_array( $input ) ? $input : array();
+        $submitted_input               = $input;
+        $input                         = wp_parse_args( $input, $existing );
+        $signature_documents           = self::sanitize_signature_documents_collection( $input['post_confirmation_signature_documents'] ?? $defaults['post_confirmation_signature_documents'] );
+        $signature_documents_submitted = array_key_exists( 'post_confirmation_signature_documents', $submitted_input );
+
+        $sanitized = array(
+            'flow_mode'                             => in_array( $input['flow_mode'] ?? $defaults['flow_mode'], array( 'proposal', 'direct_order' ), true ) ? (string) ( $input['flow_mode'] ?? $defaults['flow_mode'] ) : $defaults['flow_mode'],
+            'discount_mode'                         => in_array( $input['discount_mode'] ?? $defaults['discount_mode'], array( 'both', 'percent', 'fixed' ), true ) ? (string) ( $input['discount_mode'] ?? $defaults['discount_mode'] ) : $defaults['discount_mode'],
+            'enable_checkout_confirmation'         => 'yes' === ( $input['enable_checkout_confirmation'] ?? 'no' ) ? 'yes' : 'no',
+            'order_page_id'                        => absint( $input['order_page_id'] ?? $defaults['order_page_id'] ),
+            'proposal_page_id'                     => absint( $input['proposal_page_id'] ?? $defaults['proposal_page_id'] ),
+            'brand_logo_url'                       => esc_url_raw( $input['brand_logo_url'] ?? $defaults['brand_logo_url'] ),
+            'primary_color'                        => self::sanitize_color( $input['primary_color'] ?? $defaults['primary_color'], $defaults['primary_color'] ),
+            'surface_color'                        => self::sanitize_color( $input['surface_color'] ?? $defaults['surface_color'], $defaults['surface_color'] ),
+            'border_color'                         => self::sanitize_color( $input['border_color'] ?? $defaults['border_color'], $defaults['border_color'] ),
+            'proposal_background_color'            => self::sanitize_color( $input['proposal_background_color'] ?? $defaults['proposal_background_color'], $defaults['proposal_background_color'] ),
+            'proposal_card_color'                  => self::sanitize_color( $input['proposal_card_color'] ?? $defaults['proposal_card_color'], $defaults['proposal_card_color'] ),
+            'proposal_text_color'                  => self::sanitize_color( $input['proposal_text_color'] ?? $defaults['proposal_text_color'], $defaults['proposal_text_color'] ),
+            'proposal_muted_color'                 => self::sanitize_color( $input['proposal_muted_color'] ?? $defaults['proposal_muted_color'], $defaults['proposal_muted_color'] ),
+            'proposal_max_width'                   => (string) max( 720, min( 1600, absint( $input['proposal_max_width'] ?? $defaults['proposal_max_width'] ) ) ),
+            'proposal_title_size'                  => (string) max( 22, min( 72, absint( $input['proposal_title_size'] ?? $defaults['proposal_title_size'] ) ) ),
+            'proposal_text_size'                   => (string) max( 12, min( 24, absint( $input['proposal_text_size'] ?? $defaults['proposal_text_size'] ) ) ),
+            'border_radius'                        => (string) max( 0, min( 48, absint( $input['border_radius'] ?? $defaults['border_radius'] ) ) ),
+            'font_family'                          => self::sanitize_font_family( $input['font_family'] ?? $defaults['font_family'], $defaults['font_family'] ),
+            'customer_experience_font_family'      => self::sanitize_font_family( $input['customer_experience_font_family'] ?? $defaults['customer_experience_font_family'], $defaults['customer_experience_font_family'] ),
+            'customer_experience_background_mode'  => in_array( $input['customer_experience_background_mode'] ?? $defaults['customer_experience_background_mode'], array( 'solid', 'gradient' ), true ) ? (string) ( $input['customer_experience_background_mode'] ?? $defaults['customer_experience_background_mode'] ) : $defaults['customer_experience_background_mode'],
+            'customer_experience_background_color' => self::sanitize_color( $input['customer_experience_background_color'] ?? $defaults['customer_experience_background_color'], $defaults['customer_experience_background_color'] ),
+            'customer_experience_background_secondary_color' => self::sanitize_color( $input['customer_experience_background_secondary_color'] ?? $defaults['customer_experience_background_secondary_color'], $defaults['customer_experience_background_secondary_color'] ),
+            'customer_experience_hero_background_mode' => in_array( $input['customer_experience_hero_background_mode'] ?? $defaults['customer_experience_hero_background_mode'], array( 'solid', 'gradient' ), true ) ? (string) ( $input['customer_experience_hero_background_mode'] ?? $defaults['customer_experience_hero_background_mode'] ) : $defaults['customer_experience_hero_background_mode'],
+            'customer_experience_hero_background_color' => self::sanitize_color( $input['customer_experience_hero_background_color'] ?? $defaults['customer_experience_hero_background_color'], $defaults['customer_experience_hero_background_color'] ),
+            'customer_experience_hero_background_secondary_color' => self::sanitize_color( $input['customer_experience_hero_background_secondary_color'] ?? $defaults['customer_experience_hero_background_secondary_color'], $defaults['customer_experience_hero_background_secondary_color'] ),
+            'customer_experience_panel_background_mode' => in_array( $input['customer_experience_panel_background_mode'] ?? $defaults['customer_experience_panel_background_mode'], array( 'solid', 'gradient' ), true ) ? (string) ( $input['customer_experience_panel_background_mode'] ?? $defaults['customer_experience_panel_background_mode'] ) : $defaults['customer_experience_panel_background_mode'],
+            'customer_experience_panel_background_color' => self::sanitize_color( $input['customer_experience_panel_background_color'] ?? $defaults['customer_experience_panel_background_color'], $defaults['customer_experience_panel_background_color'] ),
+            'customer_experience_panel_background_secondary_color' => self::sanitize_color( $input['customer_experience_panel_background_secondary_color'] ?? $defaults['customer_experience_panel_background_secondary_color'], $defaults['customer_experience_panel_background_secondary_color'] ),
+            'customer_experience_sidebar_background_mode' => in_array( $input['customer_experience_sidebar_background_mode'] ?? $defaults['customer_experience_sidebar_background_mode'], array( 'solid', 'gradient' ), true ) ? (string) ( $input['customer_experience_sidebar_background_mode'] ?? $defaults['customer_experience_sidebar_background_mode'] ) : $defaults['customer_experience_sidebar_background_mode'],
+            'customer_experience_sidebar_background_color' => self::sanitize_color( $input['customer_experience_sidebar_background_color'] ?? $defaults['customer_experience_sidebar_background_color'], $defaults['customer_experience_sidebar_background_color'] ),
+            'customer_experience_sidebar_background_secondary_color' => self::sanitize_color( $input['customer_experience_sidebar_background_secondary_color'] ?? $defaults['customer_experience_sidebar_background_secondary_color'], $defaults['customer_experience_sidebar_background_secondary_color'] ),
+            'customer_experience_accent_color'     => self::sanitize_color( $input['customer_experience_accent_color'] ?? $defaults['customer_experience_accent_color'], $defaults['customer_experience_accent_color'] ),
+            'customer_experience_text_color'       => self::sanitize_color( $input['customer_experience_text_color'] ?? $defaults['customer_experience_text_color'], $defaults['customer_experience_text_color'] ),
+            'customer_experience_muted_color'      => self::sanitize_color( $input['customer_experience_muted_color'] ?? $defaults['customer_experience_muted_color'], $defaults['customer_experience_muted_color'] ),
+            'customer_experience_title_size'       => (string) max( 24, min( 76, absint( $input['customer_experience_title_size'] ?? $defaults['customer_experience_title_size'] ) ) ),
+            'customer_experience_text_size'        => (string) max( 13, min( 24, absint( $input['customer_experience_text_size'] ?? $defaults['customer_experience_text_size'] ) ) ),
+            'customer_experience_eyebrow'          => sanitize_text_field( $input['customer_experience_eyebrow'] ?? $defaults['customer_experience_eyebrow'] ),
+            'customer_experience_title'            => sanitize_text_field( $input['customer_experience_title'] ?? $defaults['customer_experience_title'] ),
+            'customer_experience_description'      => sanitize_textarea_field( $input['customer_experience_description'] ?? $defaults['customer_experience_description'] ),
+            'customer_experience_total_label'      => sanitize_text_field( $input['customer_experience_total_label'] ?? $defaults['customer_experience_total_label'] ),
+            'customer_experience_total_note'       => sanitize_textarea_field( $input['customer_experience_total_note'] ?? $defaults['customer_experience_total_note'] ),
+            'customer_experience_items_eyebrow'    => sanitize_text_field( $input['customer_experience_items_eyebrow'] ?? $defaults['customer_experience_items_eyebrow'] ),
+            'customer_experience_items_title'      => sanitize_text_field( $input['customer_experience_items_title'] ?? $defaults['customer_experience_items_title'] ),
+            'customer_experience_summary_eyebrow'  => sanitize_text_field( $input['customer_experience_summary_eyebrow'] ?? $defaults['customer_experience_summary_eyebrow'] ),
+            'customer_experience_summary_title'    => sanitize_text_field( $input['customer_experience_summary_title'] ?? $defaults['customer_experience_summary_title'] ),
+            'customer_experience_financial_eyebrow' => sanitize_text_field( $input['customer_experience_financial_eyebrow'] ?? $defaults['customer_experience_financial_eyebrow'] ),
+            'customer_experience_financial_title'  => sanitize_text_field( $input['customer_experience_financial_title'] ?? $defaults['customer_experience_financial_title'] ),
+            'customer_experience_actions_eyebrow'  => sanitize_text_field( $input['customer_experience_actions_eyebrow'] ?? $defaults['customer_experience_actions_eyebrow'] ),
+            'customer_experience_actions_title'    => sanitize_text_field( $input['customer_experience_actions_title'] ?? $defaults['customer_experience_actions_title'] ),
+            'customer_experience_progress_label'   => sanitize_text_field( $input['customer_experience_progress_label'] ?? $defaults['customer_experience_progress_label'] ),
+            'customer_experience_progress_note'    => sanitize_textarea_field( $input['customer_experience_progress_note'] ?? $defaults['customer_experience_progress_note'] ),
+            'panel_title'                          => sanitize_text_field( $input['panel_title'] ?? $defaults['panel_title'] ),
+            'panel_subtitle'                       => sanitize_textarea_field( $input['panel_subtitle'] ?? $defaults['panel_subtitle'] ),
+            'proposal_title'                       => sanitize_text_field( $input['proposal_title'] ?? $defaults['proposal_title'] ),
+            'proposal_description'                 => sanitize_textarea_field( $input['proposal_description'] ?? $defaults['proposal_description'] ),
+            'proposal_button_label'                => sanitize_text_field( $input['proposal_button_label'] ?? $defaults['proposal_button_label'] ),
+            'proposal_pay_button_label'            => sanitize_text_field( $input['proposal_pay_button_label'] ?? $defaults['proposal_pay_button_label'] ),
+            'pdf_company_name'                     => sanitize_text_field( $input['pdf_company_name'] ?? $defaults['pdf_company_name'] ),
+            'pdf_company_document'                 => sanitize_text_field( $input['pdf_company_document'] ?? $defaults['pdf_company_document'] ),
+            'pdf_company_address'                  => sanitize_textarea_field( $input['pdf_company_address'] ?? $defaults['pdf_company_address'] ),
+            'pdf_footer_note'                      => sanitize_textarea_field( $input['pdf_footer_note'] ?? $defaults['pdf_footer_note'] ),
+            'enable_post_confirmation_flow'        => 'yes' === ( $input['enable_post_confirmation_flow'] ?? 'no' ) ? 'yes' : 'no',
+            'post_confirmation_contract_title'     => sanitize_text_field( $input['post_confirmation_contract_title'] ?? $defaults['post_confirmation_contract_title'] ),
+            'post_confirmation_contract_body'      => $signature_documents_submitted ? '' : wp_kses_post( $input['post_confirmation_contract_body'] ?? $defaults['post_confirmation_contract_body'] ),
+            'post_confirmation_contract_document_description' => sanitize_textarea_field( $input['post_confirmation_contract_document_description'] ?? $defaults['post_confirmation_contract_document_description'] ),
+            'post_confirmation_contract_checkbox_label' => sanitize_text_field( $input['post_confirmation_contract_checkbox_label'] ?? $defaults['post_confirmation_contract_checkbox_label'] ),
+            'post_confirmation_contract_name_label' => sanitize_text_field( $input['post_confirmation_contract_name_label'] ?? $defaults['post_confirmation_contract_name_label'] ),
+            'post_confirmation_contract_button_label' => sanitize_text_field( $input['post_confirmation_contract_button_label'] ?? $defaults['post_confirmation_contract_button_label'] ),
+            'post_confirmation_signature_documents' => $signature_documents,
+            'post_confirmation_documents_title'    => sanitize_text_field( $input['post_confirmation_documents_title'] ?? $defaults['post_confirmation_documents_title'] ),
+            'post_confirmation_documents_description' => sanitize_textarea_field( $input['post_confirmation_documents_description'] ?? $defaults['post_confirmation_documents_description'] ),
+            'post_confirmation_documents_button_label' => sanitize_text_field( $input['post_confirmation_documents_button_label'] ?? $defaults['post_confirmation_documents_button_label'] ),
+            'post_confirmation_require_attachment' => 'yes' === ( $input['post_confirmation_require_attachment'] ?? 'yes' ) ? 'yes' : 'no',
+            'post_confirmation_upload_title'       => sanitize_text_field( $input['post_confirmation_upload_title'] ?? $defaults['post_confirmation_upload_title'] ),
+            'post_confirmation_upload_description' => sanitize_textarea_field( $input['post_confirmation_upload_description'] ?? $defaults['post_confirmation_upload_description'] ),
+            'post_confirmation_upload_field_label' => sanitize_text_field( $input['post_confirmation_upload_field_label'] ?? $defaults['post_confirmation_upload_field_label'] ),
+            'post_confirmation_upload_button_label' => sanitize_text_field( $input['post_confirmation_upload_button_label'] ?? $defaults['post_confirmation_upload_button_label'] ),
+            'post_confirmation_products_title'     => sanitize_text_field( $input['post_confirmation_products_title'] ?? $defaults['post_confirmation_products_title'] ),
+            'post_confirmation_products_description' => sanitize_textarea_field( $input['post_confirmation_products_description'] ?? $defaults['post_confirmation_products_description'] ),
+            'post_confirmation_products_button_label' => sanitize_text_field( $input['post_confirmation_products_button_label'] ?? $defaults['post_confirmation_products_button_label'] ),
+            'post_confirmation_locked_products'    => sanitize_text_field( str_replace( array( "\r", "\n", ';' ), ',', (string) ( $input['post_confirmation_locked_products'] ?? $defaults['post_confirmation_locked_products'] ) ) ),
+            'post_confirmation_completion_title'   => sanitize_text_field( $input['post_confirmation_completion_title'] ?? $defaults['post_confirmation_completion_title'] ),
+            'post_confirmation_completion_description' => sanitize_textarea_field( $input['post_confirmation_completion_description'] ?? $defaults['post_confirmation_completion_description'] ),
+        );
+
+        foreach ( self::get_post_confirmation_document_slots() as $slot ) {
+            $sanitized[ 'post_confirmation_document_' . $slot . '_label' ]       = sanitize_text_field( $input[ 'post_confirmation_document_' . $slot . '_label' ] ?? $defaults[ 'post_confirmation_document_' . $slot . '_label' ] );
+            $sanitized[ 'post_confirmation_document_' . $slot . '_placeholder' ] = sanitize_text_field( $input[ 'post_confirmation_document_' . $slot . '_placeholder' ] ?? $defaults[ 'post_confirmation_document_' . $slot . '_placeholder' ] );
+        }
+
+        return $sanitized;
     }
 
     public static function get_post_confirmation_document_slots() {
@@ -163,7 +290,7 @@ class EOP_Settings {
             array(
                 'key'           => 'contrato-principal',
                 'title'         => sanitize_text_field( $settings['post_confirmation_contract_title'] ?? __( 'Contrato principal', EOP_TEXT_DOMAIN ) ),
-                'description'   => __( 'Documento principal exibido na etapa de aceite.', EOP_TEXT_DOMAIN ),
+                'description'   => sanitize_textarea_field( $settings['post_confirmation_contract_document_description'] ?? __( 'Documento principal exibido na etapa de aceite.', EOP_TEXT_DOMAIN ) ),
                 'source_type'   => 'editor',
                 'body'          => wp_kses_post( $legacy_contract ),
                 'attachment_id' => 0,
@@ -217,12 +344,7 @@ class EOP_Settings {
             }
 
             $product_id = $product->get_id();
-
-            if ( isset( $options[ $product_id ] ) ) {
-                continue;
-            }
-
-            $label = $product->get_name();
+            $label      = $product->get_name();
 
             if ( $product->get_sku() ) {
                 $label .= ' [' . $product->get_sku() . ']';
@@ -241,125 +363,8 @@ class EOP_Settings {
         return array(
             'options'          => array_values( $options ),
             'missing_tokens'   => $missing,
-            'serialized_value' => implode( ',', $tokens ),
+            'serialized_value' => implode( ',', array_merge( array_map( 'strval', array_keys( $options ) ), $missing ) ),
         );
-    }
-
-    public static function get_all() {
-        return wp_parse_args( get_option( self::OPTION_KEY, array() ), self::get_defaults() );
-    }
-
-    public static function get( $key, $default = null ) {
-        $settings = self::get_all();
-
-        if ( array_key_exists( $key, $settings ) ) {
-            return $settings[ $key ];
-        }
-
-        return null === $default ? '' : $default;
-    }
-
-    public static function register_settings() {
-        register_setting(
-            'eop_settings_group',
-            self::OPTION_KEY,
-            array(
-                'type'              => 'array',
-                'sanitize_callback' => array( __CLASS__, 'sanitize_settings' ),
-                'default'           => self::get_defaults(),
-            )
-        );
-    }
-
-    public static function sanitize_settings( $input ) {
-        $defaults = self::get_defaults();
-        $input    = is_array( $input ) ? $input : array();
-        $signature_documents           = self::sanitize_signature_documents_collection( $input['post_confirmation_signature_documents'] ?? $defaults['post_confirmation_signature_documents'] );
-        $signature_documents_submitted = array_key_exists( 'post_confirmation_signature_documents', $input );
-
-        $sanitized = array(
-            'flow_mode'                    => in_array( $input['flow_mode'] ?? '', array( 'direct_order', 'proposal' ), true ) ? $input['flow_mode'] : $defaults['flow_mode'],
-            'discount_mode'                => in_array( $input['discount_mode'] ?? '', array( 'percent', 'fixed', 'both' ), true ) ? $input['discount_mode'] : $defaults['discount_mode'],
-            'enable_checkout_confirmation' => 'yes' === ( $input['enable_checkout_confirmation'] ?? 'no' ) ? 'yes' : 'no',
-            'order_page_id'                => absint( $input['order_page_id'] ?? 0 ),
-            'proposal_page_id'             => absint( $input['proposal_page_id'] ?? 0 ),
-            'brand_logo_url'               => esc_url_raw( $input['brand_logo_url'] ?? '' ),
-            'primary_color'                => self::sanitize_color( $input['primary_color'] ?? $defaults['primary_color'], $defaults['primary_color'] ),
-            'surface_color'                => self::sanitize_color( $input['surface_color'] ?? $defaults['surface_color'], $defaults['surface_color'] ),
-            'border_color'                 => self::sanitize_color( $input['border_color'] ?? $defaults['border_color'], $defaults['border_color'] ),
-            'proposal_background_color'    => self::sanitize_color( $input['proposal_background_color'] ?? $defaults['proposal_background_color'], $defaults['proposal_background_color'] ),
-            'proposal_card_color'          => self::sanitize_color( $input['proposal_card_color'] ?? $defaults['proposal_card_color'], $defaults['proposal_card_color'] ),
-            'proposal_text_color'          => self::sanitize_color( $input['proposal_text_color'] ?? $defaults['proposal_text_color'], $defaults['proposal_text_color'] ),
-            'proposal_muted_color'         => self::sanitize_color( $input['proposal_muted_color'] ?? $defaults['proposal_muted_color'], $defaults['proposal_muted_color'] ),
-            'proposal_max_width'           => (string) max( 720, min( 1600, absint( $input['proposal_max_width'] ?? $defaults['proposal_max_width'] ) ) ),
-            'proposal_title_size'          => (string) max( 22, min( 72, absint( $input['proposal_title_size'] ?? $defaults['proposal_title_size'] ) ) ),
-            'proposal_text_size'           => (string) max( 12, min( 24, absint( $input['proposal_text_size'] ?? $defaults['proposal_text_size'] ) ) ),
-            'border_radius'                => (string) max( 0, min( 48, absint( $input['border_radius'] ?? $defaults['border_radius'] ) ) ),
-            'font_family'                  => self::sanitize_font_family( $input['font_family'] ?? $defaults['font_family'], $defaults['font_family'] ),
-            'customer_experience_font_family' => self::sanitize_font_family( $input['customer_experience_font_family'] ?? $defaults['customer_experience_font_family'], $defaults['customer_experience_font_family'] ),
-            'customer_experience_background_color' => self::sanitize_color( $input['customer_experience_background_color'] ?? $defaults['customer_experience_background_color'], $defaults['customer_experience_background_color'] ),
-            'customer_experience_hero_background_color' => self::sanitize_color( $input['customer_experience_hero_background_color'] ?? $defaults['customer_experience_hero_background_color'], $defaults['customer_experience_hero_background_color'] ),
-            'customer_experience_panel_background_color' => self::sanitize_color( $input['customer_experience_panel_background_color'] ?? $defaults['customer_experience_panel_background_color'], $defaults['customer_experience_panel_background_color'] ),
-            'customer_experience_sidebar_background_color' => self::sanitize_color( $input['customer_experience_sidebar_background_color'] ?? $defaults['customer_experience_sidebar_background_color'], $defaults['customer_experience_sidebar_background_color'] ),
-            'customer_experience_accent_color' => self::sanitize_color( $input['customer_experience_accent_color'] ?? $defaults['customer_experience_accent_color'], $defaults['customer_experience_accent_color'] ),
-            'customer_experience_text_color' => self::sanitize_color( $input['customer_experience_text_color'] ?? $defaults['customer_experience_text_color'], $defaults['customer_experience_text_color'] ),
-            'customer_experience_muted_color' => self::sanitize_color( $input['customer_experience_muted_color'] ?? $defaults['customer_experience_muted_color'], $defaults['customer_experience_muted_color'] ),
-            'customer_experience_title_size' => (string) max( 24, min( 76, absint( $input['customer_experience_title_size'] ?? $defaults['customer_experience_title_size'] ) ) ),
-            'customer_experience_text_size' => (string) max( 13, min( 24, absint( $input['customer_experience_text_size'] ?? $defaults['customer_experience_text_size'] ) ) ),
-            'customer_experience_eyebrow' => sanitize_text_field( $input['customer_experience_eyebrow'] ?? $defaults['customer_experience_eyebrow'] ),
-            'customer_experience_title' => sanitize_text_field( $input['customer_experience_title'] ?? $defaults['customer_experience_title'] ),
-            'customer_experience_description' => sanitize_textarea_field( $input['customer_experience_description'] ?? $defaults['customer_experience_description'] ),
-            'customer_experience_total_label' => sanitize_text_field( $input['customer_experience_total_label'] ?? $defaults['customer_experience_total_label'] ),
-            'customer_experience_total_note' => sanitize_textarea_field( $input['customer_experience_total_note'] ?? $defaults['customer_experience_total_note'] ),
-            'customer_experience_items_eyebrow' => sanitize_text_field( $input['customer_experience_items_eyebrow'] ?? $defaults['customer_experience_items_eyebrow'] ),
-            'customer_experience_items_title' => sanitize_text_field( $input['customer_experience_items_title'] ?? $defaults['customer_experience_items_title'] ),
-            'customer_experience_summary_eyebrow' => sanitize_text_field( $input['customer_experience_summary_eyebrow'] ?? $defaults['customer_experience_summary_eyebrow'] ),
-            'customer_experience_summary_title' => sanitize_text_field( $input['customer_experience_summary_title'] ?? $defaults['customer_experience_summary_title'] ),
-            'customer_experience_financial_eyebrow' => sanitize_text_field( $input['customer_experience_financial_eyebrow'] ?? $defaults['customer_experience_financial_eyebrow'] ),
-            'customer_experience_financial_title' => sanitize_text_field( $input['customer_experience_financial_title'] ?? $defaults['customer_experience_financial_title'] ),
-            'customer_experience_actions_eyebrow' => sanitize_text_field( $input['customer_experience_actions_eyebrow'] ?? $defaults['customer_experience_actions_eyebrow'] ),
-            'customer_experience_actions_title' => sanitize_text_field( $input['customer_experience_actions_title'] ?? $defaults['customer_experience_actions_title'] ),
-            'customer_experience_progress_label' => sanitize_text_field( $input['customer_experience_progress_label'] ?? $defaults['customer_experience_progress_label'] ),
-            'customer_experience_progress_note' => sanitize_textarea_field( $input['customer_experience_progress_note'] ?? $defaults['customer_experience_progress_note'] ),
-            'panel_title'                  => sanitize_text_field( $input['panel_title'] ?? $defaults['panel_title'] ),
-            'panel_subtitle'               => sanitize_textarea_field( $input['panel_subtitle'] ?? $defaults['panel_subtitle'] ),
-            'proposal_title'               => sanitize_text_field( $input['proposal_title'] ?? $defaults['proposal_title'] ),
-            'proposal_description'         => sanitize_textarea_field( $input['proposal_description'] ?? $defaults['proposal_description'] ),
-            'proposal_button_label'        => sanitize_text_field( $input['proposal_button_label'] ?? $defaults['proposal_button_label'] ),
-            'proposal_pay_button_label'    => sanitize_text_field( $input['proposal_pay_button_label'] ?? $defaults['proposal_pay_button_label'] ),
-            'pdf_company_name'             => sanitize_text_field( $input['pdf_company_name'] ?? $defaults['pdf_company_name'] ),
-            'pdf_company_document'         => sanitize_text_field( $input['pdf_company_document'] ?? $defaults['pdf_company_document'] ),
-            'pdf_company_address'          => sanitize_textarea_field( $input['pdf_company_address'] ?? $defaults['pdf_company_address'] ),
-            'pdf_footer_note'              => sanitize_textarea_field( $input['pdf_footer_note'] ?? $defaults['pdf_footer_note'] ),
-            'enable_post_confirmation_flow'             => 'yes' === ( $input['enable_post_confirmation_flow'] ?? 'no' ) ? 'yes' : 'no',
-            'post_confirmation_contract_title'          => sanitize_text_field( $input['post_confirmation_contract_title'] ?? $defaults['post_confirmation_contract_title'] ),
-            'post_confirmation_contract_body'           => $signature_documents_submitted ? '' : wp_kses_post( $input['post_confirmation_contract_body'] ?? $defaults['post_confirmation_contract_body'] ),
-            'post_confirmation_contract_checkbox_label' => sanitize_text_field( $input['post_confirmation_contract_checkbox_label'] ?? $defaults['post_confirmation_contract_checkbox_label'] ),
-            'post_confirmation_contract_name_label'     => sanitize_text_field( $input['post_confirmation_contract_name_label'] ?? $defaults['post_confirmation_contract_name_label'] ),
-            'post_confirmation_contract_button_label'   => sanitize_text_field( $input['post_confirmation_contract_button_label'] ?? $defaults['post_confirmation_contract_button_label'] ),
-            'post_confirmation_signature_documents'     => $signature_documents,
-            'post_confirmation_documents_title'         => sanitize_text_field( $input['post_confirmation_documents_title'] ?? $defaults['post_confirmation_documents_title'] ),
-            'post_confirmation_documents_description'   => sanitize_textarea_field( $input['post_confirmation_documents_description'] ?? $defaults['post_confirmation_documents_description'] ),
-            'post_confirmation_documents_button_label'  => sanitize_text_field( $input['post_confirmation_documents_button_label'] ?? $defaults['post_confirmation_documents_button_label'] ),
-            'post_confirmation_require_attachment'      => 'yes' === ( $input['post_confirmation_require_attachment'] ?? 'yes' ) ? 'yes' : 'no',
-            'post_confirmation_upload_title'            => sanitize_text_field( $input['post_confirmation_upload_title'] ?? $defaults['post_confirmation_upload_title'] ),
-            'post_confirmation_upload_description'      => sanitize_textarea_field( $input['post_confirmation_upload_description'] ?? $defaults['post_confirmation_upload_description'] ),
-            'post_confirmation_upload_field_label'      => sanitize_text_field( $input['post_confirmation_upload_field_label'] ?? $defaults['post_confirmation_upload_field_label'] ),
-            'post_confirmation_upload_button_label'     => sanitize_text_field( $input['post_confirmation_upload_button_label'] ?? $defaults['post_confirmation_upload_button_label'] ),
-            'post_confirmation_products_title'          => sanitize_text_field( $input['post_confirmation_products_title'] ?? $defaults['post_confirmation_products_title'] ),
-            'post_confirmation_products_description'    => sanitize_textarea_field( $input['post_confirmation_products_description'] ?? $defaults['post_confirmation_products_description'] ),
-            'post_confirmation_products_button_label'   => sanitize_text_field( $input['post_confirmation_products_button_label'] ?? $defaults['post_confirmation_products_button_label'] ),
-            'post_confirmation_locked_products'         => sanitize_text_field( str_replace( array( "\r", "\n", ';' ), ',', (string) ( $input['post_confirmation_locked_products'] ?? $defaults['post_confirmation_locked_products'] ) ) ),
-            'post_confirmation_completion_title'        => sanitize_text_field( $input['post_confirmation_completion_title'] ?? $defaults['post_confirmation_completion_title'] ),
-            'post_confirmation_completion_description'  => sanitize_textarea_field( $input['post_confirmation_completion_description'] ?? $defaults['post_confirmation_completion_description'] ),
-        );
-
-        foreach ( self::get_post_confirmation_document_slots() as $slot ) {
-            $sanitized[ 'post_confirmation_document_' . $slot . '_label' ]       = sanitize_text_field( $input[ 'post_confirmation_document_' . $slot . '_label' ] ?? $defaults[ 'post_confirmation_document_' . $slot . '_label' ] );
-            $sanitized[ 'post_confirmation_document_' . $slot . '_placeholder' ] = sanitize_text_field( $input[ 'post_confirmation_document_' . $slot . '_placeholder' ] ?? $defaults[ 'post_confirmation_document_' . $slot . '_placeholder' ] );
-        }
-
-        return $sanitized;
     }
 
     private static function sanitize_signature_documents_collection( $documents ) {
@@ -420,6 +425,31 @@ class EOP_Settings {
         return '' !== $value ? $value : $fallback;
     }
 
+    public static function get_font_stylesheet_url( $font_value = '' ) {
+        $font_value = self::sanitize_font_family( $font_value ?: self::get( 'font_family', self::get_defaults()['font_family'] ), self::get_defaults()['font_family'] );
+
+        if ( '' === $font_value ) {
+            return '';
+        }
+
+        return 'https://fonts.googleapis.com/css?family=' . str_replace( '%2B', '+', rawurlencode( $font_value ) ) . '&display=swap';
+    }
+
+    public static function get_font_stylesheet_urls( $font_values = array() ) {
+        $font_values = is_array( $font_values ) ? $font_values : array( $font_values );
+        $urls        = array();
+
+        foreach ( $font_values as $font_value ) {
+            $url = self::get_font_stylesheet_url( (string) $font_value );
+
+            if ( '' !== $url ) {
+                $urls[ $url ] = $url;
+            }
+        }
+
+        return array_values( $urls );
+    }
+
     public static function get_font_css_family( $font_value = '' ) {
         $font_value = self::sanitize_font_family( $font_value ?: self::get( 'font_family', self::get_defaults()['font_family'] ), self::get_defaults()['font_family'] );
 
@@ -431,20 +461,61 @@ class EOP_Settings {
         $family = trim( str_replace( '+', ' ', $family ) );
 
         if ( '' === $family ) {
-            return self::get_defaults()['font_family'];
+            $family = preg_replace( '/:.+$/', '', self::get_defaults()['font_family'] );
+            $family = trim( str_replace( '+', ' ', $family ) );
         }
 
-        return "'" . $family . "', sans-serif";
+        return $family;
     }
 
-    public static function get_font_stylesheet_url( $font_value = '' ) {
-        $font_value = self::sanitize_font_family( $font_value ?: self::get( 'font_family', self::get_defaults()['font_family'] ), '' );
+    private static function build_help_tooltip_payload( $label, $help, $effect = '' ) {
+        return array(
+            'label'  => (string) $label,
+            'help'   => (string) $help,
+            'effect' => (string) $effect,
+        );
+    }
 
-        if ( '' === $font_value || ( false !== strpos( $font_value, ',' ) && false === strpos( $font_value, ':' ) ) ) {
-            return '';
+    private static function get_confirmation_general_tooltip_map() {
+        return array(
+            'enable_post_confirmation_flow' => self::build_help_tooltip_payload( __( 'Ativar fluxo complementar', EOP_TEXT_DOMAIN ), __( 'Liga a jornada adicional exibida depois que a proposta ja foi confirmada.', EOP_TEXT_DOMAIN ), __( 'Quando desligado, o fluxo termina na confirmacao da proposta.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_contract_title' => self::build_help_tooltip_payload( __( 'Titulo do contrato', EOP_TEXT_DOMAIN ), __( 'Titulo principal da etapa de aceite contratual.', EOP_TEXT_DOMAIN ), __( 'Aparece no topo da primeira etapa do fluxo complementar.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_contract_document_description' => self::build_help_tooltip_payload( __( 'Descricao do documento principal', EOP_TEXT_DOMAIN ), __( 'Texto curto exibido abaixo do titulo do documento principal na etapa contratual.', EOP_TEXT_DOMAIN ), __( 'Serve como contexto rapido antes da leitura e do aceite.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_contract_name_label' => self::build_help_tooltip_payload( __( 'Label do nome completo', EOP_TEXT_DOMAIN ), __( 'Texto do campo em que o cliente informa o nome do responsavel pelo aceite.', EOP_TEXT_DOMAIN ), __( 'Ajuda a orientar quem deve assinar ou confirmar o contrato.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_contract_checkbox_label' => self::build_help_tooltip_payload( __( 'Texto do aceite', EOP_TEXT_DOMAIN ), __( 'Frase que acompanha o checkbox de aceite do contrato.', EOP_TEXT_DOMAIN ), __( 'Deixa explicito o consentimento antes do avanço.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_contract_button_label' => self::build_help_tooltip_payload( __( 'Botao do contrato', EOP_TEXT_DOMAIN ), __( 'Texto do botao que envia o aceite e libera a proxima etapa do fluxo.', EOP_TEXT_DOMAIN ), __( 'Muda a chamada para a acao principal na etapa do contrato.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_locked_products' => self::build_help_tooltip_payload( __( 'Produtos bloqueados', EOP_TEXT_DOMAIN ), __( 'Selecione os produtos cujo nome nao deve ser alterado na etapa final de personalizacao.', EOP_TEXT_DOMAIN ), __( 'Esses itens ficam protegidos contra edicao do nome pelo cliente.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_require_attachment' => self::build_help_tooltip_payload( __( 'Exigir anexo', EOP_TEXT_DOMAIN ), __( 'Define se o envio do anexo sera obrigatorio antes de continuar o fluxo.', EOP_TEXT_DOMAIN ), __( 'Quando ativado, o cliente precisa anexar o arquivo para seguir.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_upload_title' => self::build_help_tooltip_payload( __( 'Titulo do upload', EOP_TEXT_DOMAIN ), __( 'Titulo principal da etapa em que o cliente envia arquivos complementares.', EOP_TEXT_DOMAIN ), __( 'Aparece no topo do bloco de upload.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_upload_field_label' => self::build_help_tooltip_payload( __( 'Label do anexo', EOP_TEXT_DOMAIN ), __( 'Texto que identifica o campo de envio do arquivo nessa etapa.', EOP_TEXT_DOMAIN ), __( 'Ajuda o cliente a entender o que precisa anexar.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_upload_description' => self::build_help_tooltip_payload( __( 'Descricao do upload', EOP_TEXT_DOMAIN ), __( 'Texto explicativo que orienta o cliente sobre qual documento ou material deve enviar.', EOP_TEXT_DOMAIN ), __( 'Fica logo abaixo do titulo da etapa de upload.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_upload_button_label' => self::build_help_tooltip_payload( __( 'Botao do upload', EOP_TEXT_DOMAIN ), __( 'Texto do botao que confirma o envio do anexo e leva o cliente adiante.', EOP_TEXT_DOMAIN ), __( 'Muda a chamada da acao principal da etapa de upload.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_products_title' => self::build_help_tooltip_payload( __( 'Titulo da personalizacao', EOP_TEXT_DOMAIN ), __( 'Titulo principal da etapa em que o cliente revisa ou personaliza informacoes dos produtos.', EOP_TEXT_DOMAIN ), __( 'Fica no topo da tela de personalizacao.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_products_description' => self::build_help_tooltip_payload( __( 'Descricao da personalizacao', EOP_TEXT_DOMAIN ), __( 'Texto auxiliar que explica como o cliente deve preencher ou revisar os dados dos produtos.', EOP_TEXT_DOMAIN ), __( 'Serve como instrucao curta dessa etapa.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_products_button_label' => self::build_help_tooltip_payload( __( 'Botao da personalizacao', EOP_TEXT_DOMAIN ), __( 'Texto do botao que confirma a personalizacao dos produtos.', EOP_TEXT_DOMAIN ), __( 'Muda a chamada da acao principal da etapa de produtos.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_completion_title' => self::build_help_tooltip_payload( __( 'Titulo da conclusao', EOP_TEXT_DOMAIN ), __( 'Titulo mostrado ao final do fluxo, quando todas as etapas foram concluidas.', EOP_TEXT_DOMAIN ), __( 'Identifica visualmente que o processo terminou.', EOP_TEXT_DOMAIN ) ),
+            'post_confirmation_completion_description' => self::build_help_tooltip_payload( __( 'Descricao da conclusao', EOP_TEXT_DOMAIN ), __( 'Mensagem final exibida depois que o cliente conclui contrato, anexo e personalizacao.', EOP_TEXT_DOMAIN ), __( 'Serve como fechamento e orientacao final do fluxo.', EOP_TEXT_DOMAIN ) ),
+        );
+    }
+
+    private static function render_help_label( $tag, $text, $help_key, $attributes = array() ) {
+        $tag        = in_array( $tag, array( 'label', 'span' ), true ) ? $tag : 'span';
+        $text       = (string) $text;
+        $help_key   = sanitize_key( (string) $help_key );
+        $attributes = is_array( $attributes ) ? $attributes : array();
+        $attr_html  = '';
+
+        foreach ( $attributes as $attr_name => $attr_value ) {
+            if ( '' === (string) $attr_name || null === $attr_value || false === $attr_value ) {
+                continue;
+            }
+
+            $attr_html .= sprintf( ' %s="%s"', esc_attr( $attr_name ), esc_attr( (string) $attr_value ) );
         }
 
-        return 'https://fonts.googleapis.com/css?family=' . str_replace( '%2B', '+', rawurlencode( $font_value ) ) . '&display=swap';
+        $attr_html .= sprintf( ' data-eop-help-key="%s"', esc_attr( $help_key ) );
+
+        printf( '<%1$s%2$s>%3$s</%1$s>', esc_attr( $tag ), $attr_html, esc_html( $text ) );
     }
 
     public static function get_settings_admin_localization( $has_fontselect = false ) {
@@ -457,75 +528,268 @@ class EOP_Settings {
             'select_logo'                  => __( 'Selecionar logo', EOP_TEXT_DOMAIN ),
             'change_logo'                  => __( 'Trocar logo', EOP_TEXT_DOMAIN ),
             'no_logo'                      => __( 'Nenhum logo selecionado ainda.', EOP_TEXT_DOMAIN ),
-            'color_default'                => __( 'Padrao', EOP_TEXT_DOMAIN ),
-            'color_clear'                  => __( 'Limpar', EOP_TEXT_DOMAIN ),
-            'color_close'                  => __( 'Fechar', EOP_TEXT_DOMAIN ),
             'ajax_url'                     => admin_url( 'admin-ajax.php' ),
             'nonce'                        => wp_create_nonce( 'eop_nonce' ),
             'locked_placeholder'           => __( 'Busque produtos por nome ou SKU...', EOP_TEXT_DOMAIN ),
             'locked_no_results'            => __( 'Nenhum produto encontrado.', EOP_TEXT_DOMAIN ),
-            'document_add'                 => __( 'Adicionar documento', EOP_TEXT_DOMAIN ),
-            'document_remove'              => __( 'Remover documento', EOP_TEXT_DOMAIN ),
             'document_media_title'         => __( 'Selecionar arquivo do documento', EOP_TEXT_DOMAIN ),
             'document_media_button'        => __( 'Usar este arquivo', EOP_TEXT_DOMAIN ),
             'document_pdf_empty'           => __( 'Nenhum arquivo anexado ainda.', EOP_TEXT_DOMAIN ),
             'document_select_pdf'          => __( 'Selecionar arquivo', EOP_TEXT_DOMAIN ),
             'document_change_pdf'          => __( 'Trocar arquivo', EOP_TEXT_DOMAIN ),
-            'document_editor_placeholder'  => __( 'Escreva ou cole aqui o texto completo do documento. A formatacao sera preservada no PDF gerado.', EOP_TEXT_DOMAIN ),
-            'document_type_editor'         => __( 'Texto formatado', EOP_TEXT_DOMAIN ),
-            'document_type_attachment'     => __( 'Arquivo anexado', EOP_TEXT_DOMAIN ),
-            'document_title_label'         => __( 'Titulo do documento', EOP_TEXT_DOMAIN ),
-            'document_description_label'   => __( 'Descricao curta', EOP_TEXT_DOMAIN ),
-            'document_source_label'        => __( 'Origem do documento', EOP_TEXT_DOMAIN ),
-            'document_body_label'          => __( 'Conteudo do documento', EOP_TEXT_DOMAIN ),
-            'document_attachment_label'    => __( 'Arquivo base (PDF, DOC ou DOCX)', EOP_TEXT_DOMAIN ),
-			'document_edit'                => __( 'Editar documento', EOP_TEXT_DOMAIN ),
-			'document_close'               => __( 'Fechar edicao', EOP_TEXT_DOMAIN ),
-			'document_new_title'           => __( 'Novo documento', EOP_TEXT_DOMAIN ),
-			'document_summary_editor'      => __( 'Texto editavel com placeholders e formatacao preservada na geracao.', EOP_TEXT_DOMAIN ),
-			'document_summary_attachment'  => __( 'Arquivo base pronto para gerar o documento final no pedido.', EOP_TEXT_DOMAIN ),
+            'confirmation_general_help_map' => self::get_confirmation_general_tooltip_map(),
         );
     }
 
-    public static function register_submenu() {
-        // self::$page_hook = add_submenu_page(
-        //     'aireset',
-        //     __( 'Configuracoes', EOP_TEXT_DOMAIN ),
-        //     __( 'Configuracoes', EOP_TEXT_DOMAIN ),
-        //     'manage_options',
-        //     'eop-configuracoes',
-        //     array( __CLASS__, 'render_page' )
-        // );
+    private static function normalize_admin_section( $section ) {
+        $section = sanitize_key( (string) $section );
+        $allowed = array(
+            'all',
+            'general-config',
+            'confirmation-flow-general',
+            'confirmation-flow-documents',
+            'confirmation-flow-preview',
+            'order-link-style',
+            'proposal-link-style',
+            'customer-experience',
+            'texts',
+        );
+
+        return in_array( $section, $allowed, true ) ? $section : 'all';
     }
 
-    public static function enqueue_assets( $hook_suffix ) {
-        $font_css_path = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/css/jquery.fontselect.css';
-        $font_js_path  = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/js/jquery.fontselect.js';
-        $page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+    private static function should_render_admin_section( $active_section, $section_key ) {
+        return self::normalize_admin_section( $active_section ) === sanitize_key( (string) $section_key ) || 'all' === self::normalize_admin_section( $active_section );
+    }
 
-        if ( self::$page_hook && self::$page_hook === $hook_suffix ) {
-            // ok
-        } elseif ( 'eop-configuracoes' !== $page ) {
+    private static function render_signature_document_item( $index, $document ) {
+        $document        = is_array( $document ) ? $document : array();
+        $attachment_name = ! empty( $document['attachment_id'] ) ? get_the_title( absint( $document['attachment_id'] ) ) : '';
+        $title           = isset( $document['title'] ) ? (string) $document['title'] : '';
+        $source_type     = isset( $document['source_type'] ) ? (string) $document['source_type'] : 'editor';
+        $source_label    = 'attachment' === $source_type ? __( 'Arquivo do documento', EOP_TEXT_DOMAIN ) : __( 'Conteudo do documento', EOP_TEXT_DOMAIN );
+        ?>
+        <div class="eop-signature-document is-collapsed" data-signature-document data-index="<?php echo esc_attr( $index ); ?>" data-expanded="false">
+            <div class="eop-signature-document__header">
+                <div class="eop-signature-document__summary">
+                    <strong class="eop-signature-document__heading" data-signature-document-heading><?php echo esc_html( '' !== $title ? $title : __( 'Novo documento', EOP_TEXT_DOMAIN ) ); ?></strong>
+                    <span class="eop-signature-document__type" data-signature-document-source-label><?php echo esc_html( $source_label ); ?></span>
+                </div>
+                <div class="eop-signature-document__actions">
+                    <button type="button" class="button button-secondary eop-signature-document__edit" data-signature-document-toggle aria-expanded="false"><?php esc_html_e( 'Editar', EOP_TEXT_DOMAIN ); ?></button>
+                    <button type="button" class="button-link-delete eop-signature-document__remove" data-signature-document-remove aria-label="<?php esc_attr_e( 'Excluir documento', EOP_TEXT_DOMAIN ); ?>" title="<?php esc_attr_e( 'Excluir documento', EOP_TEXT_DOMAIN ); ?>">
+                        <span class="dashicons dashicons-trash" aria-hidden="true"></span>
+                        <span class="screen-reader-text"><?php esc_html_e( 'Excluir documento', EOP_TEXT_DOMAIN ); ?></span>
+                    </button>
+                </div>
+            </div>
+            <div class="eop-signature-document__body is-hidden" data-signature-document-body>
+                <div class="eop-signature-document__grid">
+                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][key]" value="<?php echo esc_attr( $document['key'] ?? '' ); ?>" />
+                <div class="eop-settings-field">
+                    <label><?php esc_html_e( 'Titulo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                    <input type="text" data-signature-document-title name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][title]" value="<?php echo esc_attr( $title ); ?>" />
+                </div>
+                <div class="eop-settings-field">
+                    <label><?php esc_html_e( 'Tipo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                    <select name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][source_type]" data-signature-document-source>
+                        <option value="editor" <?php selected( $source_type, 'editor' ); ?>><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></option>
+                        <option value="attachment" <?php selected( $source_type, 'attachment' ); ?>><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></option>
+                    </select>
+                </div>
+                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][description]" value="<?php echo esc_attr( $document['description'] ?? '' ); ?>" />
+                <div class="eop-settings-field is-full eop-signature-document__panel<?php echo 'attachment' === $source_type ? '' : ' is-hidden'; ?>" data-signature-document-panel="attachment">
+                    <label><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                    <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][attachment_id]" value="<?php echo esc_attr( absint( $document['attachment_id'] ?? 0 ) ); ?>" data-signature-document-attachment-id />
+                    <div class="eop-signature-document__attachment-shell">
+                        <div class="eop-signature-document__attachment-name" data-signature-document-attachment-name><?php echo esc_html( $attachment_name ? $attachment_name : __( 'Nenhum arquivo anexado ainda.', EOP_TEXT_DOMAIN ) ); ?></div>
+                        <div class="eop-signature-document__attachment-actions">
+                            <button type="button" class="button button-secondary" data-signature-document-attachment-select><?php echo esc_html( $attachment_name ? __( 'Trocar arquivo', EOP_TEXT_DOMAIN ) : __( 'Selecionar arquivo', EOP_TEXT_DOMAIN ) ); ?></button>
+                            <button type="button" class="button-link-delete eop-signature-document__attachment-remove<?php echo $attachment_name ? '' : ' is-hidden'; ?>" data-signature-document-attachment-remove aria-label="<?php esc_attr_e( 'Remover arquivo', EOP_TEXT_DOMAIN ); ?>" title="<?php esc_attr_e( 'Remover arquivo', EOP_TEXT_DOMAIN ); ?>">
+                                <span class="dashicons dashicons-trash" aria-hidden="true"></span>
+                                <span class="screen-reader-text"><?php esc_html_e( 'Remover arquivo', EOP_TEXT_DOMAIN ); ?></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="eop-settings-field is-full eop-signature-document__panel<?php echo 'editor' === $source_type ? '' : ' is-hidden'; ?>" data-signature-document-panel="editor">
+                    <label><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                    <textarea id="eop_signature_document_body_<?php echo esc_attr( $index ); ?>" class="eop-signature-document__editor" data-signature-document-editor name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][body]"><?php echo esc_textarea( $document['body'] ?? '' ); ?></textarea>
+                </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    private static function render_confirmation_documents_section( $signature_documents ) {
+        $signature_documents = is_array( $signature_documents ) ? array_values( $signature_documents ) : array();
+        ?>
+        <section class="eop-settings-card">
+            <div class="eop-signature-documents" data-signature-documents data-option-key="<?php echo esc_attr( self::OPTION_KEY ); ?>" data-next-index="<?php echo esc_attr( count( $signature_documents ) ); ?>">
+                <div class="eop-signature-documents__intro">
+                    <span><?php esc_html_e( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ); ?></span>
+                    <h3><?php esc_html_e( 'Listagem de documentos', EOP_TEXT_DOMAIN ); ?></h3>
+                    <p><?php esc_html_e( 'Cada documento aparece como um card. Escolha se ele sera escrito no editor ou enviado como arquivo.', EOP_TEXT_DOMAIN ); ?></p>
+                </div>
+                <button type="button" class="button eop-signature-documents__create" data-signature-document-add><?php esc_html_e( 'Cadastrar documento', EOP_TEXT_DOMAIN ); ?></button>
+                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__sentinel]" value="1" />
+                <div class="eop-signature-documents__empty<?php echo ! empty( $signature_documents ) ? ' is-hidden' : ''; ?>" data-signature-documents-empty>
+                    <strong><?php esc_html_e( 'Nenhum documento cadastrado ainda.', EOP_TEXT_DOMAIN ); ?></strong>
+                    <p><?php esc_html_e( 'Clique em cadastrar documento para criar o primeiro item do fluxo contratual.', EOP_TEXT_DOMAIN ); ?></p>
+                </div>
+                <div class="eop-signature-documents__list" data-signature-documents-list>
+                    <?php foreach ( $signature_documents as $index => $document ) : ?>
+                        <?php self::render_signature_document_item( $index, $document ); ?>
+                    <?php endforeach; ?>
+                </div>
+                <script type="text/template" id="eop-signature-document-template">
+                    <div class="eop-signature-document is-collapsed" data-signature-document data-index="__INDEX__" data-expanded="false">
+                        <div class="eop-signature-document__header">
+                            <div class="eop-signature-document__summary">
+                                <strong class="eop-signature-document__heading" data-signature-document-heading><?php esc_html_e( 'Novo documento', EOP_TEXT_DOMAIN ); ?></strong>
+                                <span class="eop-signature-document__type" data-signature-document-source-label><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></span>
+                            </div>
+                            <div class="eop-signature-document__actions">
+                                <button type="button" class="button button-secondary eop-signature-document__edit" data-signature-document-toggle aria-expanded="false"><?php esc_html_e( 'Editar', EOP_TEXT_DOMAIN ); ?></button>
+                                <button type="button" class="button-link-delete eop-signature-document__remove" data-signature-document-remove aria-label="<?php esc_attr_e( 'Excluir documento', EOP_TEXT_DOMAIN ); ?>" title="<?php esc_attr_e( 'Excluir documento', EOP_TEXT_DOMAIN ); ?>">
+                                    <span class="dashicons dashicons-trash" aria-hidden="true"></span>
+                                    <span class="screen-reader-text"><?php esc_html_e( 'Excluir documento', EOP_TEXT_DOMAIN ); ?></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="eop-signature-document__body is-hidden" data-signature-document-body>
+                            <div class="eop-signature-document__grid">
+                            <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][key]" value="" />
+                            <div class="eop-settings-field">
+                                <label><?php esc_html_e( 'Titulo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                                <input type="text" data-signature-document-title name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][title]" value="" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label><?php esc_html_e( 'Tipo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                                <select name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][source_type]" data-signature-document-source>
+                                    <option value="editor"><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="attachment"><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></option>
+                                </select>
+                            </div>
+                            <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][description]" value="" />
+                            <div class="eop-settings-field is-full eop-signature-document__panel is-hidden" data-signature-document-panel="attachment">
+                                <label><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][attachment_id]" value="" data-signature-document-attachment-id />
+                                <div class="eop-signature-document__attachment-shell">
+                                    <div class="eop-signature-document__attachment-name" data-signature-document-attachment-name><?php esc_html_e( 'Nenhum arquivo anexado ainda.', EOP_TEXT_DOMAIN ); ?></div>
+                                    <div class="eop-signature-document__attachment-actions">
+                                        <button type="button" class="button button-secondary" data-signature-document-attachment-select><?php esc_html_e( 'Selecionar arquivo', EOP_TEXT_DOMAIN ); ?></button>
+                                        <button type="button" class="button-link-delete eop-signature-document__attachment-remove is-hidden" data-signature-document-attachment-remove aria-label="<?php esc_attr_e( 'Remover arquivo', EOP_TEXT_DOMAIN ); ?>" title="<?php esc_attr_e( 'Remover arquivo', EOP_TEXT_DOMAIN ); ?>">
+                                            <span class="dashicons dashicons-trash" aria-hidden="true"></span>
+                                            <span class="screen-reader-text"><?php esc_html_e( 'Remover arquivo', EOP_TEXT_DOMAIN ); ?></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="eop-settings-field is-full eop-signature-document__panel" data-signature-document-panel="editor">
+                                <label><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                                <textarea id="eop_signature_document_body___INDEX__" class="eop-signature-document__editor" data-signature-document-editor name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][body]"></textarea>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                </script>
+                <small class="eop-settings-help"><?php esc_html_e( 'Arquivos Word sao convertidos em PDF quando o documento for gerado para o pedido.', EOP_TEXT_DOMAIN ); ?></small>
+                <?php if ( class_exists( 'EOP_Post_Confirmation_Flow' ) && method_exists( 'EOP_Post_Confirmation_Flow', 'get_contract_placeholder_tokens' ) ) : ?>
+                    <small class="eop-settings-help">
+                        <?php
+                        printf(
+                            esc_html__( 'Placeholders disponiveis: %s', EOP_TEXT_DOMAIN ),
+                            esc_html( implode( ', ', EOP_Post_Confirmation_Flow::get_contract_placeholder_tokens() ) )
+                        );
+                        ?>
+                    </small>
+                <?php endif; ?>
+            </div>
+        </section>
+        <?php
+    }
+
+    public static function maybe_redirect_legacy_request() {
+        if ( ! class_exists( 'EOP_Admin_Page' ) ) {
             return;
         }
 
-        if ( function_exists( 'WC' ) && WC() ) {
-            $wc_version = defined( 'WC_VERSION' ) ? WC_VERSION : EOP_VERSION;
+        $page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+        $legacy_page_map = array(
+            'eop-configuracoes'                => 'settings',
+            'eop-pedido-expresso-configuracoes' => 'settings',
+            'eop-pedido-expresso-aparencia'    => 'settings-styles',
+            'eop-pedido-expresso-fluxo'        => 'settings-confirmation-flow',
+        );
 
-            wp_enqueue_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css', array(), $wc_version );
-            wp_enqueue_script( 'select2', WC()->plugin_url() . '/assets/js/select2/select2.full.min.js', array( 'jquery' ), $wc_version, true );
+        if ( ! isset( $legacy_page_map[ $page ] ) ) {
+            return;
         }
+
+        wp_safe_redirect( EOP_Admin_Page::get_view_url( $legacy_page_map[ $page ] ) );
+        exit;
+    }
+
+    public static function register_submenu() {
+        if ( class_exists( 'EOP_Admin_Page' ) ) {
+            return;
+        }
+
+        if ( function_exists( 'ensure_aireset_parent_menu' ) ) {
+            ensure_aireset_parent_menu();
+        }
+
+        self::$page_hook = add_submenu_page(
+            'aireset',
+            __( 'Configuracoes', EOP_TEXT_DOMAIN ),
+            __( 'Configuracoes', EOP_TEXT_DOMAIN ),
+            'manage_options',
+            'eop-configuracoes',
+            array( __CLASS__, 'render_page' )
+        );
+    }
+
+    public static function enqueue_assets( $hook ) {
+        if ( class_exists( 'EOP_Admin_Page' ) ) {
+            return;
+        }
+
+        if ( self::$page_hook !== $hook ) {
+            return;
+        }
+
+        if ( ! function_exists( 'WC' ) || ! WC() ) {
+            return;
+        }
+
+        $font_url = self::get_font_stylesheet_url();
+
+        if ( $font_url ) {
+            wp_enqueue_style( 'eop-settings-selected-font', $font_url, array(), null );
+        }
+
+        $wc_version   = defined( 'WC_VERSION' ) ? WC_VERSION : EOP_VERSION;
+        $font_css_path = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/css/jquery.fontselect.css';
+        $font_js_path  = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/js/jquery.fontselect.js';
+
+        wp_enqueue_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css', array(), $wc_version );
+        wp_enqueue_script( 'select2', WC()->plugin_url() . '/assets/js/select2/select2.full.min.js', array( 'jquery' ), $wc_version, true );
+        wp_enqueue_style( 'eop-admin', EOP_PLUGIN_URL . 'assets/css/admin.css', array( 'select2' ), EOP_VERSION );
+        wp_enqueue_style( 'eop-frontend', EOP_PLUGIN_URL . 'assets/css/frontend.css', array(), EOP_VERSION );
+
+        wp_enqueue_media();
 
         if ( function_exists( 'wp_enqueue_editor' ) ) {
             wp_enqueue_editor();
         }
 
-        wp_enqueue_media();
         wp_enqueue_style( 'eop-coloris', EOP_PLUGIN_URL . 'assets/css/coloris.min.css', array(), EOP_VERSION );
         wp_enqueue_style(
             'eop-settings-admin',
             EOP_PLUGIN_URL . 'assets/css/settings-admin.css',
-            array_filter( array( 'eop-coloris', wp_style_is( 'select2', 'registered' ) ? 'select2' : '' ) ),
+            array_filter( array( 'eop-admin', 'eop-coloris', wp_style_is( 'select2', 'registered' ) ? 'select2' : '' ) ),
             EOP_VERSION
         );
 
@@ -563,191 +827,23 @@ class EOP_Settings {
             'eop_settings_vars',
             self::get_settings_admin_localization( file_exists( $font_js_path ) )
         );
-
-        $font_url = self::get_font_stylesheet_url();
-        if ( $font_url ) {
-            wp_enqueue_style( 'eop-settings-selected-font', $font_url, array(), null );
-        }
     }
 
     public static function filter_admin_body_class( $classes ) {
         $page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 
-        if ( 'eop-configuracoes' !== $page ) {
+        if ( ! in_array( $page, array( 'eop-configuracoes', 'eop-pedido-expresso-configuracoes', 'eop-pedido-expresso-aparencia', 'eop-pedido-expresso-fluxo' ), true ) ) {
             return $classes;
         }
 
         return trim( $classes . ' eop-settings-screen' );
     }
 
-    private static function normalize_admin_section( $section ) {
-        $section = sanitize_key( (string) $section );
-
-        $legacy_map = array(
-            'settings'        => 'general-config',
-            'settings-styles' => 'order-link-style',
-            'confirmation-flow' => 'confirmation-flow-general',
-        );
-
-        if ( isset( $legacy_map[ $section ] ) ) {
-            $section = $legacy_map[ $section ];
-        }
-
-        $allowed = array( 'all', 'general', 'general-config', 'confirmation-flow-general', 'confirmation-flow-documents', 'confirmation-flow-preview', 'styles', 'order-link-style', 'proposal-link-style', 'customer-experience', 'texts' );
-
-        return in_array( $section, $allowed, true ) ? $section : 'all';
-    }
-
-    private static function should_render_admin_section( $active_section, $section_key ) {
-        $active_section = self::normalize_admin_section( $active_section );
-        $section_key    = sanitize_key( (string) $section_key );
-
-        $section_groups = array(
-            'general' => array( 'general-config', 'confirmation-flow-general', 'confirmation-flow-documents', 'confirmation-flow-preview' ),
-            'styles'  => array( 'order-link-style', 'proposal-link-style', 'customer-experience' ),
-        );
-
-        if ( 'all' === $active_section || $active_section === $section_key ) {
-            return true;
-        }
-
-        if ( isset( $section_groups[ $active_section ] ) ) {
-            return in_array( $section_key, $section_groups[ $active_section ], true );
-        }
-
-        return false;
-    }
-
-    private static function render_signature_document_item( $index, $document ) {
-        $index           = absint( $index );
-        $document        = is_array( $document ) ? $document : array();
-        $title           = (string) ( $document['title'] ?? '' );
-        $source_type     = in_array( $document['source_type'] ?? 'editor', array( 'editor', 'attachment' ), true ) ? $document['source_type'] : 'editor';
-        $attachment_id   = absint( $document['attachment_id'] ?? 0 );
-        $attachment_name = $attachment_id > 0 ? get_the_title( $attachment_id ) : '';
-        $body_id         = 'eop_signature_document_body_' . $index;
+    private static function render_standalone_page() {
         ?>
-        <div class="eop-signature-document" data-signature-document data-index="<?php echo esc_attr( $index ); ?>">
-            <div class="eop-signature-document__header">
-                <div>
-                    <span class="eop-signature-document__eyebrow"><?php echo esc_html( sprintf( __( 'Documento %d', EOP_TEXT_DOMAIN ), $index + 1 ) ); ?></span>
-                    <strong class="eop-signature-document__heading"><?php echo esc_html( '' !== $title ? $title : __( 'Novo documento', EOP_TEXT_DOMAIN ) ); ?></strong>
-                </div>
-                <button type="button" class="button-link-delete eop-signature-document__remove" data-signature-document-remove><?php esc_html_e( 'Excluir', EOP_TEXT_DOMAIN ); ?></button>
-            </div>
-            <div class="eop-signature-document__grid">
-                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][key]" value="<?php echo esc_attr( $document['key'] ?? '' ); ?>" />
-                <div class="eop-settings-field">
-                    <label><?php esc_html_e( 'Titulo do documento', EOP_TEXT_DOMAIN ); ?></label>
-                    <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][title]" value="<?php echo esc_attr( $title ); ?>" />
-                </div>
-                <div class="eop-settings-field">
-                    <label><?php esc_html_e( 'Tipo do documento', EOP_TEXT_DOMAIN ); ?></label>
-                    <select name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][source_type]" data-signature-document-source>
-                        <option value="editor" <?php selected( $source_type, 'editor' ); ?>><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></option>
-                        <option value="attachment" <?php selected( $source_type, 'attachment' ); ?>><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></option>
-                    </select>
-                </div>
-                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][description]" value="<?php echo esc_attr( $document['description'] ?? '' ); ?>" />
-                <div class="eop-settings-field is-full eop-signature-document__panel<?php echo 'attachment' === $source_type ? '' : ' is-hidden'; ?>" data-signature-document-panel="attachment">
-                    <label><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></label>
-                    <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][attachment_id]" value="<?php echo esc_attr( $attachment_id ); ?>" data-signature-document-attachment-id />
-                    <div class="eop-signature-document__attachment-shell">
-                        <div class="eop-signature-document__attachment-name" data-signature-document-attachment-name><?php echo esc_html( $attachment_name ? $attachment_name : __( 'Nenhum arquivo anexado ainda.', EOP_TEXT_DOMAIN ) ); ?></div>
-                        <div class="eop-signature-document__attachment-actions">
-                            <button type="button" class="button button-secondary" data-signature-document-attachment-select><?php echo $attachment_name ? esc_html__( 'Trocar arquivo', EOP_TEXT_DOMAIN ) : esc_html__( 'Selecionar arquivo', EOP_TEXT_DOMAIN ); ?></button>
-                            <button type="button" class="button-link-delete<?php echo $attachment_name ? '' : ' is-hidden'; ?>" data-signature-document-attachment-remove><?php esc_html_e( 'Remover arquivo', EOP_TEXT_DOMAIN ); ?></button>
-                        </div>
-                    </div>
-                </div>
-                <div class="eop-settings-field is-full eop-signature-document__panel<?php echo 'editor' === $source_type ? '' : ' is-hidden'; ?>" data-signature-document-panel="editor">
-                    <label><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></label>
-                    <textarea id="<?php echo esc_attr( $body_id ); ?>" class="eop-signature-document__editor" data-signature-document-editor name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][body]"><?php echo esc_textarea( $document['body'] ?? '' ); ?></textarea>
-                </div>
-            </div>
+        <div class="wrap">
+            <?php self::render_embedded_page( 'all' ); ?>
         </div>
-        <?php
-    }
-
-    private static function render_confirmation_documents_section( $signature_documents ) {
-        $signature_documents = is_array( $signature_documents ) ? array_values( $signature_documents ) : array();
-        ?>
-        <section class="eop-settings-card eop-signature-documents-card">
-            <h2><?php esc_html_e( 'Documentos do contrato', EOP_TEXT_DOMAIN ); ?></h2>
-            <p><?php esc_html_e( 'Use uma listagem clara para cadastrar, revisar e editar os documentos do fluxo. Cada item pode ser texto livre, PDF pronto, DOC ou DOCX.', EOP_TEXT_DOMAIN ); ?></p>
-            <div class="eop-signature-documents" data-signature-documents data-option-key="<?php echo esc_attr( self::OPTION_KEY ); ?>" data-next-index="<?php echo esc_attr( count( $signature_documents ) ); ?>">
-                <div class="eop-signature-documents__toolbar">
-                    <div class="eop-signature-documents__intro">
-                        <span><?php esc_html_e( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ); ?></span>
-                        <h3><?php esc_html_e( 'Listagem de documentos', EOP_TEXT_DOMAIN ); ?></h3>
-                        <p><?php esc_html_e( 'Cada documento aparece como um card. Escolha se ele sera escrito no editor ou enviado como arquivo.', EOP_TEXT_DOMAIN ); ?></p>
-                    </div>
-                    <button type="button" class="button eop-signature-documents__create" data-signature-document-add><?php esc_html_e( 'Cadastrar documento', EOP_TEXT_DOMAIN ); ?></button>
-                </div>
-                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__sentinel]" value="1" />
-                <div class="eop-signature-documents__empty<?php echo ! empty( $signature_documents ) ? ' is-hidden' : ''; ?>" data-signature-documents-empty>
-                    <strong><?php esc_html_e( 'Nenhum documento cadastrado ainda.', EOP_TEXT_DOMAIN ); ?></strong>
-                    <p><?php esc_html_e( 'Clique em cadastrar documento para criar o primeiro item do fluxo contratual.', EOP_TEXT_DOMAIN ); ?></p>
-                </div>
-                <div class="eop-signature-documents__list" data-signature-documents-list>
-                    <?php foreach ( $signature_documents as $index => $document ) : ?>
-                        <?php self::render_signature_document_item( $index, $document ); ?>
-                    <?php endforeach; ?>
-                </div>
-                <script type="text/template" id="eop-signature-document-template">
-                    <div class="eop-signature-document" data-signature-document data-index="__INDEX__">
-                        <div class="eop-signature-document__header">
-                            <div>
-                                <span class="eop-signature-document__eyebrow"><?php esc_html_e( 'Novo documento', EOP_TEXT_DOMAIN ); ?></span>
-                                <strong class="eop-signature-document__heading"><?php esc_html_e( 'Novo documento', EOP_TEXT_DOMAIN ); ?></strong>
-                            </div>
-                            <button type="button" class="button-link-delete eop-signature-document__remove" data-signature-document-remove><?php esc_html_e( 'Excluir', EOP_TEXT_DOMAIN ); ?></button>
-                        </div>
-                        <div class="eop-signature-document__grid">
-                            <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][key]" value="" />
-                            <div class="eop-settings-field">
-                                <label><?php esc_html_e( 'Titulo do documento', EOP_TEXT_DOMAIN ); ?></label>
-                                <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][title]" value="" />
-                            </div>
-                            <div class="eop-settings-field">
-                                <label><?php esc_html_e( 'Tipo do documento', EOP_TEXT_DOMAIN ); ?></label>
-                                <select name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][source_type]" data-signature-document-source>
-                                    <option value="editor"><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></option>
-                                    <option value="attachment"><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></option>
-                                </select>
-                            </div>
-                            <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][description]" value="" />
-                            <div class="eop-settings-field is-full eop-signature-document__panel is-hidden" data-signature-document-panel="attachment">
-                                <label><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></label>
-                                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][attachment_id]" value="" data-signature-document-attachment-id />
-                                <div class="eop-signature-document__attachment-shell">
-                                    <div class="eop-signature-document__attachment-name" data-signature-document-attachment-name><?php esc_html_e( 'Nenhum arquivo anexado ainda.', EOP_TEXT_DOMAIN ); ?></div>
-                                    <div class="eop-signature-document__attachment-actions">
-                                        <button type="button" class="button button-secondary" data-signature-document-attachment-select><?php esc_html_e( 'Selecionar arquivo', EOP_TEXT_DOMAIN ); ?></button>
-                                        <button type="button" class="button-link-delete is-hidden" data-signature-document-attachment-remove><?php esc_html_e( 'Remover arquivo', EOP_TEXT_DOMAIN ); ?></button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="eop-settings-field is-full eop-signature-document__panel" data-signature-document-panel="editor">
-                                <label><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></label>
-                                <textarea id="eop_signature_document_body___INDEX__" class="eop-signature-document__editor" data-signature-document-editor name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][body]"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                </script>
-                <small class="eop-settings-help"><?php esc_html_e( 'Arquivos Word sao convertidos em PDF quando o documento for gerado para o pedido.', EOP_TEXT_DOMAIN ); ?></small>
-                <?php if ( class_exists( 'EOP_Post_Confirmation_Flow' ) && method_exists( 'EOP_Post_Confirmation_Flow', 'get_contract_placeholder_tokens' ) ) : ?>
-                    <small class="eop-settings-help">
-                        <?php
-                        printf(
-                            esc_html__( 'Placeholders disponiveis: %s', EOP_TEXT_DOMAIN ),
-                            esc_html( implode( ', ', EOP_Post_Confirmation_Flow::get_contract_placeholder_tokens() ) )
-                        );
-                        ?>
-                    </small>
-                <?php endif; ?>
-            </div>
-        </section>
         <?php
     }
 
@@ -786,7 +882,7 @@ class EOP_Settings {
         ?>
         <div class="eop-settings-page eop-settings-page--embedded">
             <form method="post" action="options.php" class="eop-settings-form">
-                <?php settings_fields( 'eop_settings_group' ); ?>
+                <?php EOP_Admin_Page::render_option_form_fields( 'eop_settings_group' ); ?>
                 <?php if ( isset( $_GET['settings-updated'] ) && 'true' === wp_unslash( $_GET['settings-updated'] ) ) : ?>
                     <div class="eop-settings-feedback eop-settings-feedback--success">
                         <?php esc_html_e( 'Configuracoes salvas com sucesso.', EOP_TEXT_DOMAIN ); ?>
@@ -892,7 +988,7 @@ class EOP_Settings {
                             <p><?php esc_html_e( 'Centralize aqui as regras gerais, os textos principais e o comportamento do fluxo depois que a proposta ja foi aprovada.', EOP_TEXT_DOMAIN ); ?></p>
                             <div class="eop-settings-grid">
                                 <div class="eop-settings-field is-full">
-                                    <span><?php esc_html_e( 'Ativar fluxo complementar', EOP_TEXT_DOMAIN ); ?></span>
+                                    <?php self::render_help_label( 'span', __( 'Ativar fluxo complementar', EOP_TEXT_DOMAIN ), 'enable_post_confirmation_flow' ); ?>
                                     <div class="eop-settings-switch-shell">
                                         <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enable_post_confirmation_flow]" value="<?php echo esc_attr( $settings['enable_post_confirmation_flow'] ); ?>" />
                                         <button
@@ -915,23 +1011,11 @@ class EOP_Settings {
                                     </div>
                                 </div>
                                 <div class="eop-settings-field">
-                                    <label for="eop_post_confirmation_contract_title"><?php esc_html_e( 'Titulo do contrato', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_post_confirmation_contract_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_contract_title]" value="<?php echo esc_attr( $settings['post_confirmation_contract_title'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_post_confirmation_contract_name_label"><?php esc_html_e( 'Label do nome completo', EOP_TEXT_DOMAIN ); ?></label>
+                                    <?php self::render_help_label( 'label', __( 'Label do nome completo', EOP_TEXT_DOMAIN ), 'post_confirmation_contract_name_label', array( 'for' => 'eop_post_confirmation_contract_name_label' ) ); ?>
                                     <input id="eop_post_confirmation_contract_name_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_contract_name_label]" value="<?php echo esc_attr( $settings['post_confirmation_contract_name_label'] ); ?>" />
                                 </div>
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_post_confirmation_contract_checkbox_label"><?php esc_html_e( 'Texto do aceite', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_post_confirmation_contract_checkbox_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_contract_checkbox_label]" value="<?php echo esc_attr( $settings['post_confirmation_contract_checkbox_label'] ); ?>" />
-                                </div>
                                 <div class="eop-settings-field">
-                                    <label for="eop_post_confirmation_contract_button_label"><?php esc_html_e( 'Botao do contrato', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_post_confirmation_contract_button_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_contract_button_label]" value="<?php echo esc_attr( $settings['post_confirmation_contract_button_label'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_post_confirmation_locked_products"><?php esc_html_e( 'Produtos bloqueados', EOP_TEXT_DOMAIN ); ?></label>
+                                    <?php self::render_help_label( 'label', __( 'Produtos bloqueados', EOP_TEXT_DOMAIN ), 'post_confirmation_locked_products', array( 'for' => 'eop_post_confirmation_locked_products_selector' ) ); ?>
                                     <input id="eop_post_confirmation_locked_products" type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_locked_products]" value="<?php echo esc_attr( $locked_selector['serialized_value'] ); ?>" />
                                     <select id="eop_post_confirmation_locked_products_selector" class="eop-settings-product-selector" data-target-input="#eop_post_confirmation_locked_products" multiple>
                                         <?php foreach ( $locked_selector['options'] as $option ) : ?>
@@ -944,7 +1028,7 @@ class EOP_Settings {
                                     <?php endif; ?>
                                 </div>
                                 <div class="eop-settings-field is-full">
-                                    <span><?php esc_html_e( 'Exigir anexo', EOP_TEXT_DOMAIN ); ?></span>
+                                    <?php self::render_help_label( 'span', __( 'Exigir anexo', EOP_TEXT_DOMAIN ), 'post_confirmation_require_attachment' ); ?>
                                     <div class="eop-settings-switch-shell">
                                         <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_require_attachment]" value="<?php echo esc_attr( $settings['post_confirmation_require_attachment'] ); ?>" />
                                         <button
@@ -967,39 +1051,39 @@ class EOP_Settings {
                                     </div>
                                 </div>
                                 <div class="eop-settings-field">
-                                    <label for="eop_post_confirmation_upload_title"><?php esc_html_e( 'Titulo do upload', EOP_TEXT_DOMAIN ); ?></label>
+                                    <?php self::render_help_label( 'label', __( 'Titulo do upload', EOP_TEXT_DOMAIN ), 'post_confirmation_upload_title', array( 'for' => 'eop_post_confirmation_upload_title' ) ); ?>
                                     <input id="eop_post_confirmation_upload_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_upload_title]" value="<?php echo esc_attr( $settings['post_confirmation_upload_title'] ); ?>" />
                                 </div>
                                 <div class="eop-settings-field">
-                                    <label for="eop_post_confirmation_upload_field_label"><?php esc_html_e( 'Label do anexo', EOP_TEXT_DOMAIN ); ?></label>
+                                    <?php self::render_help_label( 'label', __( 'Label do anexo', EOP_TEXT_DOMAIN ), 'post_confirmation_upload_field_label', array( 'for' => 'eop_post_confirmation_upload_field_label' ) ); ?>
                                     <input id="eop_post_confirmation_upload_field_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_upload_field_label]" value="<?php echo esc_attr( $settings['post_confirmation_upload_field_label'] ); ?>" />
                                 </div>
                                 <div class="eop-settings-field is-full">
-                                    <label for="eop_post_confirmation_upload_description"><?php esc_html_e( 'Descricao do upload', EOP_TEXT_DOMAIN ); ?></label>
+                                    <?php self::render_help_label( 'label', __( 'Descricao do upload', EOP_TEXT_DOMAIN ), 'post_confirmation_upload_description', array( 'for' => 'eop_post_confirmation_upload_description' ) ); ?>
                                     <textarea id="eop_post_confirmation_upload_description" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_upload_description]"><?php echo esc_textarea( $settings['post_confirmation_upload_description'] ); ?></textarea>
                                 </div>
                                 <div class="eop-settings-field">
-                                    <label for="eop_post_confirmation_upload_button_label"><?php esc_html_e( 'Botao do upload', EOP_TEXT_DOMAIN ); ?></label>
+                                    <?php self::render_help_label( 'label', __( 'Botao do upload', EOP_TEXT_DOMAIN ), 'post_confirmation_upload_button_label', array( 'for' => 'eop_post_confirmation_upload_button_label' ) ); ?>
                                     <input id="eop_post_confirmation_upload_button_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_upload_button_label]" value="<?php echo esc_attr( $settings['post_confirmation_upload_button_label'] ); ?>" />
                                 </div>
                                 <div class="eop-settings-field">
-                                    <label for="eop_post_confirmation_products_title"><?php esc_html_e( 'Titulo da personalizacao', EOP_TEXT_DOMAIN ); ?></label>
+                                    <?php self::render_help_label( 'label', __( 'Titulo da personalizacao', EOP_TEXT_DOMAIN ), 'post_confirmation_products_title', array( 'for' => 'eop_post_confirmation_products_title' ) ); ?>
                                     <input id="eop_post_confirmation_products_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_products_title]" value="<?php echo esc_attr( $settings['post_confirmation_products_title'] ); ?>" />
                                 </div>
                                 <div class="eop-settings-field is-full">
-                                    <label for="eop_post_confirmation_products_description"><?php esc_html_e( 'Descricao da personalizacao', EOP_TEXT_DOMAIN ); ?></label>
+                                    <?php self::render_help_label( 'label', __( 'Descricao da personalizacao', EOP_TEXT_DOMAIN ), 'post_confirmation_products_description', array( 'for' => 'eop_post_confirmation_products_description' ) ); ?>
                                     <textarea id="eop_post_confirmation_products_description" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_products_description]"><?php echo esc_textarea( $settings['post_confirmation_products_description'] ); ?></textarea>
                                 </div>
                                 <div class="eop-settings-field">
-                                    <label for="eop_post_confirmation_products_button_label"><?php esc_html_e( 'Botao da personalizacao', EOP_TEXT_DOMAIN ); ?></label>
+                                    <?php self::render_help_label( 'label', __( 'Botao da personalizacao', EOP_TEXT_DOMAIN ), 'post_confirmation_products_button_label', array( 'for' => 'eop_post_confirmation_products_button_label' ) ); ?>
                                     <input id="eop_post_confirmation_products_button_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_products_button_label]" value="<?php echo esc_attr( $settings['post_confirmation_products_button_label'] ); ?>" />
                                 </div>
                                 <div class="eop-settings-field">
-                                    <label for="eop_post_confirmation_completion_title"><?php esc_html_e( 'Titulo da conclusao', EOP_TEXT_DOMAIN ); ?></label>
+                                    <?php self::render_help_label( 'label', __( 'Titulo da conclusao', EOP_TEXT_DOMAIN ), 'post_confirmation_completion_title', array( 'for' => 'eop_post_confirmation_completion_title' ) ); ?>
                                     <input id="eop_post_confirmation_completion_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_completion_title]" value="<?php echo esc_attr( $settings['post_confirmation_completion_title'] ); ?>" />
                                 </div>
                                 <div class="eop-settings-field is-full">
-                                    <label for="eop_post_confirmation_completion_description"><?php esc_html_e( 'Descricao da conclusao', EOP_TEXT_DOMAIN ); ?></label>
+                                    <?php self::render_help_label( 'label', __( 'Descricao da conclusao', EOP_TEXT_DOMAIN ), 'post_confirmation_completion_description', array( 'for' => 'eop_post_confirmation_completion_description' ) ); ?>
                                     <textarea id="eop_post_confirmation_completion_description" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_completion_description]"><?php echo esc_textarea( $settings['post_confirmation_completion_description'] ); ?></textarea>
                                 </div>
                             </div>
@@ -1012,12 +1096,47 @@ class EOP_Settings {
 
                         <?php if ( $should_render_confirmation_preview ) : ?>
                         <section class="eop-settings-card eop-contract-preview-settings">
-                            <h2><?php esc_html_e( 'Visual da pagina de contrato', EOP_TEXT_DOMAIN ); ?></h2>
+                            <h2><?php esc_html_e( 'Visual da pagina contratual', EOP_TEXT_DOMAIN ); ?></h2>
                             <p><?php esc_html_e( 'Ajuste o visual da etapa de aceite e veja como a pagina publica vai ficar antes de publicar.', EOP_TEXT_DOMAIN ); ?></p>
                             <div class="eop-settings-grid">
                                 <div class="eop-settings-field is-full">
+                                    <label for="eop_post_confirmation_contract_title_visual"><?php esc_html_e( 'Titulo do contrato', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_post_confirmation_contract_title_visual" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_contract_title]" value="<?php echo esc_attr( $settings['post_confirmation_contract_title'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field is-full">
+                                    <label for="eop_post_confirmation_contract_document_description_visual"><?php esc_html_e( 'Descricao do documento principal', EOP_TEXT_DOMAIN ); ?></label>
+                                    <textarea id="eop_post_confirmation_contract_document_description_visual" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_contract_document_description]"><?php echo esc_textarea( $settings['post_confirmation_contract_document_description'] ); ?></textarea>
+                                </div>
+                                <div class="eop-settings-field is-full">
+                                    <label for="eop_post_confirmation_contract_checkbox_label_visual"><?php esc_html_e( 'Texto do aceite', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_post_confirmation_contract_checkbox_label_visual" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_contract_checkbox_label]" value="<?php echo esc_attr( $settings['post_confirmation_contract_checkbox_label'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_post_confirmation_contract_button_label_visual"><?php esc_html_e( 'Botao principal', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_post_confirmation_contract_button_label_visual" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_contract_button_label]" value="<?php echo esc_attr( $settings['post_confirmation_contract_button_label'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_financial_title_visual"><?php esc_html_e( 'Titulo do resumo lateral', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_financial_title_visual" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_financial_title]" value="<?php echo esc_attr( $settings['customer_experience_financial_title'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_total_label_visual"><?php esc_html_e( 'Label do valor aprovado', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_total_label_visual" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_total_label]" value="<?php echo esc_attr( $settings['customer_experience_total_label'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field is-full">
+                                    <label for="eop_customer_experience_progress_note_visual"><?php esc_html_e( 'Texto final do resumo', EOP_TEXT_DOMAIN ); ?></label>
+                                    <textarea id="eop_customer_experience_progress_note_visual" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_progress_note]"><?php echo esc_textarea( $settings['customer_experience_progress_note'] ); ?></textarea>
+                                </div>
+                                <div class="eop-settings-field is-full">
                                     <label for="eop_customer_experience_font_family_preview"><?php esc_html_e( 'Fonte da experiencia publica', EOP_TEXT_DOMAIN ); ?></label>
                                     <input id="eop_customer_experience_font_family_preview" class="select_font eop-font-field" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_font_family]" value="<?php echo esc_attr( $settings['customer_experience_font_family'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_background_mode_preview"><?php esc_html_e( 'Tipo do fundo da pagina', EOP_TEXT_DOMAIN ); ?></label>
+                                    <select id="eop_customer_experience_background_mode_preview" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_background_mode]">
+                                        <option value="solid"<?php selected( $settings['customer_experience_background_mode'], 'solid' ); ?>><?php esc_html_e( 'Cor unica', EOP_TEXT_DOMAIN ); ?></option>
+                                        <option value="gradient"<?php selected( $settings['customer_experience_background_mode'], 'gradient' ); ?>><?php esc_html_e( 'Gradiente', EOP_TEXT_DOMAIN ); ?></option>
+                                    </select>
                                 </div>
                                 <div class="eop-settings-field">
                                     <label for="eop_customer_experience_title_size_preview"><?php esc_html_e( 'Tamanho do titulo principal (px)', EOP_TEXT_DOMAIN ); ?></label>
@@ -1032,12 +1151,53 @@ class EOP_Settings {
                                     <input id="eop_customer_experience_background_color_preview" class="eop-color-field" type="text" data-default-color="#edf2fb" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_background_color]" value="<?php echo esc_attr( $settings['customer_experience_background_color'] ); ?>" />
                                 </div>
                                 <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_background_secondary_color_preview"><?php esc_html_e( 'Segunda cor do fundo da pagina', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_background_secondary_color_preview" class="eop-color-field" type="text" data-default-color="#f7f9fc" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_background_secondary_color]" value="<?php echo esc_attr( $settings['customer_experience_background_secondary_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_hero_background_mode_preview"><?php esc_html_e( 'Tipo do fundo do topo', EOP_TEXT_DOMAIN ); ?></label>
+                                    <select id="eop_customer_experience_hero_background_mode_preview" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_hero_background_mode]">
+                                        <option value="solid"<?php selected( $settings['customer_experience_hero_background_mode'], 'solid' ); ?>><?php esc_html_e( 'Cor unica', EOP_TEXT_DOMAIN ); ?></option>
+                                        <option value="gradient"<?php selected( $settings['customer_experience_hero_background_mode'], 'gradient' ); ?>><?php esc_html_e( 'Gradiente', EOP_TEXT_DOMAIN ); ?></option>
+                                    </select>
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_hero_background_color_preview"><?php esc_html_e( 'Fundo do topo', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_hero_background_color_preview" class="eop-color-field" type="text" data-default-color="#0f1b35" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_hero_background_color]" value="<?php echo esc_attr( $settings['customer_experience_hero_background_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_hero_background_secondary_color_preview"><?php esc_html_e( 'Segunda cor do topo', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_hero_background_secondary_color_preview" class="eop-color-field" type="text" data-default-color="#243553" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_hero_background_secondary_color]" value="<?php echo esc_attr( $settings['customer_experience_hero_background_secondary_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_panel_background_mode_preview"><?php esc_html_e( 'Tipo do fundo dos cards', EOP_TEXT_DOMAIN ); ?></label>
+                                    <select id="eop_customer_experience_panel_background_mode_preview" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_panel_background_mode]">
+                                        <option value="solid"<?php selected( $settings['customer_experience_panel_background_mode'], 'solid' ); ?>><?php esc_html_e( 'Cor unica', EOP_TEXT_DOMAIN ); ?></option>
+                                        <option value="gradient"<?php selected( $settings['customer_experience_panel_background_mode'], 'gradient' ); ?>><?php esc_html_e( 'Gradiente', EOP_TEXT_DOMAIN ); ?></option>
+                                    </select>
+                                </div>
+                                <div class="eop-settings-field">
                                     <label for="eop_customer_experience_panel_background_color_preview"><?php esc_html_e( 'Fundo dos cards', EOP_TEXT_DOMAIN ); ?></label>
                                     <input id="eop_customer_experience_panel_background_color_preview" class="eop-color-field" type="text" data-default-color="#ffffff" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_panel_background_color]" value="<?php echo esc_attr( $settings['customer_experience_panel_background_color'] ); ?>" />
                                 </div>
                                 <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_panel_background_secondary_color_preview"><?php esc_html_e( 'Segunda cor dos cards', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_panel_background_secondary_color_preview" class="eop-color-field" type="text" data-default-color="#f7f9fc" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_panel_background_secondary_color]" value="<?php echo esc_attr( $settings['customer_experience_panel_background_secondary_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_sidebar_background_mode_preview"><?php esc_html_e( 'Tipo do fundo lateral', EOP_TEXT_DOMAIN ); ?></label>
+                                    <select id="eop_customer_experience_sidebar_background_mode_preview" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_sidebar_background_mode]">
+                                        <option value="solid"<?php selected( $settings['customer_experience_sidebar_background_mode'], 'solid' ); ?>><?php esc_html_e( 'Cor unica', EOP_TEXT_DOMAIN ); ?></option>
+                                        <option value="gradient"<?php selected( $settings['customer_experience_sidebar_background_mode'], 'gradient' ); ?>><?php esc_html_e( 'Gradiente', EOP_TEXT_DOMAIN ); ?></option>
+                                    </select>
+                                </div>
+                                <div class="eop-settings-field">
                                     <label for="eop_customer_experience_sidebar_background_color_preview"><?php esc_html_e( 'Fundo do resumo lateral', EOP_TEXT_DOMAIN ); ?></label>
                                     <input id="eop_customer_experience_sidebar_background_color_preview" class="eop-color-field" type="text" data-default-color="#f6f8fc" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_sidebar_background_color]" value="<?php echo esc_attr( $settings['customer_experience_sidebar_background_color'] ); ?>" />
+                                </div>
+                                <div class="eop-settings-field">
+                                    <label for="eop_customer_experience_sidebar_background_secondary_color_preview"><?php esc_html_e( 'Segunda cor do fundo lateral', EOP_TEXT_DOMAIN ); ?></label>
+                                    <input id="eop_customer_experience_sidebar_background_secondary_color_preview" class="eop-color-field" type="text" data-default-color="#ffffff" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_sidebar_background_secondary_color]" value="<?php echo esc_attr( $settings['customer_experience_sidebar_background_secondary_color'] ); ?>" />
                                 </div>
                                 <div class="eop-settings-field">
                                     <label for="eop_customer_experience_accent_color_preview"><?php esc_html_e( 'Cor de destaque', EOP_TEXT_DOMAIN ); ?></label>
@@ -1057,68 +1217,21 @@ class EOP_Settings {
                         <section class="eop-settings-card eop-contract-preview-card">
                             <h2><?php esc_html_e( 'Preview da etapa contratual', EOP_TEXT_DOMAIN ); ?></h2>
                             <p><?php esc_html_e( 'Leitura visual da pagina publica com o documento principal, o aceite e o resumo lateral.', EOP_TEXT_DOMAIN ); ?></p>
-                            <div class="eop-contract-preview" style="--eop-preview-bg: <?php echo esc_attr( $settings['customer_experience_background_color'] ); ?>; --eop-preview-panel: <?php echo esc_attr( $settings['customer_experience_panel_background_color'] ); ?>; --eop-preview-side: <?php echo esc_attr( $settings['customer_experience_sidebar_background_color'] ); ?>; --eop-preview-accent: <?php echo esc_attr( $settings['customer_experience_accent_color'] ); ?>; --eop-preview-text: <?php echo esc_attr( $settings['customer_experience_text_color'] ); ?>; --eop-preview-muted: <?php echo esc_attr( $settings['customer_experience_muted_color'] ); ?>; --eop-preview-radius: <?php echo esc_attr( $settings['border_radius'] ); ?>px; font-family: <?php echo esc_attr( self::get_font_css_family( $settings['customer_experience_font_family'] ) ); ?>;">
-                                <div class="eop-contract-preview__main">
-                                    <div class="eop-contract-preview__reader">
-                                        <div class="eop-contract-preview__reader-head">
-                                            <div>
-                                                <strong><?php echo esc_html( $confirmation_preview['primary_document']['title'] ?? __( 'Documento principal', EOP_TEXT_DOMAIN ) ); ?></strong>
-                                                <small><?php echo esc_html( $confirmation_preview['primary_document']['description'] ?? __( 'Documento principal exibido na etapa de aceite.', EOP_TEXT_DOMAIN ) ); ?></small>
-                                            </div>
-                                            <div class="eop-contract-preview__buttons">
-                                                <span class="eop-contract-preview__button is-secondary"><?php echo esc_html( $confirmation_preview['primary_document']['view_label'] ?? __( 'Visualizar PDF', EOP_TEXT_DOMAIN ) ); ?></span>
-                                                <span class="eop-contract-preview__button is-secondary"><?php echo esc_html( $confirmation_preview['primary_document']['button_label'] ?? __( 'Baixar PDF', EOP_TEXT_DOMAIN ) ); ?></span>
-                                            </div>
-                                        </div>
-                                        <div class="eop-contract-preview__reader-body">
-                                            <?php if ( ! empty( $confirmation_preview['primary_document']['preview_url'] ) && 'pdf' === ( $confirmation_preview['primary_document']['preview_type'] ?? '' ) ) : ?>
-                                                <iframe src="<?php echo esc_url( $confirmation_preview['primary_document']['preview_url'] ); ?>#toolbar=0&navpanes=0&scrollbar=1" title="<?php esc_attr_e( 'Preview do documento principal', EOP_TEXT_DOMAIN ); ?>"></iframe>
-                                            <?php elseif ( ! empty( $confirmation_preview['primary_document']['preview_html'] ) ) : ?>
-                                                <div class="eop-contract-preview__reader-copy"><?php echo wp_kses_post( $confirmation_preview['primary_document']['preview_html'] ); ?></div>
-                                            <?php else : ?>
-                                                <div class="eop-contract-preview__reader-empty"><?php esc_html_e( 'Adicione um texto ou anexe um documento para visualizar o contrato aqui.', EOP_TEXT_DOMAIN ); ?></div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-
-                                    <div class="eop-contract-preview__form-card">
-                                        <strong><?php esc_html_e( 'Confirmar e continuar', EOP_TEXT_DOMAIN ); ?></strong>
-                                        <p><?php esc_html_e( 'Informe o nome do responsavel e confirme o aceite para desbloquear as proximas etapas da jornada.', EOP_TEXT_DOMAIN ); ?></p>
-                                        <label>
-                                            <span><?php echo esc_html( $settings['post_confirmation_contract_name_label'] ); ?></span>
-                                            <input type="text" value="<?php echo esc_attr__( 'Nome da empresa ou responsavel', EOP_TEXT_DOMAIN ); ?>" readonly />
-                                        </label>
-                                        <label class="eop-contract-preview__checkbox">
-                                            <input type="checkbox" checked disabled />
-                                            <span><?php echo esc_html( $settings['post_confirmation_contract_checkbox_label'] ); ?></span>
-                                        </label>
-                                        <span class="eop-contract-preview__button"><?php echo esc_html( $settings['post_confirmation_contract_button_label'] ); ?></span>
-                                    </div>
-                                </div>
-
-                                <aside class="eop-contract-preview__sidebar">
-                                    <div class="eop-contract-preview__summary">
-                                        <span><?php esc_html_e( 'Resumo', EOP_TEXT_DOMAIN ); ?></span>
-                                        <strong><?php esc_html_e( 'Contrato pronto para aceite', EOP_TEXT_DOMAIN ); ?></strong>
-                                        <p><?php esc_html_e( 'Os itens ja foram aprovados. Nesta etapa falta apenas a leitura e o aceite do contrato.', EOP_TEXT_DOMAIN ); ?></p>
-                                        <div class="eop-contract-preview__meta-row"><span><?php esc_html_e( 'Documentos', EOP_TEXT_DOMAIN ); ?></span><strong><?php echo esc_html( (string) ( $confirmation_preview['document_count'] ?? 0 ) ); ?></strong></div>
-                                        <div class="eop-contract-preview__meta-row"><span><?php esc_html_e( 'Documentos extras', EOP_TEXT_DOMAIN ); ?></span><strong><?php echo esc_html( (string) ( $confirmation_preview['additional_documents'] ?? 0 ) ); ?></strong></div>
-                                    </div>
-                                </aside>
-                            </div>
+                            <?php if ( class_exists( 'EOP_Post_Confirmation_Flow' ) && method_exists( 'EOP_Post_Confirmation_Flow', 'render_admin_contract_preview_markup' ) ) : ?>
+                                <?php echo EOP_Post_Confirmation_Flow::render_admin_contract_preview_markup( $settings ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                            <?php endif; ?>
                         </section>
                         <?php endif; ?>
 
                         <?php if ( self::should_render_admin_section( $section, 'order-link-style' ) ) : ?>
                         <section class="eop-settings-card">
                             <h2><?php esc_html_e( 'Visual', EOP_TEXT_DOMAIN ); ?></h2>
-                            <p><?php esc_html_e( 'Personalize a experiencia da equipe e do cliente com a identidade da marca.', EOP_TEXT_DOMAIN ); ?></p>
+                                        <?php self::render_help_label( 'label', __( 'Titulo da conclusao', EOP_TEXT_DOMAIN ), 'post_confirmation_completion_title', array( 'for' => 'eop_post_confirmation_completion_title' ) ); ?>
                             <div class="eop-settings-grid">
                                 <div class="eop-settings-field is-full">
                                     <label for="eop_logo"><?php esc_html_e( 'Logo', EOP_TEXT_DOMAIN ); ?></label>
-                                    <div class="eop-settings-media" data-media-role="logo">
-                                        <input id="eop_logo" type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[brand_logo_url]" value="<?php echo esc_attr( $settings['brand_logo_url'] ); ?>" />
-                                        <div class="eop-settings-media__preview<?php echo $settings['brand_logo_url'] ? ' has-image' : ''; ?>" data-media-preview>
+                                        <?php self::render_help_label( 'label', __( 'Descricao da conclusao', EOP_TEXT_DOMAIN ), 'post_confirmation_completion_description', array( 'for' => 'eop_post_confirmation_completion_description' ) ); ?>
+                                        <textarea id="eop_post_confirmation_completion_description" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_completion_description]"><?php echo esc_textarea( $settings['post_confirmation_completion_description'] ); ?></textarea>
                                             <?php if ( $settings['brand_logo_url'] ) : ?>
                                                 <img src="<?php echo esc_url( $settings['brand_logo_url'] ); ?>" alt="<?php esc_attr_e( 'Preview da logo', EOP_TEXT_DOMAIN ); ?>" />
                                             <?php else : ?>
@@ -1259,10 +1372,6 @@ class EOP_Settings {
                                     <label for="eop_customer_experience_description"><?php esc_html_e( 'Descricao principal', EOP_TEXT_DOMAIN ); ?></label>
                                     <textarea id="eop_customer_experience_description" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_description]"><?php echo esc_textarea( $settings['customer_experience_description'] ); ?></textarea>
                                 </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_total_label"><?php esc_html_e( 'Label do total em destaque', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_total_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_total_label]" value="<?php echo esc_attr( $settings['customer_experience_total_label'] ); ?>" />
-                                </div>
                                 <div class="eop-settings-field is-full">
                                     <label for="eop_customer_experience_total_note"><?php esc_html_e( 'Texto de apoio do total', EOP_TEXT_DOMAIN ); ?></label>
                                     <textarea id="eop_customer_experience_total_note" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_total_note]"><?php echo esc_textarea( $settings['customer_experience_total_note'] ); ?></textarea>
@@ -1288,10 +1397,6 @@ class EOP_Settings {
                                     <input id="eop_customer_experience_financial_eyebrow" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_financial_eyebrow]" value="<?php echo esc_attr( $settings['customer_experience_financial_eyebrow'] ); ?>" />
                                 </div>
                                 <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_financial_title"><?php esc_html_e( 'Titulo do resumo financeiro', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_financial_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_financial_title]" value="<?php echo esc_attr( $settings['customer_experience_financial_title'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
                                     <label for="eop_customer_experience_actions_eyebrow"><?php esc_html_e( 'Label do card de acao', EOP_TEXT_DOMAIN ); ?></label>
                                     <input id="eop_customer_experience_actions_eyebrow" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_actions_eyebrow]" value="<?php echo esc_attr( $settings['customer_experience_actions_eyebrow'] ); ?>" />
                                 </div>
@@ -1302,10 +1407,6 @@ class EOP_Settings {
                                 <div class="eop-settings-field">
                                     <label for="eop_customer_experience_progress_label"><?php esc_html_e( 'Titulo do mapa de jornada', EOP_TEXT_DOMAIN ); ?></label>
                                     <input id="eop_customer_experience_progress_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_progress_label]" value="<?php echo esc_attr( $settings['customer_experience_progress_label'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_customer_experience_progress_note"><?php esc_html_e( 'Texto de apoio do mapa de jornada', EOP_TEXT_DOMAIN ); ?></label>
-                                    <textarea id="eop_customer_experience_progress_note" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_progress_note]"><?php echo esc_textarea( $settings['customer_experience_progress_note'] ); ?></textarea>
                                 </div>
                             </div>
                         </section>
@@ -1348,29 +1449,6 @@ class EOP_Settings {
                     <?php submit_button( __( 'Salvar alteracoes', EOP_TEXT_DOMAIN ), 'primary large', 'submit', false ); ?>
                 </div>
             </form>
-        </div>
-        <?php
-    }
-
-    public static function render_standalone_page() {
-        if ( ! current_user_can( 'manage_options' ) ) {
-            wp_die( esc_html__( 'Acesso negado.', EOP_TEXT_DOMAIN ) );
-        }
-        ?>
-        <div class="wrap eop-settings-page">
-            <div class="eop-settings-shell">
-                <aside class="eop-settings-panel">
-                    <h1><?php esc_html_e( 'Pedido Expresso', EOP_TEXT_DOMAIN ); ?></h1>
-                    <p><?php esc_html_e( 'Controle o comportamento do fluxo comercial, a proposta publica e a identidade visual sem depender do tema ativo.', EOP_TEXT_DOMAIN ); ?></p>
-                    <ul>
-                        <li><?php esc_html_e( 'Escolha entre proposta publica ou pedido direto', EOP_TEXT_DOMAIN ); ?></li>
-                        <li><?php esc_html_e( 'Ligue checkout somente quando fizer sentido', EOP_TEXT_DOMAIN ); ?></li>
-                        <li><?php esc_html_e( 'Ajuste logo, cor, fonte, radius e textos', EOP_TEXT_DOMAIN ); ?></li>
-                    </ul>
-                </aside>
-
-                <?php self::render_embedded_page(); ?>
-            </div>
         </div>
         <?php
     }

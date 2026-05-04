@@ -185,6 +185,33 @@ class EOP_Admin_Page {
         return $urls;
     }
 
+    public static function get_form_referer_url( $view = '', $args = array() ) {
+        $view = '' !== $view
+            ? self::normalize_view( $view )
+            : self::normalize_view( isset( $_GET['view'] ) ? wp_unslash( $_GET['view'] ) : '' );
+
+        $query_args = array();
+
+        foreach ( (array) $args as $key => $value ) {
+            if ( null === $value || '' === $value || false === $value ) {
+                continue;
+            }
+
+            $query_args[ $key ] = $value;
+        }
+
+        return self::get_view_url( $view, $query_args );
+    }
+
+    public static function render_option_form_fields( $option_group, $view = '', $args = array() ) {
+        ?>
+        <input type="hidden" name="option_page" value="<?php echo esc_attr( $option_group ); ?>" />
+        <input type="hidden" name="action" value="update" />
+        <?php wp_nonce_field( $option_group . '-options' ); ?>
+        <input type="hidden" name="_wp_http_referer" value="<?php echo esc_attr( self::get_form_referer_url( $view, $args ) ); ?>" />
+        <?php
+    }
+
     private static function render_template( $template_name ) {
         $template_path = EOP_PLUGIN_DIR . 'templates/' . ltrim( (string) $template_name, '/\\' );
 
