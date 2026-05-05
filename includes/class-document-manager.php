@@ -5,6 +5,8 @@ class EOP_Document_Manager {
 
     use EOP_License_Guard;
 
+	const PUBLIC_TOKEN_QUERY_VAR = 'eop_token';
+
     public static function init() {
         self::maybe_bootstrap_pdf_output_buffer();
 
@@ -154,7 +156,7 @@ class EOP_Document_Manager {
         $args = array(
             'document' => 'proposal',
             'download' => $force_download ? '1' : '0',
-            'token'    => rawurlencode( $token ),
+			self::PUBLIC_TOKEN_QUERY_VAR => rawurlencode( $token ),
         );
 
         if ( self::use_pretty_pdf_links() ) {
@@ -799,7 +801,7 @@ class EOP_Document_Manager {
 
     public static function handle_download() {
         $document_type = self::normalize_document_type( isset( $_GET['document'] ) ? wp_unslash( $_GET['document'] ) : '' );
-        $token         = isset( $_GET['token'] ) ? sanitize_text_field( wp_unslash( $_GET['token'] ) ) : '';
+		$token         = self::get_public_request_token();
         $order_id      = absint( $_GET['order_id'] ?? 0 );
         $force_download = isset( $_GET['download'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['download'] ) );
         $order         = $order_id ? wc_get_order( $order_id ) : null;
@@ -909,6 +911,18 @@ class EOP_Document_Manager {
         $post = get_post( $order->get_id() );
 
         return ( $post && (int) $post->post_author === $user_id );
+    }
+
+    private static function get_public_request_token() {
+        if ( isset( $_GET[ self::PUBLIC_TOKEN_QUERY_VAR ] ) ) {
+            return sanitize_text_field( wp_unslash( $_GET[ self::PUBLIC_TOKEN_QUERY_VAR ] ) );
+        }
+
+        if ( isset( $_GET['token'] ) ) {
+            return sanitize_text_field( wp_unslash( $_GET['token'] ) );
+        }
+
+        return '';
     }
 
     private static function public_token_matches_order( WC_Order $order, $token ) {

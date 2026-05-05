@@ -2,6 +2,12 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.65 - 2026-05-05
+
+- o fluxo complementar publico passou a tratar contrato, upload e personalizacao com uma etapa final unificada, visual refinado e melhor encaixe do layout no estado final
+- a proposta publica por token agora carrega o CSS do frontend de forma confiavel e os downloads publicos passaram a usar `eop_token`, evitando conflito com outros plugins
+- o modulo de documentos ganhou placeholders organizados no editor, contrato consolidado com melhor reaproveitamento dos documentos configurados e aceite sem exigir nome manual do cliente
+
 ## 1.1.64 - 2026-05-04
 
 - a listagem de documentos de assinatura no admin foi convertida para cards resumidos com titulo, badge do tipo, editar e excluir, removendo a exibicao aberta e pesada do formulario inteiro

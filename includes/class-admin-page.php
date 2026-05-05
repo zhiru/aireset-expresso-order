@@ -253,14 +253,14 @@ class EOP_Admin_Page {
                 },
             ),
             'settings-general-config' => array(
-                'title' => __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ),
+				'title' => __( 'Configurações Gerais', EOP_TEXT_DOMAIN ),
                 'description' => __( 'Mantenha em um bloco proprio as regras operacionais do plugin, paginas publicas e comportamento comercial principal.', EOP_TEXT_DOMAIN ),
                 'renderer' => function () {
                     EOP_Settings::render_embedded_page( 'general-config' );
                 },
             ),
             'settings-confirmation-general' => array(
-				'title' => __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ),
+				'title' => __( 'Configurações Gerais', EOP_TEXT_DOMAIN ),
                 'description' => __( 'Controle regras gerais, textos-base e o comportamento do aceite complementar apos a proposta.', EOP_TEXT_DOMAIN ),
                 'renderer' => function () {
                     EOP_Settings::render_embedded_page( 'confirmation-flow-general' );
@@ -274,7 +274,7 @@ class EOP_Admin_Page {
                 },
             ),
             'settings-confirmation-preview' => array(
-				'title' => __( 'Preview', EOP_TEXT_DOMAIN ),
+				'title' => __( 'Visual da página de confirmação', EOP_TEXT_DOMAIN ),
                 'description' => __( 'Edite visualmente a etapa contratual com foco em leitura, aceite e resumo lateral.', EOP_TEXT_DOMAIN ),
                 'renderer' => function () {
                     EOP_Settings::render_embedded_page( 'confirmation-flow-preview' );
@@ -309,7 +309,7 @@ class EOP_Admin_Page {
                 },
             ),
             'documentation' => array(
-                'title' => __( 'Documentacao', EOP_TEXT_DOMAIN ),
+				'title' => __( 'Documentação', EOP_TEXT_DOMAIN ),
                 'description' => __( 'Consulte em uma area propria o efeito real de cada configuracao do modulo de documentos.', EOP_TEXT_DOMAIN ),
                 'renderer' => function () {
                     EOP_PDF_Admin_Page::render_embedded_page( 'documentation' );
@@ -325,7 +325,7 @@ class EOP_Admin_Page {
                 },
             ),
             'license' => array(
-                'title' => __( 'Licenca', EOP_TEXT_DOMAIN ),
+				'title' => __( 'Licença', EOP_TEXT_DOMAIN ),
                 'description' => __( 'Consulte a validade da assinatura e administre a ativacao do plugin sem sair do painel.', EOP_TEXT_DOMAIN ),
                 'renderer' => function () {
                     $license_manager = class_exists( 'EOP_License_Manager' ) ? EOP_License_Manager::get_instance() : null;
@@ -603,7 +603,7 @@ class EOP_Admin_Page {
                 'nav_orders'       => __( 'Pedidos', EOP_TEXT_DOMAIN ),
                 'nav_pdf'          => __( 'PDF', EOP_TEXT_DOMAIN ),
                 'nav_settings'     => __( 'Configuracoes', EOP_TEXT_DOMAIN ),
-                'nav_license'      => __( 'Licenca', EOP_TEXT_DOMAIN ),
+                'nav_license'      => __( 'Licença', EOP_TEXT_DOMAIN ),
                 'orders_loading'   => __( 'Carregando pedidos...', EOP_TEXT_DOMAIN ),
                 'orders_error'     => __( 'Nao foi possivel carregar os pedidos agora.', EOP_TEXT_DOMAIN ),
                 'orders_empty'     => __( 'Nenhum pedido encontrado para este filtro.', EOP_TEXT_DOMAIN ),
@@ -749,7 +749,7 @@ class EOP_Admin_Page {
                 ),
                 array(
                     'key'   => 'eop-view-settings-general-config',
-                    'label' => __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ),
+					'label' => __( 'Configurações Gerais', EOP_TEXT_DOMAIN ),
                     'icon'  => 'dashicons-admin-settings',
                     'url'   => self::get_view_url( 'settings-general-config' ),
                     'query' => array(
@@ -802,7 +802,7 @@ class EOP_Admin_Page {
             $confirmation_children = array(
                 array(
                     'key'   => 'eop-view-settings-confirmation-general',
-                    'label' => __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ),
+					'label' => __( 'Configurações Gerais', EOP_TEXT_DOMAIN ),
                     'icon'  => 'dashicons-admin-settings',
                     'url'   => self::get_view_url( 'settings-confirmation-general' ),
                     'query' => array(
@@ -822,7 +822,7 @@ class EOP_Admin_Page {
                 ),
                 array(
                     'key'   => 'eop-view-settings-confirmation-preview',
-                    'label' => __( 'Preview', EOP_TEXT_DOMAIN ),
+					'label' => __( 'Visual da página de confirmação', EOP_TEXT_DOMAIN ),
                     'icon'  => 'dashicons-visibility',
                     'url'   => self::get_view_url( 'settings-confirmation-preview' ),
                     'query' => array(
@@ -963,7 +963,7 @@ class EOP_Admin_Page {
                     ),
                     array(
                         'key'   => 'eop-view-confirmation-flow',
-                        'label' => __( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ),
+						'label' => __( 'Fluxo de Confirmação', EOP_TEXT_DOMAIN ),
                         'icon'  => 'dashicons-yes-alt',
                         'url'   => self::get_view_url( 'settings-confirmation-general' ),
                         'query' => array(
@@ -977,7 +977,7 @@ class EOP_Admin_Page {
                 array(
                     array(
                         'key'   => 'eop-view-documentation',
-                        'label' => __( 'Documentacao', EOP_TEXT_DOMAIN ),
+						'label' => __( 'Documentação', EOP_TEXT_DOMAIN ),
                         'icon'  => 'dashicons-book-alt',
                         'url'   => self::get_view_url( 'documentation' ),
                         'query' => array(
@@ -987,7 +987,7 @@ class EOP_Admin_Page {
                     ),
                     array(
                         'key'   => 'eop-view-license',
-                        'label' => __( 'Licenca', EOP_TEXT_DOMAIN ),
+						'label' => __( 'Licença', EOP_TEXT_DOMAIN ),
                         'icon'  => 'dashicons-admin-network',
                         'url'   => self::get_view_url( 'license' ),
                         'query' => array(

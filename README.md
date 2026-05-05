@@ -44,6 +44,10 @@ O modulo PDF agora inclui uma central propria em `Aireset > Pedido Expresso > PD
 - [`assets/scss/`](./assets/scss): fonte SCSS do frontend e do admin
 - [`assets/css/`](./assets/css): CSS compilado distribuido com o plugin
 
+## Planos e arquitetura
+
+- [`POST_CONFIRMATION_FLOW_PLAN.md`](./POST_CONFIRMATION_FLOW_PLAN.md): planejamento completo do fluxo documental pos-proposta, com status atual, backlog e caminhos mapeados
+
 ## Identidade do admin
 
 O shell visual administrativo segue o padrao documentado em [`ADMIN_UI_BRAND.md`](./ADMIN_UI_BRAND.md), com hero proprio do plugin e navegacao lateral compartilhada com a linha Aireset.

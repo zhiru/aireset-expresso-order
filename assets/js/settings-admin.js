@@ -8,6 +8,140 @@
     var colorisConfigured = false;
     var colorSwatches = ['#067bc2', '#84bcda', '#80e377', '#ecc30b', '#f37748', '#d56062'];
 
+    function getContractPlaceholders() {
+        var placeholders = getSettingsVar('contract_placeholders', []);
+
+        if (!Array.isArray(placeholders)) {
+            return [];
+        }
+
+        return placeholders.filter(function (placeholder) {
+            return typeof placeholder === 'string' && placeholder.length > 0;
+        });
+    }
+
+    function getContractPlaceholderGroups() {
+        var groups = {
+            order: {
+                label: getSettingsVar('document_placeholder_group_order', 'Pedido e cobrança'),
+                tokens: []
+            },
+            contract: {
+                label: getSettingsVar('document_placeholder_group_contract', 'Contrato e aceite'),
+                tokens: []
+            },
+            shipping: {
+                label: getSettingsVar('document_placeholder_group_shipping', 'Entrega'),
+                tokens: []
+            }
+        };
+
+        getContractPlaceholders().forEach(function (token) {
+            if (token.indexOf('{shipping_') === 0) {
+                groups.shipping.tokens.push(token);
+                return;
+            }
+
+            if (token.indexOf('{contract_') === 0) {
+                groups.contract.tokens.push(token);
+                return;
+            }
+
+            groups.order.tokens.push(token);
+        });
+
+        return Object.keys(groups).map(function (key) {
+            return groups[key];
+        }).filter(function (group) {
+            return group.tokens.length > 0;
+        });
+    }
+
+    function insertPlaceholderIntoEditor(editor, placeholder) {
+        if (!placeholder || !editor || typeof editor.insertContent !== 'function') {
+            return;
+        }
+
+        editor.focus();
+        editor.insertContent(placeholder);
+        editor.nodeChanged();
+    }
+
+    function buildPlaceholderMenuItems(editor, modern) {
+        var groups = getContractPlaceholderGroups();
+        var emptyLabel = getSettingsVar('document_placeholder_empty', 'Nenhum placeholder disponível.');
+
+        if (!groups.length) {
+            return modern
+                ? [{
+                    type: 'menuitem',
+                    text: emptyLabel,
+                    onAction: function () {}
+                }]
+                : [{
+                    text: emptyLabel,
+                    disabled: true
+                }];
+        }
+
+        return groups.map(function (group) {
+            if (modern) {
+                return {
+                    type: 'nestedmenuitem',
+                    text: group.label,
+                    getSubmenuItems: function () {
+                        return group.tokens.map(function (token) {
+                            return {
+                                type: 'menuitem',
+                                text: token,
+                                onAction: function () {
+                                    insertPlaceholderIntoEditor(editor, token);
+                                }
+                            };
+                        });
+                    }
+                };
+            }
+
+            return {
+                text: group.label,
+                menu: group.tokens.map(function (token) {
+                    return {
+                        text: token,
+                        onclick: function () {
+                            insertPlaceholderIntoEditor(editor, token);
+                        }
+                    };
+                })
+            };
+        });
+    }
+
+    function registerPlaceholderMenu(editor) {
+        var buttonId = 'eopplaceholders';
+        var label = getSettingsVar('document_placeholder_menu_label', 'Inserir placeholder');
+
+        if (editor.ui && editor.ui.registry && typeof editor.ui.registry.addMenuButton === 'function') {
+            editor.ui.registry.addMenuButton(buttonId, {
+                text: label,
+                fetch: function (callback) {
+                    callback(buildPlaceholderMenuItems(editor, true));
+                }
+            });
+
+            return;
+        }
+
+        if (typeof editor.addButton === 'function') {
+            editor.addButton(buttonId, {
+                type: 'menubutton',
+                text: label,
+                icon: false,
+                menu: buildPlaceholderMenuItems(editor, false)
+            });
+        }
+    }
+
     function getSettingsVar(key, fallback) {
         if (window.eop_settings_vars && Object.prototype.hasOwnProperty.call(window.eop_settings_vars, key)) {
             return window.eop_settings_vars[key];
@@ -46,11 +180,24 @@
         return {
             tinymce: {
                 wpautop: true,
-                toolbar1: 'formatselect,bold,italic,bullist,numlist,blockquote,alignleft,aligncenter,alignright,link,unlink,undo,redo',
-                toolbar2: '',
-                height: 320
+                browser_spellcheck: true,
+                resize: true,
+                menubar: 'edit insert view format',
+                branding: false,
+                elementpath: false,
+                statusbar: true,
+                wpautoresize_on: true,
+                block_formats: 'Parágrafo=p;Título 2=h2;Título 3=h3;Título 4=h4;Citação=blockquote;Pré-formatado=pre',
+                toolbar1: 'formatselect,styleselect,|,bold,italic,underline,strikethrough,|,forecolor,backcolor,|,alignleft,aligncenter,alignright,alignjustify,|,link,unlink,|,eopplaceholders',
+                toolbar2: 'bullist,numlist,outdent,indent,blockquote,hr,|,pastetext,removeformat,charmap,|,undo,redo,fullscreen',
+                height: 360,
+                setup: function (editor) {
+                    registerPlaceholderMenu(editor);
+                }
             },
-            quicktags: true,
+            quicktags: {
+                buttons: 'strong,em,link,block,ul,ol,li,code,close'
+            },
             mediaButtons: false
         };
     }

@@ -33,7 +33,7 @@ $general_nav_items = array(
         'icon'  => 'dashicons-store',
     ),
     'settings-general-config' => array(
-        'label' => __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ),
+		'label' => __( 'Configurações Gerais', EOP_TEXT_DOMAIN ),
         'icon'  => 'dashicons-admin-settings',
     ),
     'settings-order-link-style' => array(
@@ -55,7 +55,7 @@ $general_nav_items = array(
 );
 $confirmation_nav_items = array(
     'settings-confirmation-general' => array(
-        'label' => __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ),
+		'label' => __( 'Configurações Gerais', EOP_TEXT_DOMAIN ),
         'icon'  => 'dashicons-admin-settings',
     ),
     'settings-confirmation-documents' => array(
@@ -63,7 +63,7 @@ $confirmation_nav_items = array(
         'icon'  => 'dashicons-media-document',
     ),
     'settings-confirmation-preview' => array(
-        'label' => __( 'Preview', EOP_TEXT_DOMAIN ),
+		'label' => __( 'Visual da página de confirmação', EOP_TEXT_DOMAIN ),
         'icon'  => 'dashicons-visibility',
     ),
 );
@@ -183,7 +183,7 @@ $performance_initial_metrics = class_exists( 'EOP_Performance_Audit' )
                             aria-expanded="<?php echo $is_confirmation_view ? 'true' : 'false'; ?>"
                         >
                             <span class="eop-admin-spa-nav__icon dashicons dashicons-yes-alt" aria-hidden="true"></span>
-                            <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ); ?></span>
+                            <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Fluxo de Confirmação', EOP_TEXT_DOMAIN ); ?></span>
                             <span class="eop-admin-spa-nav__group-arrow dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
                         </button>
 
@@ -236,7 +236,7 @@ $performance_initial_metrics = class_exists( 'EOP_Performance_Audit' )
                 <?php if ( $can_manage_settings ) : ?>
                     <button type="button" class="eop-pdv-nav__item eop-admin-spa-nav__item<?php echo 'documentation' === $initial_view ? ' is-active' : ''; ?>" data-eop-view-target="documentation" aria-selected="<?php echo 'documentation' === $initial_view ? 'true' : 'false'; ?>">
                         <span class="eop-admin-spa-nav__icon dashicons dashicons-book-alt" aria-hidden="true"></span>
-                        <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Documentacao', EOP_TEXT_DOMAIN ); ?></span>
+                        <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Documentação', EOP_TEXT_DOMAIN ); ?></span>
                     </button>
                     <button type="button" class="eop-pdv-nav__item eop-admin-spa-nav__item<?php echo 'export-import' === $initial_view ? ' is-active' : ''; ?>" data-eop-view-target="export-import" aria-selected="<?php echo 'export-import' === $initial_view ? 'true' : 'false'; ?>">
                         <span class="eop-admin-spa-nav__icon dashicons dashicons-migrate" aria-hidden="true"></span>
@@ -244,7 +244,7 @@ $performance_initial_metrics = class_exists( 'EOP_Performance_Audit' )
                     </button>
                     <button type="button" class="eop-pdv-nav__item eop-admin-spa-nav__item<?php echo 'license' === $initial_view ? ' is-active' : ''; ?>" data-eop-view-target="license" aria-selected="<?php echo 'license' === $initial_view ? 'true' : 'false'; ?>">
                         <span class="eop-admin-spa-nav__icon dashicons dashicons-admin-network" aria-hidden="true"></span>
-                        <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Licenca', EOP_TEXT_DOMAIN ); ?></span>
+                        <span class="eop-admin-spa-nav__name"><?php esc_html_e( 'Licença', EOP_TEXT_DOMAIN ); ?></span>
                     </button>
                 <?php endif; ?>
             </nav>
@@ -334,28 +334,28 @@ $performance_initial_metrics = class_exists( 'EOP_Performance_Audit' )
 
                 <section class="eop-pdv-view<?php echo 'settings-general-config' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-general-config" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-general-config' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-general-config' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
-                        <h2><?php esc_html_e( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ); ?></h2>
+						<h2><?php esc_html_e( 'Configurações Gerais', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Mantenha em um bloco proprio as regras operacionais do plugin, paginas publicas e comportamento comercial principal.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
                     <?php if ( 'settings-general-config' === $initial_view ) : ?>
                         <?php EOP_Settings::render_embedded_page( 'general-config' ); ?>
                     <?php else : ?>
-                        <?php $render_lazy_placeholder( __( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ) ); ?>
+						<?php $render_lazy_placeholder( __( 'Configurações Gerais', EOP_TEXT_DOMAIN ) ); ?>
                     <?php endif; ?>
                     </div>
                 </section>
 
                 <section class="eop-pdv-view<?php echo 'settings-confirmation-general' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-confirmation-general" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-confirmation-general' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-confirmation-general' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
-						<h2><?php esc_html_e( 'Configuracoes Gerais', EOP_TEXT_DOMAIN ); ?></h2>
+						<h2><?php esc_html_e( 'Configurações Gerais', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Controle regras gerais, aceite, upload, personalizacao e conclusao do fluxo complementar.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
                     <?php if ( 'settings-confirmation-general' === $initial_view ) : ?>
                         <?php EOP_Settings::render_embedded_page( 'confirmation-flow-general' ); ?>
                     <?php else : ?>
-                        <?php $render_lazy_placeholder( __( 'Fluxo de Confirmacao - Geral', EOP_TEXT_DOMAIN ) ); ?>
+						<?php $render_lazy_placeholder( __( 'Fluxo de Confirmação - Geral', EOP_TEXT_DOMAIN ) ); ?>
                     <?php endif; ?>
                     </div>
                 </section>
@@ -369,21 +369,21 @@ $performance_initial_metrics = class_exists( 'EOP_Performance_Audit' )
                     <?php if ( 'settings-confirmation-documents' === $initial_view ) : ?>
                         <?php EOP_Settings::render_embedded_page( 'confirmation-flow-documents' ); ?>
                     <?php else : ?>
-                        <?php $render_lazy_placeholder( __( 'Fluxo de Confirmacao - Documentos', EOP_TEXT_DOMAIN ) ); ?>
+						<?php $render_lazy_placeholder( __( 'Fluxo de Confirmação - Documentos', EOP_TEXT_DOMAIN ) ); ?>
                     <?php endif; ?>
                     </div>
                 </section>
 
                 <section class="eop-pdv-view<?php echo 'settings-confirmation-preview' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-confirmation-preview" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-confirmation-preview' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-confirmation-preview' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
-						<h2><?php esc_html_e( 'Preview', EOP_TEXT_DOMAIN ); ?></h2>
+						<h2><?php esc_html_e( 'Visual da página de confirmação', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Ajuste o visual da etapa contratual com uma leitura previa da pagina publica.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
                     <?php if ( 'settings-confirmation-preview' === $initial_view ) : ?>
                         <?php EOP_Settings::render_embedded_page( 'confirmation-flow-preview' ); ?>
                     <?php else : ?>
-                        <?php $render_lazy_placeholder( __( 'Fluxo de Confirmacao - Preview', EOP_TEXT_DOMAIN ) ); ?>
+						<?php $render_lazy_placeholder( __( 'Fluxo de Confirmação - Visual da página de confirmação', EOP_TEXT_DOMAIN ) ); ?>
                     <?php endif; ?>
                     </div>
                 </section>
@@ -446,14 +446,14 @@ $performance_initial_metrics = class_exists( 'EOP_Performance_Audit' )
 
                 <section class="eop-pdv-view<?php echo 'documentation' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="documentation" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'documentation' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'documentation' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
-                        <h2><?php esc_html_e( 'Documentacao', EOP_TEXT_DOMAIN ); ?></h2>
+						<h2><?php esc_html_e( 'Documentação', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Consulte em uma area propria o efeito real de cada configuracao do modulo de documentos.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
                     <?php if ( 'documentation' === $initial_view ) : ?>
                         <?php EOP_PDF_Admin_Page::render_embedded_page( 'documentation' ); ?>
                     <?php else : ?>
-                        <?php $render_lazy_placeholder( __( 'Documentacao', EOP_TEXT_DOMAIN ) ); ?>
+						<?php $render_lazy_placeholder( __( 'Documentação', EOP_TEXT_DOMAIN ) ); ?>
                     <?php endif; ?>
                     </div>
                 </section>
@@ -474,7 +474,7 @@ $performance_initial_metrics = class_exists( 'EOP_Performance_Audit' )
 
                 <section class="eop-pdv-view<?php echo 'license' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="license" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'license' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'license' === $initial_view ? '' : ' hidden'; ?>>
                     <div class="eop-admin-panel-head">
-                        <h2><?php esc_html_e( 'Licenca', EOP_TEXT_DOMAIN ); ?></h2>
+						<h2><?php esc_html_e( 'Licença', EOP_TEXT_DOMAIN ); ?></h2>
                         <p><?php esc_html_e( 'Consulte a validade da assinatura e administre a ativacao do plugin sem sair do painel.', EOP_TEXT_DOMAIN ); ?></p>
                     </div>
                     <div class="eop-admin-view-main">
@@ -487,7 +487,7 @@ $performance_initial_metrics = class_exists( 'EOP_Performance_Audit' )
                             ?>
                         </div>
                     <?php else : ?>
-                        <?php $render_lazy_placeholder( __( 'Licenca', EOP_TEXT_DOMAIN ) ); ?>
+						<?php $render_lazy_placeholder( __( 'Licença', EOP_TEXT_DOMAIN ) ); ?>
                     <?php endif; ?>
                     </div>
                 </section>

@@ -92,7 +92,6 @@ class EOP_Settings {
                 'post_confirmation_contract_body'           => __( 'Use este espaco para inserir o texto contratual que o cliente precisa ler e aceitar antes de continuar.', EOP_TEXT_DOMAIN ),
                 'post_confirmation_contract_document_description' => __( 'Documento principal exibido na etapa de aceite.', EOP_TEXT_DOMAIN ),
                 'post_confirmation_contract_checkbox_label' => __( 'Li e aceito o contrato acima.', EOP_TEXT_DOMAIN ),
-                'post_confirmation_contract_name_label'     => __( 'Nome completo para aceite', EOP_TEXT_DOMAIN ),
                 'post_confirmation_contract_button_label'   => __( 'Confirmar e continuar', EOP_TEXT_DOMAIN ),
                 'post_confirmation_signature_documents'     => array(),
                 'post_confirmation_documents_title'         => __( 'Dados do pedido', EOP_TEXT_DOMAIN ),
@@ -101,7 +100,7 @@ class EOP_Settings {
                 'post_confirmation_require_attachment'      => 'yes',
                 'post_confirmation_upload_title'            => __( 'Envie o arquivo solicitado', EOP_TEXT_DOMAIN ),
                 'post_confirmation_upload_description'      => __( 'Aceitamos arquivos JPG, PNG ou PDF.', EOP_TEXT_DOMAIN ),
-                'post_confirmation_upload_field_label'      => __( 'Arquivo do cliente', EOP_TEXT_DOMAIN ),
+                'post_confirmation_upload_field_label'      => __( 'Arquivo', EOP_TEXT_DOMAIN ),
                 'post_confirmation_upload_button_label'     => __( 'Enviar arquivo', EOP_TEXT_DOMAIN ),
                 'post_confirmation_products_title'          => __( 'Personalize os nomes dos produtos', EOP_TEXT_DOMAIN ),
                 'post_confirmation_products_description'    => __( 'Informe como cada nome deve aparecer para os itens liberados.', EOP_TEXT_DOMAIN ),
@@ -203,7 +202,6 @@ class EOP_Settings {
             'post_confirmation_contract_body'      => $signature_documents_submitted ? '' : wp_kses_post( $input['post_confirmation_contract_body'] ?? $defaults['post_confirmation_contract_body'] ),
             'post_confirmation_contract_document_description' => sanitize_textarea_field( $input['post_confirmation_contract_document_description'] ?? $defaults['post_confirmation_contract_document_description'] ),
             'post_confirmation_contract_checkbox_label' => sanitize_text_field( $input['post_confirmation_contract_checkbox_label'] ?? $defaults['post_confirmation_contract_checkbox_label'] ),
-            'post_confirmation_contract_name_label' => sanitize_text_field( $input['post_confirmation_contract_name_label'] ?? $defaults['post_confirmation_contract_name_label'] ),
             'post_confirmation_contract_button_label' => sanitize_text_field( $input['post_confirmation_contract_button_label'] ?? $defaults['post_confirmation_contract_button_label'] ),
             'post_confirmation_signature_documents' => $signature_documents,
             'post_confirmation_documents_title'    => sanitize_text_field( $input['post_confirmation_documents_title'] ?? $defaults['post_confirmation_documents_title'] ),
@@ -235,7 +233,7 @@ class EOP_Settings {
     }
 
     public static function get_confirmation_flow_preview_data( $settings = array() ) {
-        $settings = is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
+        $settings = ! empty( $settings ) && is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
 
         if ( class_exists( 'EOP_Post_Confirmation_Flow' ) && method_exists( 'EOP_Post_Confirmation_Flow', 'get_admin_contract_preview_payload' ) ) {
             return EOP_Post_Confirmation_Flow::get_admin_contract_preview_payload( $settings );
@@ -249,7 +247,7 @@ class EOP_Settings {
     }
 
     public static function get_post_confirmation_document_fields( $settings = array() ) {
-        $settings = is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
+		$settings = ! empty( $settings ) && is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
         $fields   = array();
 
         foreach ( self::get_post_confirmation_document_slots() as $slot ) {
@@ -270,14 +268,14 @@ class EOP_Settings {
     }
 
     public static function get_post_confirmation_signature_documents( $settings = array() ) {
-        $settings  = is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
+		$settings  = ! empty( $settings ) && is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
         $documents = $settings['post_confirmation_signature_documents'] ?? array();
 
         return self::sanitize_signature_documents_collection( $documents );
     }
 
     public static function get_post_confirmation_contract_documents( $settings = array() ) {
-        $settings        = is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
+		$settings        = ! empty( $settings ) && is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
         $documents       = self::get_post_confirmation_signature_documents( $settings );
         $legacy_contract = trim( (string) ( $settings['post_confirmation_contract_body'] ?? '' ) );
 
@@ -303,7 +301,7 @@ class EOP_Settings {
     }
 
     public static function get_post_confirmation_locked_product_selector_state( $settings = array() ) {
-        $settings = is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
+		$settings = ! empty( $settings ) && is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
         $raw      = str_replace( array( "\r", "\n", ';' ), ',', (string) ( $settings['post_confirmation_locked_products'] ?? '' ) );
         $tokens   = array_values( array_unique( array_filter( array_map( 'trim', explode( ',', $raw ) ) ) ) );
 
@@ -481,7 +479,6 @@ class EOP_Settings {
             'enable_post_confirmation_flow' => self::build_help_tooltip_payload( __( 'Ativar fluxo complementar', EOP_TEXT_DOMAIN ), __( 'Liga a jornada adicional exibida depois que a proposta ja foi confirmada.', EOP_TEXT_DOMAIN ), __( 'Quando desligado, o fluxo termina na confirmacao da proposta.', EOP_TEXT_DOMAIN ) ),
             'post_confirmation_contract_title' => self::build_help_tooltip_payload( __( 'Titulo do contrato', EOP_TEXT_DOMAIN ), __( 'Titulo principal da etapa de aceite contratual.', EOP_TEXT_DOMAIN ), __( 'Aparece no topo da primeira etapa do fluxo complementar.', EOP_TEXT_DOMAIN ) ),
             'post_confirmation_contract_document_description' => self::build_help_tooltip_payload( __( 'Descricao do documento principal', EOP_TEXT_DOMAIN ), __( 'Texto curto exibido abaixo do titulo do documento principal na etapa contratual.', EOP_TEXT_DOMAIN ), __( 'Serve como contexto rapido antes da leitura e do aceite.', EOP_TEXT_DOMAIN ) ),
-            'post_confirmation_contract_name_label' => self::build_help_tooltip_payload( __( 'Label do nome completo', EOP_TEXT_DOMAIN ), __( 'Texto do campo em que o cliente informa o nome do responsavel pelo aceite.', EOP_TEXT_DOMAIN ), __( 'Ajuda a orientar quem deve assinar ou confirmar o contrato.', EOP_TEXT_DOMAIN ) ),
             'post_confirmation_contract_checkbox_label' => self::build_help_tooltip_payload( __( 'Texto do aceite', EOP_TEXT_DOMAIN ), __( 'Frase que acompanha o checkbox de aceite do contrato.', EOP_TEXT_DOMAIN ), __( 'Deixa explicito o consentimento antes do avanço.', EOP_TEXT_DOMAIN ) ),
             'post_confirmation_contract_button_label' => self::build_help_tooltip_payload( __( 'Botao do contrato', EOP_TEXT_DOMAIN ), __( 'Texto do botao que envia o aceite e libera a proxima etapa do fluxo.', EOP_TEXT_DOMAIN ), __( 'Muda a chamada para a acao principal na etapa do contrato.', EOP_TEXT_DOMAIN ) ),
             'post_confirmation_locked_products' => self::build_help_tooltip_payload( __( 'Produtos bloqueados', EOP_TEXT_DOMAIN ), __( 'Selecione os produtos cujo nome nao deve ser alterado na etapa final de personalizacao.', EOP_TEXT_DOMAIN ), __( 'Esses itens ficam protegidos contra edicao do nome pelo cliente.', EOP_TEXT_DOMAIN ) ),
@@ -519,6 +516,12 @@ class EOP_Settings {
     }
 
     public static function get_settings_admin_localization( $has_fontselect = false ) {
+		$contract_placeholders = array();
+
+		if ( class_exists( 'EOP_Post_Confirmation_Flow' ) && method_exists( 'EOP_Post_Confirmation_Flow', 'get_contract_placeholder_tokens' ) ) {
+			$contract_placeholders = array_values( EOP_Post_Confirmation_Flow::get_contract_placeholder_tokens() );
+		}
+
         return array(
             'has_fontselect'               => (bool) $has_fontselect,
             'font_placeholder'             => __( 'Escolha uma fonte Google', EOP_TEXT_DOMAIN ),
@@ -537,6 +540,17 @@ class EOP_Settings {
             'document_pdf_empty'           => __( 'Nenhum arquivo anexado ainda.', EOP_TEXT_DOMAIN ),
             'document_select_pdf'          => __( 'Selecionar arquivo', EOP_TEXT_DOMAIN ),
             'document_change_pdf'          => __( 'Trocar arquivo', EOP_TEXT_DOMAIN ),
+            'document_default_title'       => __( 'Novo documento', EOP_TEXT_DOMAIN ),
+            'document_source_editor'       => __( 'Conteúdo do documento', EOP_TEXT_DOMAIN ),
+            'document_source_attachment'   => __( 'Arquivo do documento', EOP_TEXT_DOMAIN ),
+            'document_edit'                => __( 'Editar', EOP_TEXT_DOMAIN ),
+            'document_close'               => __( 'Fechar', EOP_TEXT_DOMAIN ),
+            'document_placeholder_menu_label' => __( 'Inserir placeholder', EOP_TEXT_DOMAIN ),
+            'document_placeholder_empty'   => __( 'Nenhum placeholder disponível.', EOP_TEXT_DOMAIN ),
+            'document_placeholder_group_order' => __( 'Pedido e cobrança', EOP_TEXT_DOMAIN ),
+            'document_placeholder_group_contract' => __( 'Contrato e aceite', EOP_TEXT_DOMAIN ),
+            'document_placeholder_group_shipping' => __( 'Entrega', EOP_TEXT_DOMAIN ),
+            'contract_placeholders'        => $contract_placeholders,
             'confirmation_general_help_map' => self::get_confirmation_general_tooltip_map(),
         );
     }
@@ -567,7 +581,7 @@ class EOP_Settings {
         $attachment_name = ! empty( $document['attachment_id'] ) ? get_the_title( absint( $document['attachment_id'] ) ) : '';
         $title           = isset( $document['title'] ) ? (string) $document['title'] : '';
         $source_type     = isset( $document['source_type'] ) ? (string) $document['source_type'] : 'editor';
-        $source_label    = 'attachment' === $source_type ? __( 'Arquivo do documento', EOP_TEXT_DOMAIN ) : __( 'Conteudo do documento', EOP_TEXT_DOMAIN );
+        $source_label    = 'attachment' === $source_type ? __( 'Arquivo do documento', EOP_TEXT_DOMAIN ) : __( 'Conteúdo do documento', EOP_TEXT_DOMAIN );
         ?>
         <div class="eop-signature-document is-collapsed" data-signature-document data-index="<?php echo esc_attr( $index ); ?>" data-expanded="false">
             <div class="eop-signature-document__header">
@@ -587,13 +601,13 @@ class EOP_Settings {
                 <div class="eop-signature-document__grid">
                 <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][key]" value="<?php echo esc_attr( $document['key'] ?? '' ); ?>" />
                 <div class="eop-settings-field">
-                    <label><?php esc_html_e( 'Titulo do documento', EOP_TEXT_DOMAIN ); ?></label>
+					<label><?php esc_html_e( 'Título do documento', EOP_TEXT_DOMAIN ); ?></label>
                     <input type="text" data-signature-document-title name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][title]" value="<?php echo esc_attr( $title ); ?>" />
                 </div>
                 <div class="eop-settings-field">
                     <label><?php esc_html_e( 'Tipo do documento', EOP_TEXT_DOMAIN ); ?></label>
                     <select name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][source_type]" data-signature-document-source>
-                        <option value="editor" <?php selected( $source_type, 'editor' ); ?>><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></option>
+                        <option value="editor" <?php selected( $source_type, 'editor' ); ?>><?php esc_html_e( 'Conteúdo do documento', EOP_TEXT_DOMAIN ); ?></option>
                         <option value="attachment" <?php selected( $source_type, 'attachment' ); ?>><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></option>
                     </select>
                 </div>
@@ -613,7 +627,7 @@ class EOP_Settings {
                     </div>
                 </div>
                 <div class="eop-settings-field is-full eop-signature-document__panel<?php echo 'editor' === $source_type ? '' : ' is-hidden'; ?>" data-signature-document-panel="editor">
-                    <label><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></label>
+					<label><?php esc_html_e( 'Conteúdo do documento', EOP_TEXT_DOMAIN ); ?></label>
                     <textarea id="eop_signature_document_body_<?php echo esc_attr( $index ); ?>" class="eop-signature-document__editor" data-signature-document-editor name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][<?php echo esc_attr( $index ); ?>][body]"><?php echo esc_textarea( $document['body'] ?? '' ); ?></textarea>
                 </div>
                 </div>
@@ -628,7 +642,7 @@ class EOP_Settings {
         <section class="eop-settings-card">
             <div class="eop-signature-documents" data-signature-documents data-option-key="<?php echo esc_attr( self::OPTION_KEY ); ?>" data-next-index="<?php echo esc_attr( count( $signature_documents ) ); ?>">
                 <div class="eop-signature-documents__intro">
-                    <span><?php esc_html_e( 'Fluxo de Confirmacao', EOP_TEXT_DOMAIN ); ?></span>
+                    <span><?php esc_html_e( 'Fluxo de Confirmação', EOP_TEXT_DOMAIN ); ?></span>
                     <h3><?php esc_html_e( 'Listagem de documentos', EOP_TEXT_DOMAIN ); ?></h3>
                     <p><?php esc_html_e( 'Cada documento aparece como um card. Escolha se ele sera escrito no editor ou enviado como arquivo.', EOP_TEXT_DOMAIN ); ?></p>
                 </div>
@@ -648,7 +662,7 @@ class EOP_Settings {
                         <div class="eop-signature-document__header">
                             <div class="eop-signature-document__summary">
                                 <strong class="eop-signature-document__heading" data-signature-document-heading><?php esc_html_e( 'Novo documento', EOP_TEXT_DOMAIN ); ?></strong>
-                                <span class="eop-signature-document__type" data-signature-document-source-label><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></span>
+                                <span class="eop-signature-document__type" data-signature-document-source-label><?php esc_html_e( 'Conteúdo do documento', EOP_TEXT_DOMAIN ); ?></span>
                             </div>
                             <div class="eop-signature-document__actions">
                                 <button type="button" class="button button-secondary eop-signature-document__edit" data-signature-document-toggle aria-expanded="false"><?php esc_html_e( 'Editar', EOP_TEXT_DOMAIN ); ?></button>
@@ -662,13 +676,13 @@ class EOP_Settings {
                             <div class="eop-signature-document__grid">
                             <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][key]" value="" />
                             <div class="eop-settings-field">
-                                <label><?php esc_html_e( 'Titulo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                                <label><?php esc_html_e( 'Título do documento', EOP_TEXT_DOMAIN ); ?></label>
                                 <input type="text" data-signature-document-title name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][title]" value="" />
                             </div>
                             <div class="eop-settings-field">
                                 <label><?php esc_html_e( 'Tipo do documento', EOP_TEXT_DOMAIN ); ?></label>
                                 <select name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][source_type]" data-signature-document-source>
-                                    <option value="editor"><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="editor"><?php esc_html_e( 'Conteúdo do documento', EOP_TEXT_DOMAIN ); ?></option>
                                     <option value="attachment"><?php esc_html_e( 'Arquivo do documento', EOP_TEXT_DOMAIN ); ?></option>
                                 </select>
                             </div>
@@ -688,7 +702,7 @@ class EOP_Settings {
                                 </div>
                             </div>
                             <div class="eop-settings-field is-full eop-signature-document__panel" data-signature-document-panel="editor">
-                                <label><?php esc_html_e( 'Conteudo do documento', EOP_TEXT_DOMAIN ); ?></label>
+                                <label><?php esc_html_e( 'Conteúdo do documento', EOP_TEXT_DOMAIN ); ?></label>
                                 <textarea id="eop_signature_document_body___INDEX__" class="eop-signature-document__editor" data-signature-document-editor name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_signature_documents][__INDEX__][body]"></textarea>
                             </div>
                             </div>
@@ -697,6 +711,7 @@ class EOP_Settings {
                 </script>
                 <small class="eop-settings-help"><?php esc_html_e( 'Arquivos Word sao convertidos em PDF quando o documento for gerado para o pedido.', EOP_TEXT_DOMAIN ); ?></small>
                 <?php if ( class_exists( 'EOP_Post_Confirmation_Flow' ) && method_exists( 'EOP_Post_Confirmation_Flow', 'get_contract_placeholder_tokens' ) ) : ?>
+                    <small class="eop-settings-help"><?php esc_html_e( 'Use o menu Inserir placeholder no editor para adicionar os dados dinamicos sem copiar manualmente.', EOP_TEXT_DOMAIN ); ?></small>
                     <small class="eop-settings-help">
                         <?php
                         printf(
@@ -1009,10 +1024,6 @@ class EOP_Settings {
                                             <?php echo 'yes' === $settings['enable_post_confirmation_flow'] ? esc_html__( 'Ativado', EOP_TEXT_DOMAIN ) : esc_html__( 'Desativado', EOP_TEXT_DOMAIN ); ?>
                                         </span>
                                     </div>
-                                </div>
-                                <div class="eop-settings-field">
-                                    <?php self::render_help_label( 'label', __( 'Label do nome completo', EOP_TEXT_DOMAIN ), 'post_confirmation_contract_name_label', array( 'for' => 'eop_post_confirmation_contract_name_label' ) ); ?>
-                                    <input id="eop_post_confirmation_contract_name_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_contract_name_label]" value="<?php echo esc_attr( $settings['post_confirmation_contract_name_label'] ); ?>" />
                                 </div>
                                 <div class="eop-settings-field">
                                     <?php self::render_help_label( 'label', __( 'Produtos bloqueados', EOP_TEXT_DOMAIN ), 'post_confirmation_locked_products', array( 'for' => 'eop_post_confirmation_locked_products_selector' ) ); ?>

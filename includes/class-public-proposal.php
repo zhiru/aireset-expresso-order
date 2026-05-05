@@ -6,6 +6,36 @@ class EOP_Public_Proposal {
     public static function init() {
         add_shortcode( 'expresso_order_proposal', array( __CLASS__, 'render_shortcode' ) );
         add_action( 'init', array( __CLASS__, 'handle_confirmation' ) );
+        add_action( 'wp_enqueue_scripts', array( __CLASS__, 'maybe_enqueue_public_assets' ) );
+    }
+
+    public static function maybe_enqueue_public_assets() {
+        $token = '';
+
+        if ( isset( $_GET['eop_proposal'] ) ) {
+            $token = sanitize_text_field( wp_unslash( $_GET['eop_proposal'] ) );
+        } elseif ( isset( $_GET['eop_token'] ) ) {
+            $token = sanitize_text_field( wp_unslash( $_GET['eop_token'] ) );
+        }
+
+        if ( '' === $token ) {
+            return;
+        }
+
+        $order = self::get_order_by_token( $token );
+
+        if ( ! $order ) {
+            return;
+        }
+
+        $settings = EOP_Settings::get_all();
+        $font_url = method_exists( 'EOP_Settings', 'get_font_stylesheet_url' ) ? EOP_Settings::get_font_stylesheet_url( $settings['customer_experience_font_family'] ?? $settings['font_family'] ?? '' ) : '';
+
+        if ( $font_url ) {
+            wp_enqueue_style( 'eop-selected-font', $font_url, array(), null );
+        }
+
+        wp_enqueue_style( 'eop-frontend', EOP_PLUGIN_URL . 'assets/css/frontend.css', array(), EOP_VERSION );
     }
 
     public static function create_public_token( WC_Order $order ) {
@@ -115,7 +145,7 @@ class EOP_Public_Proposal {
         $flow_enabled    = class_exists( 'EOP_Post_Confirmation_Flow' ) && EOP_Post_Confirmation_Flow::is_enabled_for_order( $order );
         $current_flow_stage = $confirmed && $flow_enabled ? EOP_Post_Confirmation_Flow::get_current_stage( $order ) : '';
         $current_flow_label = $current_flow_stage ? EOP_Post_Confirmation_Flow::get_stage_label( $current_flow_stage ) : '';
-        $is_contract_focus = $confirmed && $flow_enabled && 'contract' === $current_flow_stage;
+        $is_flow_focus = $confirmed && $flow_enabled && in_array( $current_flow_stage, array( 'payment', 'contract', 'upload', 'products', 'completed' ), true );
         $document_config = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_document_display_settings( 'proposal' ) : array();
         $item_columns    = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_document_item_columns( 'proposal' ) : array();
         $item_labels     = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_document_item_labels( 'proposal' ) : array();
@@ -168,6 +198,9 @@ class EOP_Public_Proposal {
 
         ob_start();
         ?>
+        <?php if ( ! wp_style_is( 'eop-frontend', 'enqueued' ) && ! wp_style_is( 'eop-frontend', 'done' ) ) : ?>
+            <link rel="stylesheet" href="<?php echo esc_url( EOP_PLUGIN_URL . 'assets/css/frontend.css?ver=' . EOP_VERSION ); ?>">
+        <?php endif; ?>
         <?php if ( $experience_font_url ) : ?>
             <link rel="stylesheet" href="<?php echo esc_url( $experience_font_url ); ?>">
         <?php endif; ?>
@@ -240,14 +273,14 @@ class EOP_Public_Proposal {
             .eop-proposal-actions form{display:flex;width:100%}
             .eop-proposal-actions .eop-proposal-button{width:100%}
             .eop-proposal-note{margin:0;padding:14px 16px;border-radius:18px;background:#ecfdf5;border:1px solid #bbf7d0;color:#166534}
-            .eop-proposal-wrap.is-contract-focus{max-width:<?php echo esc_attr( min( $max_width, 1040 ) ); ?>px;padding-bottom:34px}
-            .eop-proposal-wrap.is-contract-focus .eop-proposal-card{gap:0}
+            .eop-proposal-wrap.is-flow-focus{max-width:<?php echo esc_attr( min( $max_width, 1040 ) ); ?>px;padding-bottom:34px}
+            .eop-proposal-wrap.is-flow-focus .eop-proposal-card{gap:0}
             @media (max-width: 980px){.eop-proposal-hero,.eop-proposal-overview{grid-template-columns:1fr}.eop-proposal-overview__side{position:static}.eop-proposal-actions .eop-proposal-button{width:auto}}
             @media (max-width: 720px){.eop-proposal-wrap{font-size:15px;padding:0 10px 30px}.eop-proposal-hero,.eop-proposal-section,.eop-proposal-summary-card{padding:20px;border-radius:24px}.eop-proposal-brandline{flex-direction:column}.eop-proposal-hero__meta{grid-template-columns:1fr}.eop-proposal-title{font-size:<?php echo esc_attr( max( 28, $title_font_size - 10 ) ); ?>px}.eop-proposal-item{grid-template-columns:1fr}.eop-proposal-item__media{width:88px;height:88px}.eop-proposal-item__summary{justify-items:start;text-align:left}.eop-proposal-item__meta{gap:8px}.eop-proposal-total{gap:10px}.eop-proposal-total__value strong{font-size:14px}}
         </style>
-        <div class="eop-proposal-wrap<?php echo $confirmed ? ' is-confirmed' : ''; ?><?php echo $is_contract_focus ? ' is-contract-focus' : ''; ?>">
+        <div class="eop-proposal-wrap<?php echo $confirmed ? ' is-confirmed' : ''; ?><?php echo $is_flow_focus ? ' is-flow-focus' : ''; ?>">
             <div class="eop-proposal-card">
-                <?php if ( $is_contract_focus ) : ?>
+                <?php if ( $is_flow_focus ) : ?>
                     <?php echo EOP_Post_Confirmation_Flow::render_frontend_stage( $order, $line_items, $pdf_url ); ?>
                 <?php else : ?>
                 <div class="eop-proposal-hero">

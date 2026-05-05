@@ -3,7 +3,7 @@ Contributors: aireset
 Tags: woocommerce, pedido expresso, vendas, proposta, administrativo
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 1.1.64
+Stable tag: 1.1.65
 
 Pedido expresso para vendedores do WooCommerce: busca e selecao rapida de cliente e produto, geracao de pedido, proposta publica e PDF nativo com navegacao SPA no admin.
 
@@ -33,10 +33,15 @@ Basta ter o WooCommerce ativo e o plugin instalado; as configuracoes de pedido e
 
 == Upgrade Notice ==
 
-= 1.1.64 =
-* Listagem de documentos do fluxo complementar em cards compactos com edicao sob demanda e resumo sincronizado.
+= 1.1.65 =
+* Etapa final do fluxo complementar unificada com upload, personalizacao e carregamento confiavel do CSS publico.
 
 == Changelog ==
+
+= 1.1.65 =
+* etapa final publica unificada com upload e personalizacao dos itens em uma unica tela
+* proposta publica por token agora carrega o CSS frontend corretamente e usa `eop_token` nos downloads publicos
+* editor de documentos ganhou placeholders agrupados e o aceite contratual deixou de exigir nome manual
 
 = 1.1.64 =
 * listagem de documentos do fluxo complementar convertida para cards compactos com editar e excluir
