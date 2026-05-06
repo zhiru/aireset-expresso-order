@@ -2,6 +2,28 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.72 - 2026-05-06
+
+- consolidacao dos ajustes recentes antes do deploy em producao
+
+## 1.1.71 - 2026-05-06
+
+- a pagina Documentos do fluxo de confirmacao voltou a renderizar a lista como cards recolhiveis, escondendo estado vazio, paineis internos e campos de edicao ate o usuario abrir cada documento
+
+## 1.1.70 - 2026-05-06
+
+- os controles de recolhimento e modo foco agora ficam abaixo da logo quando a sidebar esta colapsada, mantendo a marca legivel no menu estreito
+
+## 1.1.69 - 2026-05-06
+
+- o `jquery.fontselect` passou a ser empacotado dentro do proprio Pedido Expresso, evitando carregamento por caminho antigo e o erro `_typeof is not defined` apos instalacao pelo ZIP
+- o menu Geral ganhou seletor de produtos considerados servicos, reutilizando a busca por produto/SKU ja existente no admin
+- produtos marcados como servico agora ficam separados em uma linha `Servicos` antes do total e nao aparecem na personalizacao do fluxo complementar
+
+## 1.1.68 - 2026-05-06
+
+- os controles de recolhimento da sidebar e modo foco foram movidos para a linha da logo Aireset, evitando quebra visual quando o titulo do painel fica longo
+
 ## 1.1.67 - 2026-05-06
 
 - o shell administrativo ganhou suporte dedicado ao fly-in menu lateral, com assets próprios para o menu recolhível e melhor integração desse comportamento ao baseline de performance

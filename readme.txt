@@ -3,7 +3,7 @@ Contributors: aireset
 Tags: woocommerce, pedido expresso, vendas, proposta, administrativo
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 1.1.67
+Stable tag: 1.1.72
 
 Pedido expresso para vendedores do WooCommerce: busca e selecao rapida de cliente e produto, geracao de pedido, proposta publica e PDF nativo com navegacao SPA no admin.
 
@@ -33,6 +33,21 @@ Basta ter o WooCommerce ativo e o plugin instalado; as configuracoes de pedido e
 
 == Upgrade Notice ==
 
+= 1.1.72 =
+* Ajuste de consolidacao do fluxo de confirmacao e dos cards de documentos antes do deploy em producao.
+
+= 1.1.71 =
+* Restaura a interface em cards da pagina Documentos do fluxo de confirmacao.
+
+= 1.1.70 =
+* Ajusta os controles da sidebar colapsada para ficarem abaixo da logo.
+
+= 1.1.69 =
+* Fontselect empacotado localmente e produtos de servico separados nos totalizadores e no fluxo complementar.
+
+= 1.1.68 =
+* Controles do sidebar movidos para a linha da logo Aireset, evitando quebra com titulos longos.
+
 = 1.1.67 =
 * Navegação administrativa refinada com fly-in menu lateral, controle de recolhimento da sidebar e ajustes no flyout compartilhado para testes em outro ambiente.
 
@@ -43,6 +58,23 @@ Basta ter o WooCommerce ativo e o plugin instalado; as configuracoes de pedido e
 * Etapa final do fluxo complementar unificada com upload, personalizacao e carregamento confiavel do CSS publico.
 
 == Changelog ==
+
+= 1.1.72 =
+* consolidacao dos ajustes recentes antes do deploy em producao
+
+= 1.1.71 =
+* pagina Documentos do fluxo de confirmacao voltou a renderizar documentos como cards recolhiveis, escondendo estados vazios e paineis internos corretamente
+
+= 1.1.70 =
+* controles de recolhimento e modo foco agora ficam abaixo da logo quando a sidebar esta colapsada, evitando quebra visual da marca
+
+= 1.1.69 =
+* jquery.fontselect empacotado no proprio plugin para evitar erro `_typeof is not defined` em instalacoes via ZIP
+* menu Geral ganhou seletor de produtos considerados servicos
+* produtos de servico passam a aparecer em linha propria antes do total e ficam fora da edicao do fluxo complementar
+
+= 1.1.68 =
+* controles de recolhimento e modo foco movidos para a linha da logo Aireset, mantendo o titulo do plugin limpo mesmo com textos longos
 
 = 1.1.67 =
 * shell admin com fly-in menu lateral dedicado e inclusão desses assets na auditoria de performance
