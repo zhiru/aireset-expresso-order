@@ -11,10 +11,39 @@
 (function () {
     'use strict';
 
+    if (window.airesetAdminMenuFlyoutBootstrapped) {
+        return;
+    }
+    window.airesetAdminMenuFlyoutBootstrapped = true;
+
     /* ------------------------------------------------------------------ */
     /*  FlyoutRenderer – builds one <ul> per config and appends to anchor */
     /* ------------------------------------------------------------------ */
     var FlyoutRenderer = {
+
+        createIconNode: function (iconClass) {
+            if (!iconClass) { return null; }
+
+            var normalizedClass = String(iconClass).trim();
+            if (!normalizedClass) { return null; }
+
+            var iconWrap = document.createElement('span');
+            iconWrap.className = 'eop-flyout-icon';
+
+            if (/(^|\s)(fa[sbrld]?|fab|far|fal|fat)(\s|$)/.test(normalizedClass)) {
+                var fontAwesomeIcon = document.createElement('i');
+                fontAwesomeIcon.className = normalizedClass;
+                fontAwesomeIcon.setAttribute('aria-hidden', 'true');
+                iconWrap.appendChild(fontAwesomeIcon);
+                return iconWrap;
+            }
+
+            iconWrap.classList.add('dashicons');
+            iconWrap.classList.add.apply(iconWrap.classList, normalizedClass.split(/\s+/));
+            iconWrap.setAttribute('aria-hidden', 'true');
+
+            return iconWrap;
+        },
 
         renderAll: function () {
             var configs = this.collectConfigs();
@@ -110,9 +139,10 @@
                 }
 
                 if (item.icon) {
-                    var icon = document.createElement('span');
-                    icon.className = 'eop-flyout-icon dashicons ' + String(item.icon);
-                    a.appendChild(icon);
+                    var icon = self.createIconNode(item.icon);
+                    if (icon) {
+                        a.appendChild(icon);
+                    }
                 }
 
                 var itemLabel = document.createElement('span');
@@ -212,7 +242,20 @@
             if (!query || !currentState || !currentState.params) { return false; }
 
             return Object.keys(query).every(function (key) {
-                return String(currentState.params.get(key) || '') === String(query[key]);
+                var currentValue = String(currentState.params.get(key) || '');
+                var expectedValue = String(query[key]);
+
+                if (key === 'type') {
+                    var normalizeType = function (value) {
+                        return String(value || '')
+                            .replace(/-(add|edit)$/i, '')
+                            .replace(/^funcionalidades$/i, 'checkout.config');
+                    };
+
+                    return normalizeType(currentValue) === normalizeType(expectedValue);
+                }
+
+                return currentValue === expectedValue;
             });
         },
 
@@ -267,10 +310,8 @@
             var self = this;
 
             parentLi.addEventListener('mouseenter', function () {
-                if (self.activeMenu && !self.activeMenu.contains(parentLi) && self.activeMenu !== flyout) {
-                    if (!self.isCursorInSafeZone()) {
-                        self.hideFlyout(self.activeMenu);
-                    }
+                if (self.activeMenu && self.activeMenu !== flyout && !self.isSameFlyoutBranch(parentLi)) {
+                    self.closeAllFlyouts();
                 }
                 self.clearClose();
                 self.showFlyout(parentLi, flyout);
@@ -360,8 +401,8 @@
         /* --- Show / Hide --- */
 
         showFlyout: function (parentLi, flyout) {
-            if (this.activeMenu && this.activeMenu !== flyout && !this.activeMenu.contains(parentLi)) {
-                this.hideFlyout(this.activeMenu);
+            if (this.activeMenu && this.activeMenu !== flyout && !this.isSameFlyoutBranch(parentLi)) {
+                this.closeAllFlyouts();
             }
             this.exitPoint = null;
             this.positionFlyout(parentLi, flyout);
@@ -380,6 +421,7 @@
                 parentLi.classList.remove('eop-flyout-open');
                 this.setExpanded(parentLi, false);
                 this.closeDescendants(parentLi);
+                this.closeIdleAncestors(parentLi);
             }
 
             if (this.activeMenu === flyout || (this.activeMenu && flyout.contains(this.activeMenu))) {
@@ -390,6 +432,71 @@
             }
         },
 
+        isSameFlyoutBranch: function (parentLi) {
+            if (!parentLi || !this.activeMenu || !this.activeParent) {
+                return false;
+            }
+
+            if (parentLi === this.activeParent) {
+                return true;
+            }
+
+            if (this.activeMenu.contains(parentLi)) {
+                return true;
+            }
+
+            return parentLi.contains(this.activeParent);
+        },
+
+        closeAllFlyouts: function () {
+            var self = this;
+            var openFlyouts = document.querySelectorAll('#adminmenu .eop-submenu-flyout.eop-submenu-flyout-visible');
+
+            Array.prototype.slice.call(openFlyouts).forEach(function (openFlyout) {
+                self.hideFlyout(openFlyout);
+            });
+
+            this.clearClose();
+            this.stopMouseTracking();
+            this.exitPoint = null;
+        },
+
+        closeIdleAncestors: function (parentLi) {
+            var current = parentLi;
+
+            while (current && current.classList && current.classList.contains('eop-has-flyout')) {
+                if (current.matches && current.matches(':hover')) {
+                    break;
+                }
+
+                current.classList.remove('eop-flyout-open');
+                this.setExpanded(current, false);
+
+                var submenu = current.querySelector(':scope > .eop-submenu-flyout');
+                if (submenu) {
+                    submenu.classList.remove('eop-submenu-flyout-visible');
+                }
+
+                var owner = this.getOwnerFlyoutLi(current);
+                if (!owner || owner === current) {
+                    break;
+                }
+
+                current = owner;
+            }
+        },
+
+        getOwnerFlyoutLi: function (li) {
+            if (!li || !li.parentElement) { return null; }
+
+            var owner = li.parentElement.parentElement;
+            if (owner && owner.classList && owner.classList.contains('eop-has-flyout')) {
+                return owner;
+            }
+
+            return null;
+        },
+
         /* --- Delayed close with safe-zone check --- */
 
         scheduleClose: function (parentLi, flyout) {
@@ -398,7 +505,7 @@
             this.startMouseTracking();
             this.closeTimeout = setTimeout(function () {
                 self.checkAndClose(flyout);
-            }, 300);
+            }, 120);
         },
 
         checkAndClose: function (flyout) {
@@ -410,7 +517,7 @@
             } else {
                 this.closeTimeout = setTimeout(function () {
                     self.checkAndClose(flyout);
-                }, 300);
+                }, 120);
             }
         },
 
@@ -634,6 +741,279 @@
     /* ------------------------------------------------------------------ */
     /*  SidebarHighlight – keeps the correct menu item highlighted        */
     /* ------------------------------------------------------------------ */
+    FlyoutInteraction = {
+
+        closeTimeout: null,
+        closeDelay: 180,
+
+        handle: function () {
+            this.setupFlyoutMenus();
+            this.setupMobileSupport();
+        },
+
+        setupFlyoutMenus: function () {
+            var self = this;
+            var parents = document.querySelectorAll('#adminmenu li.eop-has-flyout');
+
+            parents.forEach(function (parentLi) {
+                var flyout = parentLi.querySelector(':scope > .eop-submenu-flyout');
+                if (!flyout) { return; }
+
+                self.attachHover(parentLi, flyout);
+                self.attachFocus(parentLi, flyout);
+                self.attachKeyboard(parentLi, flyout);
+            });
+        },
+
+        attachHover: function (parentLi, flyout) {
+            var self = this;
+
+            parentLi.addEventListener('mouseenter', function () {
+                self.clearClose();
+                self.openFlyout(parentLi, flyout);
+            });
+
+            parentLi.addEventListener('mouseleave', function () {
+                self.scheduleClose(parentLi);
+            });
+        },
+
+        attachFocus: function (parentLi, flyout) {
+            var self = this;
+            var parentLink = parentLi.querySelector(':scope > a');
+
+            if (parentLink) {
+                parentLink.addEventListener('focus', function () {
+                    self.openFlyout(parentLi, flyout);
+                });
+            }
+
+            flyout.addEventListener('focusout', function (e) {
+                if (!parentLi.contains(e.relatedTarget)) {
+                    self.closeBranch(parentLi);
+                }
+            });
+        },
+
+        attachKeyboard: function (parentLi, flyout) {
+            var self = this;
+
+            parentLi.addEventListener('keydown', function (e) {
+                var allLinks = self.getDirectMenuLinks(flyout);
+                var focused = flyout.querySelector('a:focus');
+                var idx = Array.from(allLinks).indexOf(focused);
+                var visible = flyout.classList.contains('eop-submenu-flyout-visible');
+
+                switch (e.key) {
+                    case 'ArrowRight':
+                        if (!visible) {
+                            e.preventDefault();
+                            self.openFlyout(parentLi, flyout);
+                            if (allLinks[0]) { allLinks[0].focus(); }
+                        }
+                        break;
+                    case 'ArrowLeft':
+                    case 'Escape':
+                        if (visible) {
+                            e.preventDefault();
+                            self.closeBranch(parentLi);
+                            var link = parentLi.querySelector(':scope > a');
+                            if (link) { link.focus(); }
+                        }
+                        break;
+                    case 'ArrowDown':
+                        if (visible && idx >= 0) {
+                            e.preventDefault();
+                            var next = (idx + 1) % allLinks.length;
+                            allLinks[next].focus();
+                        }
+                        break;
+                    case 'ArrowUp':
+                        if (visible && idx >= 0) {
+                            e.preventDefault();
+                            var prev = (idx - 1 + allLinks.length) % allLinks.length;
+                            allLinks[prev].focus();
+                        }
+                        break;
+                }
+            });
+        },
+
+        openFlyout: function (parentLi, flyout) {
+            this.closeSiblingMenus(parentLi);
+            this.openAncestorChain(parentLi);
+            this.positionFlyout(parentLi, flyout);
+
+            flyout.classList.add('eop-submenu-flyout-visible');
+            parentLi.classList.add('eop-flyout-open');
+            this.setExpanded(parentLi, true);
+        },
+
+        closeBranch: function (parentLi) {
+            if (!parentLi || !parentLi.classList) { return; }
+
+            this.closeDescendants(parentLi);
+            parentLi.classList.remove('eop-flyout-open');
+            this.setExpanded(parentLi, false);
+
+            var flyout = parentLi.querySelector(':scope > .eop-submenu-flyout');
+            if (flyout) {
+                flyout.classList.remove('eop-submenu-flyout-visible', 'eop-submenu-flyout--reverse');
+                flyout.style.top = '';
+            }
+        },
+
+        closeAllFlyouts: function () {
+            var self = this;
+            var openParents = document.querySelectorAll('#adminmenu li.eop-has-flyout.eop-flyout-open');
+
+            this.clearClose();
+
+            Array.prototype.slice.call(openParents).forEach(function (parentLi) {
+                self.closeBranch(parentLi);
+            });
+        },
+
+        scheduleClose: function (parentLi) {
+            var self = this;
+
+            this.clearClose();
+            this.closeTimeout = setTimeout(function () {
+                if (!parentLi.matches(':hover')) {
+                    self.closeBranch(parentLi);
+                }
+            }, this.closeDelay);
+        },
+
+        clearClose: function () {
+            if (this.closeTimeout) {
+                clearTimeout(this.closeTimeout);
+                this.closeTimeout = null;
+            }
+        },
+
+        positionFlyout: function (parentLi, flyout) {
+            var prevDisplay = flyout.style.display;
+            var prevVisibility = flyout.style.visibility;
+
+            flyout.style.visibility = 'hidden';
+            flyout.style.display = 'block';
+            flyout.style.top = '';
+            flyout.classList.remove('eop-submenu-flyout--reverse');
+
+            var winH = window.innerHeight;
+            var winW = window.innerWidth;
+            var flyH = flyout.offsetHeight;
+            var flyW = flyout.offsetWidth;
+            var parentRect = parentLi.getBoundingClientRect();
+
+            if (parentRect.top + flyH > winH) {
+                var offset = winH - flyH - parentRect.top;
+                if (offset < -parentRect.top) {
+                    offset = -parentRect.top + 10;
+                }
+                flyout.style.top = offset + 'px';
+            }
+
+            if (parentRect.right + flyW > winW - 8 && parentRect.left - flyW > 8) {
+                flyout.classList.add('eop-submenu-flyout--reverse');
+            }
+
+            flyout.style.display = prevDisplay;
+            flyout.style.visibility = prevVisibility;
+        },
+
+        setupMobileSupport: function () {
+            if (window.innerWidth > 782) { return; }
+
+            var self = this;
+            var links = document.querySelectorAll('#adminmenu li.eop-has-flyout > a');
+
+            links.forEach(function (link) {
+                link.addEventListener('click', function (e) {
+                    var parentLi = link.parentElement;
+                    var flyout = parentLi.querySelector(':scope > .eop-submenu-flyout');
+                    if (!flyout) { return; }
+
+                    e.preventDefault();
+
+                    if (parentLi.classList.contains('eop-flyout-open')) {
+                        self.closeBranch(parentLi);
+                        return;
+                    }
+
+                    self.openFlyout(parentLi, flyout);
+                });
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('#adminmenu li.eop-has-flyout')) {
+                    self.closeAllFlyouts();
+                }
+            });
+        },
+
+        getDirectMenuLinks: function (flyout) {
+            if (!flyout) { return []; }
+
+            return Array.from(flyout.querySelectorAll(':scope > li > a'));
+        },
+
+        setExpanded: function (parentLi, expanded) {
+            if (!parentLi) { return; }
+
+            var link = parentLi.querySelector(':scope > a');
+            if (link && link.hasAttribute('aria-haspopup')) {
+                link.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            }
+        },
+
+        closeDescendants: function (parentLi) {
+            if (!parentLi) { return; }
+
+            parentLi.querySelectorAll('li.eop-has-flyout').forEach(function (item) {
+                item.classList.remove('eop-flyout-open');
+                var link = item.querySelector(':scope > a');
+                if (link && link.hasAttribute('aria-haspopup')) {
+                    link.setAttribute('aria-expanded', 'false');
+                }
+                var submenu = item.querySelector(':scope > .eop-submenu-flyout');
+                if (submenu) {
+                    submenu.classList.remove('eop-submenu-flyout-visible', 'eop-submenu-flyout--reverse');
+                    submenu.style.top = '';
+                }
+            });
+        },
+
+        closeSiblingMenus: function (parentLi) {
+            var self = this;
+            var list = parentLi && parentLi.parentElement;
+            if (!list) { return; }
+
+            Array.from(list.children).forEach(function (sibling) {
+                if (sibling === parentLi || !sibling.classList || !sibling.classList.contains('eop-has-flyout')) { return; }
+                self.closeBranch(sibling);
+            });
+        },
+
+        openAncestorChain: function (parentLi) {
+            var current = parentLi ? parentLi.parentElement : null;
+
+            while (current && current.id !== 'adminmenu') {
+                if (current.matches && current.matches('.eop-submenu-flyout')) {
+                    var owner = current.parentElement;
+                    if (owner && owner.classList.contains('eop-has-flyout')) {
+                        owner.classList.add('eop-flyout-open');
+                        current.classList.add('eop-submenu-flyout-visible');
+                        this.setExpanded(owner, true);
+                    }
+                }
+
+                current = current.parentElement;
+            }
+        }
+    };
+
     var SidebarHighlight = {
 
         handle: function () {

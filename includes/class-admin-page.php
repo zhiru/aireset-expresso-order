@@ -1,6 +1,68 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
+if ( ! function_exists( 'aireset_enqueue_shared_admin_menu_flyout_assets' ) ) {
+    function aireset_enqueue_shared_admin_menu_flyout_assets( $args = array() ) {
+        static $assets_enqueued = false;
+
+        $args = wp_parse_args(
+            $args,
+            array(
+                'style_handle'     => 'aireset-admin-flyout',
+                'style_url'        => '',
+                'style_version'    => '',
+                'script_handle'    => 'aireset-admin-flyout',
+                'script_url'       => '',
+                'script_version'   => '',
+                'fontawesome_url'  => '',
+                'fontawesome_ver'  => '',
+                'inline_script'    => '',
+                'inline_style'     => '',
+            )
+        );
+
+        if ( ! $assets_enqueued ) {
+            if ( ! empty( $args['style_url'] ) ) {
+                wp_enqueue_style(
+                    $args['style_handle'],
+                    $args['style_url'],
+                    array(),
+                    $args['style_version']
+                );
+            }
+
+            if ( ! empty( $args['fontawesome_url'] ) ) {
+                wp_enqueue_style(
+                    'aireset-admin-flyout-fontawesome',
+                    $args['fontawesome_url'],
+                    array(),
+                    $args['fontawesome_ver']
+                );
+            }
+
+            if ( ! empty( $args['script_url'] ) ) {
+                wp_enqueue_script(
+                    $args['script_handle'],
+                    $args['script_url'],
+                    array(),
+                    $args['script_version'],
+                    true
+                );
+            }
+
+            $assets_enqueued = true;
+        }
+
+        if ( ! empty( $args['inline_script'] ) ) {
+            wp_add_inline_script( $args['script_handle'], $args['inline_script'], 'before' );
+        }
+
+        if ( ! empty( $args['inline_style'] ) ) {
+            wp_add_inline_style( $args['style_handle'], $args['inline_style'] );
+        }
+    }
+}
+
 if ( ! function_exists( 'ensure_aireset_parent_menu' ) ) {
     function ensure_aireset_parent_menu() {
         static $cleanup_hooked = false;
@@ -618,8 +680,10 @@ class EOP_Admin_Page {
                 'orders_flow_contract' => __( 'Contrato', EOP_TEXT_DOMAIN ),
                 'orders_flow_fields' => __( 'Campos', EOP_TEXT_DOMAIN ),
                 'orders_flow_attachment' => __( 'Anexo', EOP_TEXT_DOMAIN ),
+                'orders_flow_final_pdf' => __( 'PDF final', EOP_TEXT_DOMAIN ),
                 'orders_flow_products' => __( 'Produtos', EOP_TEXT_DOMAIN ),
                 'orders_flow_uploaded' => __( 'Enviado', EOP_TEXT_DOMAIN ),
+                'orders_flow_ready' => __( 'Pronto', EOP_TEXT_DOMAIN ),
                 'orders_flow_optional' => __( 'Opcional', EOP_TEXT_DOMAIN ),
                 'post_flow_loading' => __( 'Carregando dados complementares da proposta...', EOP_TEXT_DOMAIN ),
                 'post_flow_unavailable_edit' => __( 'O resumo complementar aparece quando um pedido existente entra em modo de edicao.', EOP_TEXT_DOMAIN ),
@@ -632,12 +696,19 @@ class EOP_Admin_Page {
                 'post_flow_signature_documents_empty' => __( 'Nenhum documento para assinatura foi gerado ainda.', EOP_TEXT_DOMAIN ),
                 'post_flow_attachment_missing' => __( 'Nenhum anexo registrado.', EOP_TEXT_DOMAIN ),
                 'post_flow_attachment_done' => __( 'Anexo registrado com sucesso.', EOP_TEXT_DOMAIN ),
+                'post_flow_final_pdf_done' => __( 'PDF final salvo no pedido.', EOP_TEXT_DOMAIN ),
                 'post_flow_products_empty' => __( 'Nenhuma personalizacao registrada ate agora.', EOP_TEXT_DOMAIN ),
+                'post_flow_downloads_empty' => __( 'Nenhum download complementar disponivel ainda.', EOP_TEXT_DOMAIN ),
                 'post_flow_open_public' => __( 'Abrir link publico', EOP_TEXT_DOMAIN ),
+                'post_flow_link_public' => __( 'Jornada publica', EOP_TEXT_DOMAIN ),
+                'post_flow_link_attachment' => __( 'Logo enviada', EOP_TEXT_DOMAIN ),
                 'post_flow_download_pdf' => __( 'Baixar PDF complementar', EOP_TEXT_DOMAIN ),
+                'post_flow_download_final_pdf' => __( 'Baixar PDF final da personalizacao', EOP_TEXT_DOMAIN ),
                 'post_flow_stat_stage' => __( 'Etapa atual', EOP_TEXT_DOMAIN ),
                 'post_flow_stat_documents' => __( 'Dados do pedido', EOP_TEXT_DOMAIN ),
+                'post_flow_stat_signature_documents' => __( 'Documentos para assinatura', EOP_TEXT_DOMAIN ),
                 'post_flow_stat_attachment' => __( 'Anexo', EOP_TEXT_DOMAIN ),
+                'post_flow_stat_final_pdf' => __( 'PDF final', EOP_TEXT_DOMAIN ),
                 'post_flow_stat_products' => __( 'Produtos', EOP_TEXT_DOMAIN ),
                 'post_flow_summary_ready' => __( 'Payload estruturado pronto para PDF, admin e integracoes futuras.', EOP_TEXT_DOMAIN ),
                 'post_flow_completed_at' => __( 'Concluido em', EOP_TEXT_DOMAIN ),
@@ -669,21 +740,6 @@ class EOP_Admin_Page {
         if ( ! is_admin() ) {
             return;
         }
-
-        wp_enqueue_style(
-            'aireset-admin-flyout',
-            EOP_PLUGIN_URL . 'assets/css/admin-menu-flyout.css',
-            array(),
-            EOP_VERSION
-        );
-
-        wp_enqueue_script(
-            'aireset-admin-flyout',
-            EOP_PLUGIN_URL . 'assets/js/admin-menu-flyout.js',
-            array(),
-            EOP_VERSION,
-            true
-        );
 
         $current_page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
         $pdf_children = array(
@@ -1014,11 +1070,20 @@ class EOP_Admin_Page {
             'items'       => $items,
         );
 
-        wp_add_inline_script(
-            'aireset-admin-flyout',
-            'window.airesetAdminFlyouts=window.airesetAdminFlyouts||[];'
-            . 'window.airesetAdminFlyouts.push(' . wp_json_encode( $config ) . ');',
-            'before'
+        $flyout_style_path  = EOP_PLUGIN_DIR . 'assets/css/admin-menu-flyout.css';
+        $flyout_script_path = EOP_PLUGIN_DIR . 'assets/js/admin-menu-flyout.js';
+
+        aireset_enqueue_shared_admin_menu_flyout_assets(
+            array(
+                'style_url'       => EOP_PLUGIN_URL . 'assets/css/admin-menu-flyout.css',
+                'style_version'    => file_exists( $flyout_style_path ) ? (string) filemtime( $flyout_style_path ) : EOP_VERSION,
+                'script_url'       => EOP_PLUGIN_URL . 'assets/js/admin-menu-flyout.js',
+                'script_version'   => file_exists( $flyout_script_path ) ? (string) filemtime( $flyout_script_path ) : EOP_VERSION,
+                'fontawesome_url'  => 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css',
+                'fontawesome_ver'  => '6.3.0',
+                'inline_script'    => 'window.airesetAdminFlyouts=window.airesetAdminFlyouts||[];'
+                    . 'window.airesetAdminFlyouts.push(' . wp_json_encode( $config ) . ');',
+            )
         );
     }
 

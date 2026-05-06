@@ -2,6 +2,12 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.66 - 2026-05-05
+
+- o fluxo complementar agora gera e salva um PDF final proprio da personalizacao, exposto no frontend e no admin junto com um resumo operacional mais completo, downloads centralizados e payload estruturado versionado para integracoes futuras
+- o upload do anexo complementar passou a usar whitelist explicita, limite maximo configuravel e mensagens de falha mais precisas, enquanto o plano operacional do fluxo foi alinhado ao estado real da implementacao
+- o flyout administrativo compartilhado foi refinado com bootstrap unico, suporte melhor a icones e submenus multinivel, fechamento mais consistente e posicionamento responsivo no desktop e no mobile
+
 ## 1.1.65 - 2026-05-05
 
 - o fluxo complementar publico passou a tratar contrato, upload e personalizacao com uma etapa final unificada, visual refinado e melhor encaixe do layout no estado final

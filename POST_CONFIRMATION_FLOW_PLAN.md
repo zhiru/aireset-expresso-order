@@ -72,8 +72,8 @@ Uso esperado:
 - Parcial: acompanhamento administrativo existe em partes, com resumo visivel em areas do admin, mas ainda nao esta consolidado como painel operacional unico por pedido.
 - Parcial: a implementacao atual separa upload e personalizacao em etapas distintas; o fluxo canonico desejado agora e uma etapa final unica contendo upload no topo e lista dos produtos logo abaixo.
 - Pendente: PDF final especifico da lista personalizada de produtos com a logo do cliente, salvo no pedido como artefato proprio do fluxo final.
-- Pendente: payload estruturado formal e versionado para integracao externa futura.
-- Pendente: governanca de dados sensiveis, politica de retencao e checklist final de rollout.
+- Concluido: payload estruturado formal e versionado para integracao futura, com schema estavel, snapshots, dados derivados, referencias a anexos e persistencia do snapshot no pedido.
+- Parcial: governanca de dados sensiveis e rollout. Ja existe whitelist explicita de upload, limite de tamanho filterable, mensagens de falha mais granulares e reducao de dados sensiveis no payload canonicamente exportado; ainda faltam testes manuais finais e decisao operacional de retencao por negocio.
 - Desvio importante: o plano antigo falava em etapa documental separada; a definicao atual substitui isso por contrato + etapa final unica de upload/logo e personalizacao de produtos.
 
 ### Ja entregue ou ja funcional no codigo atual
@@ -244,6 +244,16 @@ O codigo hoje ainda trabalha com estados separados para upload e personalizacao.
 4. rodar php -l nos arquivos PHP alterados e revisar erros do editor
 5. atualizar changelog e versao somente ao final do lote validado
 
+## Governanca adotada nesta implementacao
+
+- o payload canonicamente estruturado do fluxo complementar passou a usar schema versionado proprio e e salvo no pedido para integracoes futuras, sem depender de parsing do HTML publico
+- o payload estruturado separa `snapshots`, `derived` e `references`, mantendo o IP de aceite fora do contrato canonico de integracao e deixando esse dado restrito ao contexto administrativo legado quando necessario
+- o upload do anexo complementar aceita apenas JPG, JPEG, PNG e PDF
+- o limite padrao de upload do anexo complementar e o menor valor entre 8 MB e o teto de upload do WordPress, com filtro dedicado para override tecnico quando necessario
+- os notices de upload agora distinguem formato invalido, arquivo acima do limite e falha geral de transferencia
+- os binarios continuam armazenados como attachments do WordPress; o payload salvo no pedido persiste referencias, metadados e snapshots textuais, nao uma copia extra dos arquivos
+- a politica final de retencao e descarte continua dependente de definicao operacional do projeto e deve ser fechada antes do rollout produtivo
+
 ## Checklist de Verificacao
 
 1. confirmar o fluxo 1 sem jornada complementar e sem regressao
@@ -270,10 +280,9 @@ O codigo hoje ainda trabalha com estados separados para upload e personalizacao.
 
 ## Proximo Lote Recomendado
 
-Se a implementacao continuar agora, a ordem mais segura e:
+Com a parte implementavel deste lote concluida, a ordem mais segura passa a ser:
 
-1. unificar upload e personalizacao na etapa final unica
-2. validar e fechar retomada apos pagamento
-3. gerar e salvar o PDF final da personalizacao
-4. consolidar acompanhamento administrativo por pedido
-5. formalizar payload estruturado para integracao futura
+1. executar validacao manual ponta a ponta nos tres fluxos canonicos
+2. corrigir regressao visual, funcional ou de permissao que aparecer nos testes
+3. revisar checklist final de governanca e retencao antes do rollout
+4. atualizar changelog e versao somente depois da rodada final de validacao

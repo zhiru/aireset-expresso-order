@@ -81,12 +81,14 @@
     }
 
     /* Flyout panel */
-    #adminmenu .eop-submenu-flyout {
+#adminmenu .eop-submenu-flyout {
         position: absolute;
         left: 100%;
         top: calc(var(--eop-flyout-padding-y) * -1 - 2px);
         display: none;
         min-width: var(--eop-flyout-min-width);
+        width: max-content;
+        max-width: min(320px, calc(100vw - 36px));
         max-height: none;
         overflow: visible;
         margin: 0;
@@ -96,6 +98,21 @@
         box-shadow: var(--eop-flyout-shadow);
         border-radius: 0 var(--eop-flyout-radius) var(--eop-flyout-radius) 0;
         z-index: var(--eop-flyout-z);
+    }
+
+    #adminmenu .eop-submenu-flyout .eop-submenu-flyout {
+        left: 100%;
+        top: calc(var(--eop-flyout-padding-y) * -1 - 2px);
+        margin-left: 0;
+        margin-right: 0;
+        min-width: var(--eop-flyout-min-width);
+        width: max-content;
+        max-width: min(320px, calc(100vw - 36px));
+    }
+
+    #adminmenu .eop-submenu-flyout .eop-submenu-flyout--reverse {
+        left: auto;
+        right: 100%;
     }
 
     .rtl #adminmenu .eop-submenu-flyout {
@@ -139,7 +156,9 @@
         text-decoration: none;
         font-size: var(--eop-flyout-font-size);
         line-height: var(--eop-flyout-line-height);
+        font-weight: 400;
         white-space: nowrap;
+        box-sizing: border-box;
         transition: background-color var(--eop-flyout-transition),
                     color var(--eop-flyout-transition),
                     transform var(--eop-flyout-transition);
@@ -157,11 +176,13 @@
     #adminmenu .eop-submenu-flyout li.eop-flyout-current a {
         color: var(--eop-flyout-text-active);
         background: var(--eop-flyout-active-bg);
+        font-weight: 400;
     }
 
     #adminmenu .eop-submenu-flyout li.eop-flyout-current-branch > a {
         color: var(--eop-flyout-text-active);
         background: rgba(255, 255, 255, 0.06);
+        font-weight: 400;
     }
 
     /* Icon sizing */
@@ -196,6 +217,7 @@
         color: var(--eop-flyout-text, #c3c4c7);
         text-decoration: none;
         font-size: 13px;
+        font-weight: 400;
     }
 
     #adminmenu .eop-submenu-flyout li a:hover {
@@ -204,7 +226,7 @@
 
     #adminmenu .eop-submenu-flyout li.eop-flyout-current a {
         color: #fff;
-        font-weight: 600;
+        font-weight: 400;
     }
 
     #adminmenu .eop-submenu-flyout .eop-flyout-icon {

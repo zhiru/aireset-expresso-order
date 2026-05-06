@@ -7,7 +7,11 @@ class EOP_Post_Confirmation_Flow {
 
 	const META_KEY  = '_eop_post_confirmation_flow_data';
 	const META_FLAG = '_eop_post_confirmation_flow_completed';
+	const EXPORT_PAYLOAD_META_KEY = '_eop_post_confirmation_integration_payload';
+	const EXPORT_SCHEMA_NAME = 'aireset_expresso_order.post_confirmation_flow';
+	const EXPORT_SCHEMA_VERSION = '1.0.0';
 	const PDF_QUERY_VAR = 'eop_post_confirmation_pdf';
+	const FINAL_PDF_QUERY_VAR = 'eop_post_confirmation_final_pdf';
 	const SIGNATURE_DOCUMENT_QUERY_VAR = 'eop_post_confirmation_signature_document';
 	const PUBLIC_TOKEN_QUERY_VAR = 'eop_token';
 	const REST_NAMESPACE = 'aireset-expresso-order/v1';
@@ -20,14 +24,18 @@ class EOP_Post_Confirmation_Flow {
 		add_action( 'init', array( __CLASS__, 'handle_request' ) );
 		add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
 		add_action( 'template_redirect', array( __CLASS__, 'handle_pdf_request' ) );
+		add_action( 'template_redirect', array( __CLASS__, 'handle_final_customization_pdf_request' ) );
 		add_action( 'template_redirect', array( __CLASS__, 'handle_signature_document_request' ) );
 		add_action( 'admin_post_eop_download_post_confirmation_pdf', array( __CLASS__, 'handle_pdf_download' ) );
 		add_action( 'admin_post_nopriv_eop_download_post_confirmation_pdf', array( __CLASS__, 'handle_pdf_download' ) );
+		add_action( 'admin_post_eop_download_post_confirmation_final_pdf', array( __CLASS__, 'handle_final_customization_pdf_download' ) );
+		add_action( 'admin_post_nopriv_eop_download_post_confirmation_final_pdf', array( __CLASS__, 'handle_final_customization_pdf_download' ) );
 		add_action( 'admin_post_eop_download_post_confirmation_signature_document', array( __CLASS__, 'handle_signature_document_download' ) );
 		add_action( 'admin_post_nopriv_eop_download_post_confirmation_signature_document', array( __CLASS__, 'handle_signature_document_download' ) );
 		add_action( 'woocommerce_thankyou', array( __CLASS__, 'render_thankyou_continue' ), 20 );
 		add_filter( 'woocommerce_get_checkout_order_received_url', array( __CLASS__, 'filter_checkout_order_received_url' ), 10, 2 );
 		add_filter( 'woocommerce_get_return_url', array( __CLASS__, 'filter_gateway_return_url' ), 10, 2 );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_order_admin_assets' ) );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'register_meta_boxes' ) );
 		add_action( 'add_meta_boxes_woocommerce_page_wc-orders', array( __CLASS__, 'register_hpos_meta_boxes' ) );
 	}
@@ -60,6 +68,39 @@ class EOP_Post_Confirmation_Flow {
 				'order_id' => $order->get_id(),
 				'download' => $force_download ? '1' : '0',
 				'_wpnonce' => wp_create_nonce( 'eop_download_post_confirmation_pdf_' . $order->get_id() ),
+			),
+			admin_url( 'admin-post.php' )
+		);
+	}
+
+	public static function get_final_customization_pdf_url( WC_Order $order, $force_download = false, $public = false ) {
+		if ( ! self::is_enabled_for_order( $order ) ) {
+			return '';
+		}
+
+		if ( $public ) {
+			$token = (string) $order->get_meta( '_eop_public_token', true );
+
+			if ( '' === $token ) {
+				return '';
+			}
+
+			return add_query_arg(
+				array(
+					self::FINAL_PDF_QUERY_VAR   => '1',
+					'download'                  => $force_download ? '1' : '0',
+					self::PUBLIC_TOKEN_QUERY_VAR => rawurlencode( $token ),
+				),
+				home_url( '/' )
+			);
+		}
+
+		return add_query_arg(
+			array(
+				'action'   => 'eop_download_post_confirmation_final_pdf',
+				'order_id' => $order->get_id(),
+				'download' => $force_download ? '1' : '0',
+				'_wpnonce' => wp_create_nonce( 'eop_download_post_confirmation_final_pdf_' . $order->get_id() ),
 			),
 			admin_url( 'admin-post.php' )
 		);
@@ -137,6 +178,12 @@ class EOP_Post_Confirmation_Flow {
 					'filename'    => '',
 					'uploaded_at' => '',
 				),
+				'final_pdf'      => array(
+					'attachment_id' => 0,
+					'filename'      => '',
+					'generated_at'  => '',
+					'state_hash'    => '',
+				),
 				'signature_documents' => array(),
 				'products'       => array(),
 			)
@@ -159,6 +206,16 @@ class EOP_Post_Confirmation_Flow {
 				'id'          => 0,
 				'filename'    => '',
 				'uploaded_at' => '',
+			)
+		);
+
+		$state['final_pdf'] = wp_parse_args(
+			is_array( $state['final_pdf'] ) ? $state['final_pdf'] : array(),
+			array(
+				'attachment_id' => 0,
+				'filename'      => '',
+				'generated_at'  => '',
+				'state_hash'    => '',
 			)
 		);
 
@@ -223,33 +280,39 @@ class EOP_Post_Confirmation_Flow {
 		$attachment_url    = $attachment_id ? wp_get_attachment_url( $attachment_id ) : '';
 		$product_counts    = self::get_product_completion_counts( $order, $state );
 		$contract_text     = self::get_contract_text( $order, $state );
+		$final_pdf         = self::get_final_customization_pdf_record( $order, $state, true, 'completed' === $stage );
 		$signature_documents = self::get_signature_documents( $order, $state, 'admin' === $context, 'admin' !== $context );
-		$products_payload  = array();
-
-		foreach ( $order->get_items( 'line_item' ) as $item ) {
-			if ( ! $item instanceof WC_Order_Item_Product ) {
-				continue;
-			}
-
-			$product         = $item->get_product();
-			$custom_name     = self::get_item_custom_name( $item, $state );
-			$original_name   = (string) $item->get_meta( '_eop_original_product_snapshot', true ) ?: $item->get_name();
-			$locked          = 'yes' === (string) $item->get_meta( '_eop_custom_name_locked', true );
-			$image_id        = $product ? $product->get_image_id() : 0;
-			$products_payload[] = array(
-				'item_id'       => $item->get_id(),
-				'product_id'    => $item->get_product_id(),
-				'variation_id'  => $item->get_variation_id(),
-				'quantity'      => $item->get_quantity(),
-				'original_name' => $original_name,
-				'custom_name'   => $custom_name,
-				'locked'        => $locked,
-				'sku'           => $product ? (string) $product->get_sku() : '',
-				'image'         => $image_id ? wp_get_attachment_image_url( $image_id, 'thumbnail' ) : wc_placeholder_img_src( 'thumbnail' ),
-			);
-		}
+		$products_payload  = self::get_export_products_payload( $order, $state );
+		$status_payload    = array(
+			'current_stage'       => $stage,
+			'current_stage_label' => self::get_stage_label( $stage ),
+			'completed'           => 'completed' === $stage,
+			'completed_at'        => (string) ( $state['completed_at'] ?? '' ),
+			'saved_stage'         => (string) ( $state['current_stage'] ?? '' ),
+		);
+		$summary_payload   = array(
+			'order_data_total'           => count( $order_data_rows ),
+			'order_data_filled'          => count( array_filter( wp_list_pluck( $order_data_rows, 'filled' ) ) ),
+			'documents_total'            => count( $order_data_rows ),
+			'documents_completed'        => count( array_filter( wp_list_pluck( $order_data_rows, 'filled' ) ) ),
+			'signature_documents_total'  => count( $signature_documents ),
+			'signature_documents_ready'  => count( array_filter( wp_list_pluck( $signature_documents, 'attachment_id' ) ) ),
+			'attachment_required'        => self::requires_attachment(),
+			'attachment_uploaded'        => $attachment_id > 0,
+			'products_editable'          => $product_counts['editable'],
+			'products_locked'            => $product_counts['locked'],
+			'products_completed'         => $product_counts['completed'],
+			'final_pdf_ready'            => ! empty( $final_pdf['attachment_id'] ),
+		);
 
 		$data = array(
+			'schema_name'     => self::EXPORT_SCHEMA_NAME,
+			'schema_version'  => self::EXPORT_SCHEMA_VERSION,
+			'schema'          => array(
+				'name'              => self::EXPORT_SCHEMA_NAME,
+				'version'           => self::EXPORT_SCHEMA_VERSION,
+				'payload_meta_key'  => self::EXPORT_PAYLOAD_META_KEY,
+			),
 			'context'          => $context,
 			'generated_at'     => current_time( 'mysql' ),
 			'order'            => array(
@@ -261,31 +324,15 @@ class EOP_Post_Confirmation_Flow {
 			),
 			'enabled'          => self::is_enabled(),
 			'active_for_order' => self::is_enabled_for_order( $order ),
-			'status'           => array(
-				'current_stage'       => $stage,
-				'current_stage_label' => self::get_stage_label( $stage ),
-				'completed'           => 'completed' === $stage,
-				'completed_at'        => (string) ( $state['completed_at'] ?? '' ),
-				'saved_stage'         => (string) ( $state['current_stage'] ?? '' ),
-			),
+			'status'           => $status_payload,
 			'links'            => array(
 				'public_url'      => EOP_Public_Proposal::get_public_link( $order ),
 				'admin_pdf_url'   => self::is_enabled_for_order( $order ) ? self::get_pdf_url( $order, true, false ) : '',
 				'public_pdf_url'  => self::is_enabled_for_order( $order ) ? self::get_pdf_url( $order, true, true ) : '',
+				'admin_final_pdf_url'  => ! empty( $final_pdf['admin_download_url'] ) ? $final_pdf['admin_download_url'] : '',
+				'public_final_pdf_url' => ! empty( $final_pdf['public_download_url'] ) ? $final_pdf['public_download_url'] : '',
 			),
-			'summary'          => array(
-				'order_data_total'     => count( $order_data_rows ),
-				'order_data_filled'    => count( array_filter( wp_list_pluck( $order_data_rows, 'filled' ) ) ),
-				'documents_total'      => count( $order_data_rows ),
-				'documents_completed'  => count( array_filter( wp_list_pluck( $order_data_rows, 'filled' ) ) ),
-				'signature_documents_total' => count( $signature_documents ),
-				'signature_documents_ready' => count( array_filter( wp_list_pluck( $signature_documents, 'attachment_id' ) ) ),
-				'attachment_required'  => self::requires_attachment(),
-				'attachment_uploaded'  => $attachment_id > 0,
-				'products_editable'    => $product_counts['editable'],
-				'products_locked'      => $product_counts['locked'],
-				'products_completed'   => $product_counts['completed'],
-			),
+			'summary'          => $summary_payload,
 			'contract'         => array(
 				'accepted'      => ! empty( $state['contract']['accepted'] ),
 				'accepted_name' => (string) ( $state['contract']['accepted_name'] ?? '' ),
@@ -303,7 +350,31 @@ class EOP_Post_Confirmation_Flow {
 				'url'         => $attachment_url ? $attachment_url : '',
 				'mime_type'   => $attachment_id ? (string) get_post_mime_type( $attachment_id ) : '',
 			),
+			'final_customization_pdf' => array(
+				'attachment_id' => absint( $final_pdf['attachment_id'] ?? 0 ),
+				'filename'      => (string) ( $final_pdf['filename'] ?? '' ),
+				'generated_at'  => (string) ( $final_pdf['generated_at'] ?? '' ),
+				'admin_url'     => (string) ( $final_pdf['admin_download_url'] ?? '' ),
+				'public_url'    => (string) ( $final_pdf['public_download_url'] ?? '' ),
+			),
 			'products'         => $products_payload,
+		);
+
+		$data['payload'] = self::build_structured_export_payload(
+			$order,
+			$context,
+			array(
+				'state'               => $state,
+				'status'              => $status_payload,
+				'summary'             => $summary_payload,
+				'order_data_rows'     => $order_data_rows,
+				'products_payload'    => $products_payload,
+				'signature_documents' => $signature_documents,
+				'attachment_id'       => $attachment_id,
+				'attachment_url'      => $attachment_url,
+				'contract_text'       => $contract_text,
+				'final_pdf'           => $final_pdf,
+			)
 		);
 
 		return apply_filters( 'eop_post_confirmation_export_data', $data, $order, $state, $context );
@@ -316,6 +387,7 @@ class EOP_Post_Confirmation_Flow {
 		$counts            = self::get_list_product_completion_counts( $order, $state );
 		$order_data_counts = self::get_list_order_data_counts( $order );
 		$attachment_id     = absint( $order->get_meta( '_eop_post_confirmation_attachment_id', true ) );
+		$final_pdf_id      = absint( $state['final_pdf']['attachment_id'] ?? $order->get_meta( '_eop_post_confirmation_final_pdf_attachment_id', true ) );
 		$contract_accepted = '' !== trim( (string) $order->get_meta( '_eop_post_confirmation_contract_accepted_at', true ) )
 			|| '' !== trim( (string) $order->get_meta( '_eop_post_confirmation_contract_accepted_name', true ) );
 
@@ -340,6 +412,9 @@ class EOP_Post_Confirmation_Flow {
 				'attachment'       => array(
 					'required' => self::requires_attachment(),
 					'uploaded' => $attachment_id > 0,
+				),
+				'final_pdf'       => array(
+					'ready' => $final_pdf_id > 0,
 				),
 				'products'         => array(
 					'completed' => $counts['completed'],
@@ -616,7 +691,10 @@ class EOP_Post_Confirmation_Flow {
 			'upload_saved'    => array( 'type' => 'success', 'message' => __( 'Arquivo enviado com sucesso.', EOP_TEXT_DOMAIN ) ),
 			'products_saved'  => array( 'type' => 'success', 'message' => __( 'Personalizacao dos produtos salva com sucesso.', EOP_TEXT_DOMAIN ) ),
 			'flow_completed'  => array( 'type' => 'success', 'message' => __( 'Etapa complementar concluida com sucesso.', EOP_TEXT_DOMAIN ) ),
-			'invalid_file'    => array( 'type' => 'error', 'message' => __( 'Nao foi possivel enviar o arquivo. Use JPG, PNG ou PDF.', EOP_TEXT_DOMAIN ) ),
+			'invalid_file'    => array( 'type' => 'error', 'message' => __( 'Nao foi possivel enviar o arquivo agora.', EOP_TEXT_DOMAIN ) ),
+			'invalid_file_type' => array( 'type' => 'error', 'message' => __( 'Formato invalido. Use JPG, JPEG, PNG ou PDF.', EOP_TEXT_DOMAIN ) ),
+			'file_too_large'  => array( 'type' => 'error', 'message' => sprintf( __( 'O arquivo ultrapassa o limite permitido de %s.', EOP_TEXT_DOMAIN ), size_format( self::get_max_attachment_upload_size() ) ) ),
+			'upload_failed'   => array( 'type' => 'error', 'message' => __( 'Nao foi possivel concluir o upload do arquivo.', EOP_TEXT_DOMAIN ) ),
 			'missing_file'    => array( 'type' => 'error', 'message' => __( 'Selecione um arquivo antes de continuar.', EOP_TEXT_DOMAIN ) ),
 			'missing_data'    => array( 'type' => 'error', 'message' => __( 'Preencha todos os campos obrigatorios antes de continuar.', EOP_TEXT_DOMAIN ) ),
 			'invalid_request' => array( 'type' => 'error', 'message' => __( 'Nao foi possivel processar sua solicitacao.', EOP_TEXT_DOMAIN ) ),
@@ -635,6 +713,18 @@ class EOP_Post_Confirmation_Flow {
 		}
 
 		self::handle_pdf_download();
+	}
+
+	public static function handle_final_customization_pdf_request() {
+		if ( ! isset( $_GET[ self::FINAL_PDF_QUERY_VAR ] ) ) {
+			return;
+		}
+
+		if ( '1' !== sanitize_text_field( wp_unslash( $_GET[ self::FINAL_PDF_QUERY_VAR ] ) ) ) {
+			return;
+		}
+
+		self::handle_final_customization_pdf_download();
 	}
 
 	private static function get_public_request_token() {
@@ -700,6 +790,45 @@ class EOP_Post_Confirmation_Flow {
 
 		echo $binary; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		exit;
+	}
+
+	public static function handle_final_customization_pdf_download() {
+		$token          = self::get_public_request_token();
+		$order_id       = absint( $_GET['order_id'] ?? 0 );
+		$force_download = isset( $_GET['download'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['download'] ) );
+		$order          = $order_id ? wc_get_order( $order_id ) : null;
+
+		if ( ! $order instanceof WC_Order && '' !== $token ) {
+			$order = EOP_Public_Proposal::get_order_by_token( $token );
+		}
+
+		if ( ! $order instanceof WC_Order || ! self::is_enabled_for_order( $order ) ) {
+			wp_die( esc_html__( 'PDF final da personalizacao indisponivel para este pedido.', EOP_TEXT_DOMAIN ) );
+		}
+
+		if ( '' !== $token ) {
+			if ( ! self::public_token_matches_order( $order, $token ) ) {
+				wp_die( esc_html__( 'Acesso negado ao PDF final da personalizacao.', EOP_TEXT_DOMAIN ) );
+			}
+		} else {
+			$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '';
+
+			if ( ! wp_verify_nonce( $nonce, 'eop_download_post_confirmation_final_pdf_' . $order->get_id() ) ) {
+				wp_die( esc_html__( 'Link do PDF final da personalizacao invalido.', EOP_TEXT_DOMAIN ) );
+			}
+
+			if ( ! current_user_can( 'edit_shop_orders' ) || ! self::current_user_can_access_order( $order ) ) {
+				wp_die( esc_html__( 'Acesso negado ao PDF final da personalizacao.', EOP_TEXT_DOMAIN ) );
+			}
+		}
+
+		$record = self::get_final_customization_pdf_record( $order, null, false, true );
+
+		if ( empty( $record['attachment_id'] ) ) {
+			wp_die( esc_html__( 'O PDF final da personalizacao ainda nao foi gerado.', EOP_TEXT_DOMAIN ) );
+		}
+
+		self::stream_attachment_file( absint( $record['attachment_id'] ), $force_download, (string) ( $record['filename'] ?? self::get_final_customization_pdf_filename( $order ) ) );
 	}
 
 	public static function handle_signature_document_request() {
@@ -1231,6 +1360,29 @@ class EOP_Post_Confirmation_Flow {
 		return '' !== $redirect_url ? $redirect_url : $return_url;
 	}
 
+	public static function enqueue_order_admin_assets( $hook ) {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		$screen_id = is_object( $screen ) && isset( $screen->id ) ? (string) $screen->id : '';
+		$post_type = is_object( $screen ) && isset( $screen->post_type ) ? (string) $screen->post_type : '';
+		$valid_screen_ids = array_filter(
+			array(
+				'shop_order',
+				'woocommerce_page_wc-orders',
+				function_exists( 'wc_get_page_screen_id' ) ? (string) wc_get_page_screen_id( 'shop-order' ) : '',
+			)
+		);
+
+		if ( in_array( $hook, array( 'post.php', 'post-new.php' ), true ) ) {
+			if ( 'shop_order' !== $post_type ) {
+				return;
+			}
+		} elseif ( ! in_array( $screen_id, $valid_screen_ids, true ) ) {
+			return;
+		}
+
+		wp_enqueue_style( 'eop-admin', EOP_PLUGIN_URL . 'assets/css/admin.css', array(), EOP_VERSION );
+	}
+
 	public static function register_meta_boxes() {
 		add_meta_box(
 			'eop-post-confirmation-flow',
@@ -1263,61 +1415,184 @@ class EOP_Post_Confirmation_Flow {
 			return;
 		}
 
-		$state       = self::get_state( $order );
-		$stage       = self::get_current_stage( $order, $state );
-		$order_data  = self::get_order_data_rows( $order );
-		$signature_documents = self::get_signature_documents( $order, $state, false );
-		$attachment  = absint( $state['attachment']['id'] ?? 0 );
-		$custom_rows = self::get_item_customizations( $order, $state );
-		?>
-		<div class="eop-post-flow-admin">
-			<p><strong><?php esc_html_e( 'Etapa atual', EOP_TEXT_DOMAIN ); ?>:</strong> <?php echo esc_html( self::get_stage_label( $stage ) ); ?></p>
-			<p><strong><?php esc_html_e( 'Aceite contratual', EOP_TEXT_DOMAIN ); ?>:</strong> <?php echo ! empty( $state['contract']['accepted'] ) ? esc_html( $state['contract']['accepted_name'] . ' - ' . $state['contract']['accepted_at'] ) : esc_html__( 'Pendente', EOP_TEXT_DOMAIN ); ?></p>
-			<p><strong><?php esc_html_e( 'Dados do pedido preenchidos', EOP_TEXT_DOMAIN ); ?>:</strong> <?php echo esc_html( count( array_filter( wp_list_pluck( $order_data, 'filled' ) ) ) . '/' . count( $order_data ) ); ?></p>
-			<?php if ( ! empty( $signature_documents ) ) : ?>
-				<p><strong><?php esc_html_e( 'Documentos para assinatura', EOP_TEXT_DOMAIN ); ?>:</strong></p>
-				<ul>
-					<?php foreach ( $signature_documents as $document ) : ?>
-						<li>
-							<a target="_blank" href="<?php echo esc_url( $document['admin_view_url'] ); ?>"><?php echo esc_html( $document['title'] ); ?></a>
-						</li>
-					<?php endforeach; ?>
-				</ul>
-			<?php endif; ?>
-			<p><strong><?php esc_html_e( 'Anexo enviado', EOP_TEXT_DOMAIN ); ?>:</strong>
-				<?php if ( $attachment ) : ?>
-					<a target="_blank" href="<?php echo esc_url( wp_get_attachment_url( $attachment ) ); ?>"><?php echo esc_html( get_the_title( $attachment ) ); ?></a>
-				<?php else : ?>
-					<?php esc_html_e( 'Nao', EOP_TEXT_DOMAIN ); ?>
-				<?php endif; ?>
-			</p>
-				<p><strong><?php esc_html_e( 'PDF complementar', EOP_TEXT_DOMAIN ); ?>:</strong> <a href="<?php echo esc_url( self::get_pdf_url( $order, true, false ) ); ?>"><?php esc_html_e( 'Baixar PDF', EOP_TEXT_DOMAIN ); ?></a></p>
+		$flow = self::get_export_data( $order, 'admin' );
 
-			<?php if ( ! empty( $custom_rows ) ) : ?>
-				<table class="widefat striped">
-					<thead>
-						<tr>
-							<th><?php esc_html_e( 'Produto original', EOP_TEXT_DOMAIN ); ?></th>
-							<th><?php esc_html_e( 'Nome desejado', EOP_TEXT_DOMAIN ); ?></th>
-							<th><?php esc_html_e( 'Status', EOP_TEXT_DOMAIN ); ?></th>
-						</tr>
-					</thead>
-					<tbody>
-						<?php foreach ( $custom_rows as $row ) : ?>
-							<tr>
-								<td>
-									<strong><?php echo esc_html( $row['original_name'] ); ?></strong>
-									<?php if ( '' !== $row['sku'] ) : ?>
-										<br /><small><?php echo esc_html( sprintf( __( 'SKU: %s', EOP_TEXT_DOMAIN ), $row['sku'] ) ); ?></small>
+		if ( empty( $flow['active_for_order'] ) ) {
+			echo '<p>' . esc_html__( 'O fluxo complementar esta desativado para este pedido.', EOP_TEXT_DOMAIN ) . '</p>';
+			return;
+		}
+
+		$summary             = is_array( $flow['summary'] ?? null ) ? $flow['summary'] : array();
+		$contract            = is_array( $flow['contract'] ?? null ) ? $flow['contract'] : array();
+		$order_data          = is_array( $flow['order_data'] ?? null ) ? $flow['order_data'] : array();
+		$signature_documents = is_array( $flow['signature_documents'] ?? null ) ? $flow['signature_documents'] : array();
+		$attachment          = is_array( $flow['attachment'] ?? null ) ? $flow['attachment'] : array();
+		$products            = is_array( $flow['products'] ?? null ) ? $flow['products'] : array();
+		$links               = is_array( $flow['links'] ?? null ) ? $flow['links'] : array();
+		$final_pdf           = is_array( $flow['final_customization_pdf'] ?? null ) ? $flow['final_customization_pdf'] : array();
+		?>
+		<div class="eop-post-flow-card eop-post-flow-admin">
+			<div class="eop-post-flow-card__head">
+				<div>
+					<h2><?php esc_html_e( 'Resumo operacional do fluxo complementar', EOP_TEXT_DOMAIN ); ?></h2>
+					<p><?php esc_html_e( 'Consulta rapida do contrato salvo, documentos, logo enviada, personalizacao e downloads deste pedido.', EOP_TEXT_DOMAIN ); ?></p>
+				</div>
+				<span class="eop-post-flow-badge is-active"><?php echo esc_html( $flow['status']['current_stage_label'] ?? __( 'Fluxo', EOP_TEXT_DOMAIN ) ); ?></span>
+			</div>
+
+			<div class="eop-post-flow-card__stats">
+				<div class="eop-post-flow-stat">
+					<span><?php esc_html_e( 'Dados do pedido', EOP_TEXT_DOMAIN ); ?></span>
+					<strong><?php echo esc_html( (string) ( absint( $summary['order_data_filled'] ?? 0 ) . '/' . absint( $summary['order_data_total'] ?? 0 ) ) ); ?></strong>
+				</div>
+				<div class="eop-post-flow-stat">
+					<span><?php esc_html_e( 'Documentos para assinatura', EOP_TEXT_DOMAIN ); ?></span>
+					<strong><?php echo esc_html( (string) ( absint( $summary['signature_documents_ready'] ?? 0 ) . '/' . absint( $summary['signature_documents_total'] ?? 0 ) ) ); ?></strong>
+				</div>
+				<div class="eop-post-flow-stat">
+					<span><?php esc_html_e( 'Anexo', EOP_TEXT_DOMAIN ); ?></span>
+					<strong><?php echo esc_html( ! empty( $summary['attachment_uploaded'] ) ? __( 'Enviado', EOP_TEXT_DOMAIN ) : __( 'Pendente', EOP_TEXT_DOMAIN ) ); ?></strong>
+				</div>
+				<div class="eop-post-flow-stat">
+					<span><?php esc_html_e( 'PDF final', EOP_TEXT_DOMAIN ); ?></span>
+					<strong><?php echo esc_html( ! empty( $summary['final_pdf_ready'] ) ? __( 'Pronto', EOP_TEXT_DOMAIN ) : __( 'Pendente', EOP_TEXT_DOMAIN ) ); ?></strong>
+				</div>
+				<div class="eop-post-flow-stat">
+					<span><?php esc_html_e( 'Produtos', EOP_TEXT_DOMAIN ); ?></span>
+					<strong><?php echo esc_html( (string) ( absint( $summary['products_completed'] ?? 0 ) . '/' . absint( $summary['products_editable'] ?? 0 ) ) ); ?></strong>
+				</div>
+			</div>
+
+			<div class="eop-post-flow-card__section">
+				<h3><?php esc_html_e( 'Contrato', EOP_TEXT_DOMAIN ); ?></h3>
+				<p>
+					<?php
+					echo ! empty( $contract['accepted'] )
+						? esc_html( trim( implode( ' - ', array_filter( array( (string) ( $contract['accepted_name'] ?? '' ), (string) ( $contract['accepted_at'] ?? '' ) ) ) ) ) )
+						: esc_html__( 'Aceite contratual pendente.', EOP_TEXT_DOMAIN );
+					?>
+				</p>
+			</div>
+
+			<div class="eop-post-flow-card__section">
+				<h3><?php esc_html_e( 'Documentos para assinatura', EOP_TEXT_DOMAIN ); ?></h3>
+				<div class="eop-post-flow-list">
+					<?php if ( ! empty( $signature_documents ) ) : ?>
+						<?php foreach ( $signature_documents as $document ) : ?>
+							<div class="eop-post-flow-row">
+								<strong><?php echo esc_html( (string) ( $document['title'] ?? '' ) ); ?></strong>
+								<span>
+									<?php if ( ! empty( $document['admin_view_url'] ) ) : ?>
+										<a href="<?php echo esc_url( (string) $document['admin_view_url'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( (string) ( $document['filename'] ?? $document['title'] ?? __( 'Documento', EOP_TEXT_DOMAIN ) ) ); ?></a>
+									<?php else : ?>
+										<?php esc_html_e( 'Documento ainda nao disponivel.', EOP_TEXT_DOMAIN ); ?>
 									<?php endif; ?>
-								</td>
-								<td><?php echo esc_html( $row['custom_name'] ? $row['custom_name'] : '—' ); ?></td>
-								<td><?php echo esc_html( $row['locked'] ? __( 'Bloqueado', EOP_TEXT_DOMAIN ) : __( 'Editavel', EOP_TEXT_DOMAIN ) ); ?></td>
-							</tr>
+								</span>
+							</div>
 						<?php endforeach; ?>
-					</tbody>
-				</table>
-			<?php endif; ?>
+					<?php else : ?>
+						<p><?php esc_html_e( 'Nenhum documento para assinatura foi gerado ainda.', EOP_TEXT_DOMAIN ); ?></p>
+					<?php endif; ?>
+				</div>
+			</div>
+
+			<div class="eop-post-flow-card__section">
+				<h3><?php esc_html_e( 'Dados do pedido', EOP_TEXT_DOMAIN ); ?></h3>
+				<div class="eop-post-flow-list">
+					<?php $has_order_data = false; ?>
+					<?php foreach ( $order_data as $row ) : ?>
+						<?php if ( empty( $row['filled'] ) ) : ?>
+							<?php continue; ?>
+						<?php endif; ?>
+						<?php $has_order_data = true; ?>
+						<div class="eop-post-flow-row">
+							<strong><?php echo esc_html( (string) ( $row['label'] ?? '' ) ); ?></strong>
+							<span><?php echo esc_html( (string) ( $row['value'] ?? '' ) ); ?></span>
+						</div>
+					<?php endforeach; ?>
+					<?php if ( ! $has_order_data ) : ?>
+						<p><?php esc_html_e( 'Nenhum dado do pedido preenchido no WooCommerce ate agora.', EOP_TEXT_DOMAIN ); ?></p>
+					<?php endif; ?>
+				</div>
+			</div>
+
+			<div class="eop-post-flow-card__section">
+				<h3><?php esc_html_e( 'Anexo', EOP_TEXT_DOMAIN ); ?></h3>
+				<div class="eop-post-flow-list">
+					<?php if ( ! empty( $attachment['id'] ) ) : ?>
+						<div class="eop-post-flow-row">
+							<strong><?php echo esc_html( (string) ( $attachment['filename'] ?? __( 'Arquivo enviado', EOP_TEXT_DOMAIN ) ) ); ?></strong>
+							<span>
+								<?php echo esc_html( (string) ( $attachment['uploaded_at'] ?? '' ) ); ?>
+								<?php if ( ! empty( $attachment['url'] ) ) : ?>
+									<a href="<?php echo esc_url( (string) $attachment['url'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Abrir arquivo', EOP_TEXT_DOMAIN ); ?></a>
+								<?php endif; ?>
+							</span>
+						</div>
+					<?php else : ?>
+						<p><?php esc_html_e( 'Nenhum anexo registrado.', EOP_TEXT_DOMAIN ); ?></p>
+					<?php endif; ?>
+				</div>
+			</div>
+
+			<div class="eop-post-flow-card__section">
+				<h3><?php esc_html_e( 'Downloads e links', EOP_TEXT_DOMAIN ); ?></h3>
+				<div class="eop-post-flow-list">
+					<?php if ( ! empty( $links['public_url'] ) ) : ?>
+						<div class="eop-post-flow-row">
+							<strong><?php esc_html_e( 'Jornada publica', EOP_TEXT_DOMAIN ); ?></strong>
+							<span><a href="<?php echo esc_url( (string) $links['public_url'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Abrir link publico', EOP_TEXT_DOMAIN ); ?></a></span>
+						</div>
+					<?php endif; ?>
+					<?php if ( ! empty( $links['admin_pdf_url'] ) ) : ?>
+						<div class="eop-post-flow-row">
+							<strong><?php esc_html_e( 'PDF complementar', EOP_TEXT_DOMAIN ); ?></strong>
+							<span><a href="<?php echo esc_url( (string) $links['admin_pdf_url'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Baixar PDF complementar', EOP_TEXT_DOMAIN ); ?></a></span>
+						</div>
+					<?php endif; ?>
+					<?php if ( ! empty( $links['admin_final_pdf_url'] ) ) : ?>
+						<div class="eop-post-flow-row">
+							<strong><?php esc_html_e( 'PDF final da personalizacao', EOP_TEXT_DOMAIN ); ?></strong>
+							<span>
+								<a href="<?php echo esc_url( (string) $links['admin_final_pdf_url'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Baixar PDF final da personalizacao', EOP_TEXT_DOMAIN ); ?></a>
+								<?php if ( ! empty( $final_pdf['generated_at'] ) ) : ?>
+									<small><?php echo esc_html( sprintf( __( 'Gerado em %s', EOP_TEXT_DOMAIN ), (string) $final_pdf['generated_at'] ) ); ?></small>
+								<?php endif; ?>
+							</span>
+						</div>
+					<?php endif; ?>
+					<?php if ( empty( $links['public_url'] ) && empty( $links['admin_pdf_url'] ) && empty( $links['admin_final_pdf_url'] ) ) : ?>
+						<p><?php esc_html_e( 'Nenhum download complementar disponivel ainda.', EOP_TEXT_DOMAIN ); ?></p>
+					<?php endif; ?>
+				</div>
+			</div>
+
+			<div class="eop-post-flow-card__section">
+				<h3><?php esc_html_e( 'Produtos', EOP_TEXT_DOMAIN ); ?></h3>
+				<div class="eop-post-flow-list">
+					<?php if ( ! empty( $products ) ) : ?>
+						<?php foreach ( $products as $row ) : ?>
+							<?php
+							$status_label = ! empty( $row['locked'] )
+								? __( 'Bloqueado', EOP_TEXT_DOMAIN )
+								: ( '' !== trim( (string) ( $row['custom_name'] ?? '' ) ) ? __( 'Personalizado', EOP_TEXT_DOMAIN ) : __( 'Pendente', EOP_TEXT_DOMAIN ) );
+							$value_label = '' !== trim( (string) ( $row['custom_name'] ?? '' ) ) ? (string) $row['custom_name'] : (string) ( $row['original_name'] ?? '' );
+							?>
+							<div class="eop-post-flow-row">
+								<strong><?php echo esc_html( (string) ( $row['original_name'] ?? '' ) ); ?></strong>
+								<span>
+									<?php echo esc_html( $value_label . ' - ' . $status_label ); ?>
+									<?php if ( ! empty( $row['sku'] ) ) : ?>
+										<small><?php echo esc_html( sprintf( __( 'SKU: %s', EOP_TEXT_DOMAIN ), (string) $row['sku'] ) ); ?></small>
+									<?php endif; ?>
+								</span>
+							</div>
+						<?php endforeach; ?>
+					<?php else : ?>
+						<p><?php esc_html_e( 'Nenhuma personalizacao registrada ate agora.', EOP_TEXT_DOMAIN ); ?></p>
+					<?php endif; ?>
+				</div>
+			</div>
 		</div>
 		<?php
 	}
@@ -1667,6 +1942,7 @@ class EOP_Post_Confirmation_Flow {
 
 	private static function render_completion_panel( WC_Order $order, $settings, $state, $line_items, $pdf_url ) {
 		$flow_pdf_url = self::get_pdf_url( $order, true, true );
+		$final_pdf    = self::get_final_customization_pdf_record( $order, $state, true, true );
 		?>
 		<p class="eop-post-flow__text"><?php echo esc_html( $settings['post_confirmation_completion_description'] ); ?></p>
 		<p class="eop-post-flow__helper"><?php esc_html_e( 'Seu contrato, os dados do pedido, o anexo e a personalizacao dos produtos ja foram consolidados para a equipe.', EOP_TEXT_DOMAIN ); ?></p>
@@ -1694,8 +1970,11 @@ class EOP_Post_Confirmation_Flow {
 			</div>
 		<?php endif; ?>
 		<div class="eop-post-flow__actions">
+			<?php if ( ! empty( $final_pdf['public_download_url'] ) ) : ?>
+				<a class="eop-proposal-button" href="<?php echo esc_url( $final_pdf['public_download_url'] ); ?>" download="<?php echo esc_attr( $final_pdf['filename'] ); ?>"><?php esc_html_e( 'Baixar PDF final da personalizacao', EOP_TEXT_DOMAIN ); ?></a>
+			<?php endif; ?>
 			<?php if ( $flow_pdf_url ) : ?>
-				<a class="eop-proposal-button" href="<?php echo esc_url( $flow_pdf_url ); ?>" download="<?php echo esc_attr( self::get_pdf_filename( $order ) ); ?>"><?php esc_html_e( 'Baixar PDF complementar', EOP_TEXT_DOMAIN ); ?></a>
+				<a class="eop-proposal-button eop-proposal-button--secondary" href="<?php echo esc_url( $flow_pdf_url ); ?>" download="<?php echo esc_attr( self::get_pdf_filename( $order ) ); ?>"><?php esc_html_e( 'Baixar PDF complementar', EOP_TEXT_DOMAIN ); ?></a>
 			<?php endif; ?>
 			<?php if ( $pdf_url ) : ?>
 				<a class="eop-proposal-button eop-proposal-button--secondary" href="<?php echo esc_url( $pdf_url ); ?>" download="documento-<?php echo esc_attr( time() ); ?>.pdf"><?php esc_html_e( 'Baixar PDF da proposta', EOP_TEXT_DOMAIN ); ?></a>
@@ -1760,6 +2039,7 @@ class EOP_Post_Confirmation_Flow {
 		$stage = self::persist_state( $order, $state );
 
 		if ( 'completed' === $stage ) {
+			self::ensure_final_customization_pdf_generated( $order, true );
 			return 'flow_completed';
 		}
 
@@ -1781,7 +2061,7 @@ class EOP_Post_Confirmation_Flow {
 			return array(
 				'state'    => $state,
 				'uploaded' => false,
-				'error'    => 'invalid_file',
+				'error'    => self::get_upload_notice_from_error( $attachment_id ),
 			);
 		}
 
@@ -1902,6 +2182,28 @@ class EOP_Post_Confirmation_Flow {
 			$order->update_meta_data( '_eop_post_confirmation_attachment_id', absint( $state['attachment']['id'] ) );
 		}
 
+		if ( ! empty( $state['final_pdf']['attachment_id'] ) ) {
+			$order->update_meta_data( '_eop_post_confirmation_final_pdf_attachment_id', absint( $state['final_pdf']['attachment_id'] ) );
+		}
+
+		if ( ! empty( $state['final_pdf']['generated_at'] ) ) {
+			$order->update_meta_data( '_eop_post_confirmation_final_pdf_generated_at', sanitize_text_field( (string) $state['final_pdf']['generated_at'] ) );
+		}
+
+		$order->update_meta_data(
+			self::EXPORT_PAYLOAD_META_KEY,
+			wp_json_encode(
+				self::build_structured_export_payload(
+					$order,
+					'integration',
+					array(
+						'state'            => $state,
+						'ensure_generated' => false,
+					)
+				)
+			)
+		);
+
 		$order->save();
 
 		return $stage;
@@ -1980,10 +2282,178 @@ class EOP_Post_Confirmation_Flow {
 				'custom_name'   => self::get_item_custom_name( $item, $state ),
 				'locked'        => 'yes' === (string) $item->get_meta( '_eop_custom_name_locked', true ),
 				'sku'           => $product ? (string) $product->get_sku() : '',
+				'quantity'      => (int) $item->get_quantity(),
 			);
 		}
 
 		return $rows;
+	}
+
+	private static function get_export_products_payload( WC_Order $order, $state ) {
+		$rows = array();
+
+		foreach ( $order->get_items( 'line_item' ) as $item ) {
+			if ( ! $item instanceof WC_Order_Item_Product ) {
+				continue;
+			}
+
+			$product       = $item->get_product();
+			$image_id      = $product ? $product->get_image_id() : 0;
+			$rows[] = array(
+				'item_id'       => $item->get_id(),
+				'product_id'    => $item->get_product_id(),
+				'variation_id'  => $item->get_variation_id(),
+				'quantity'      => $item->get_quantity(),
+				'original_name' => (string) $item->get_meta( '_eop_original_product_snapshot', true ) ?: $item->get_name(),
+				'custom_name'   => self::get_item_custom_name( $item, $state ),
+				'locked'        => 'yes' === (string) $item->get_meta( '_eop_custom_name_locked', true ),
+				'sku'           => $product ? (string) $product->get_sku() : '',
+				'image'         => $image_id ? wp_get_attachment_image_url( $image_id, 'thumbnail' ) : wc_placeholder_img_src( 'thumbnail' ),
+			);
+		}
+
+		return $rows;
+	}
+
+	private static function build_structured_export_payload( WC_Order $order, $context = 'integration', $parts = array() ) {
+		$context             = in_array( $context, array( 'admin', 'internal', 'integration' ), true ) ? $context : 'integration';
+		$parts               = is_array( $parts ) ? $parts : array();
+		$state               = is_array( $parts['state'] ?? null ) ? $parts['state'] : self::get_state( $order );
+		$ensure_generated    = ! array_key_exists( 'ensure_generated', $parts ) || (bool) $parts['ensure_generated'];
+		$status              = is_array( $parts['status'] ?? null ) ? $parts['status'] : array();
+		$order_data_rows     = is_array( $parts['order_data_rows'] ?? null ) ? $parts['order_data_rows'] : self::get_order_data_rows( $order );
+		$products_payload    = is_array( $parts['products_payload'] ?? null ) ? $parts['products_payload'] : self::get_export_products_payload( $order, $state );
+		$stage               = isset( $status['current_stage'] ) ? sanitize_key( (string) $status['current_stage'] ) : self::get_current_stage( $order, $state );
+		$attachment_id       = isset( $parts['attachment_id'] ) ? absint( $parts['attachment_id'] ) : absint( $state['attachment']['id'] ?? 0 );
+		$attachment_url      = array_key_exists( 'attachment_url', $parts ) ? (string) $parts['attachment_url'] : ( $attachment_id ? wp_get_attachment_url( $attachment_id ) : '' );
+		$signature_documents = is_array( $parts['signature_documents'] ?? null ) ? $parts['signature_documents'] : self::get_signature_documents( $order, $state, true, $ensure_generated );
+		$final_pdf           = is_array( $parts['final_pdf'] ?? null ) ? $parts['final_pdf'] : self::get_final_customization_pdf_record( $order, $state, true, $ensure_generated && 'completed' === $stage );
+		$contract_text       = array_key_exists( 'contract_text', $parts ) ? (string) $parts['contract_text'] : self::get_contract_text( $order, $state );
+
+		if ( empty( $status ) ) {
+			$status = array(
+				'current_stage'       => $stage,
+				'current_stage_label' => self::get_stage_label( $stage ),
+				'completed'           => 'completed' === $stage,
+				'completed_at'        => (string) ( $state['completed_at'] ?? '' ),
+				'saved_stage'         => (string) ( $state['current_stage'] ?? '' ),
+			);
+		}
+
+		$summary = is_array( $parts['summary'] ?? null ) ? $parts['summary'] : array(
+			'order_data_total'           => count( $order_data_rows ),
+			'order_data_filled'          => count( array_filter( wp_list_pluck( $order_data_rows, 'filled' ) ) ),
+			'documents_total'            => count( $order_data_rows ),
+			'documents_completed'        => count( array_filter( wp_list_pluck( $order_data_rows, 'filled' ) ) ),
+			'signature_documents_total'  => count( $signature_documents ),
+			'signature_documents_ready'  => count( array_filter( wp_list_pluck( $signature_documents, 'attachment_id' ) ) ),
+			'attachment_required'        => self::requires_attachment(),
+			'attachment_uploaded'        => $attachment_id > 0,
+			'products_editable'          => count( array_filter( $products_payload, static function ( $row ) {
+				return empty( $row['locked'] );
+			} ) ),
+			'products_locked'            => count( array_filter( $products_payload, static function ( $row ) {
+				return ! empty( $row['locked'] );
+			} ) ),
+			'products_completed'         => count( array_filter( $products_payload, static function ( $row ) {
+				return empty( $row['locked'] ) && '' !== trim( (string) ( $row['custom_name'] ?? '' ) );
+			} ) ),
+			'final_pdf_ready'            => ! empty( $final_pdf['attachment_id'] ),
+		);
+
+		return array(
+			'schema_name'    => self::EXPORT_SCHEMA_NAME,
+			'schema_version' => self::EXPORT_SCHEMA_VERSION,
+			'context'        => $context,
+			'generated_at'   => current_time( 'mysql' ),
+			'order'          => array(
+				'id'       => $order->get_id(),
+				'number'   => $order->get_order_number(),
+				'status'   => $order->get_status(),
+				'currency' => (string) $order->get_currency(),
+				'total'    => (float) $order->get_total(),
+				'customer' => array(
+					'name'     => trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() ),
+					'email'    => (string) $order->get_billing_email(),
+					'document' => self::get_order_customer_document( $order ),
+				),
+				'flags'    => array(
+					'enabled'            => self::is_enabled(),
+					'active_for_order'   => self::is_enabled_for_order( $order ),
+					'is_proposal'        => 'yes' === (string) $order->get_meta( '_eop_is_proposal', true ),
+					'proposal_confirmed' => 'yes' === (string) $order->get_meta( '_eop_proposal_confirmed', true ),
+				),
+			),
+			'snapshots'      => array(
+				'contract'   => array(
+					'accepted'      => ! empty( $state['contract']['accepted'] ),
+					'accepted_name' => (string) ( $state['contract']['accepted_name'] ?? '' ),
+					'accepted_at'   => (string) ( $state['contract']['accepted_at'] ?? '' ),
+					'text_snapshot' => trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $contract_text ) ) ),
+				),
+				'order_data' => $order_data_rows,
+				'items'      => array_map(
+					static function ( $item ) {
+						return array(
+							'item_id'       => absint( $item['item_id'] ?? 0 ),
+							'product_id'    => absint( $item['product_id'] ?? 0 ),
+							'variation_id'  => absint( $item['variation_id'] ?? 0 ),
+							'quantity'      => absint( $item['quantity'] ?? 0 ),
+							'original_name' => (string) ( $item['original_name'] ?? '' ),
+							'custom_name'   => (string) ( $item['custom_name'] ?? '' ),
+							'locked'        => ! empty( $item['locked'] ),
+							'sku'           => (string) ( $item['sku'] ?? '' ),
+							'image_url'     => (string) ( $item['image'] ?? '' ),
+						);
+					},
+					$products_payload
+				),
+			),
+			'derived'        => array(
+				'status'  => $status,
+				'summary' => $summary,
+			),
+			'references'     => array(
+				'public_url'       => EOP_Public_Proposal::get_public_link( $order ),
+				'brand_attachment' => array(
+					'attachment_id' => $attachment_id,
+					'filename'      => (string) ( $state['attachment']['filename'] ?? '' ),
+					'uploaded_at'   => (string) ( $state['attachment']['uploaded_at'] ?? '' ),
+					'mime_type'     => $attachment_id ? (string) get_post_mime_type( $attachment_id ) : '',
+					'file_url'      => $attachment_url ? (string) $attachment_url : '',
+				),
+				'contract_pdf'      => array(
+					'admin_download_url'  => self::is_enabled_for_order( $order ) ? self::get_pdf_url( $order, true, false ) : '',
+					'public_download_url' => self::is_enabled_for_order( $order ) ? self::get_pdf_url( $order, true, true ) : '',
+				),
+				'signature_documents' => array_map(
+					static function ( $document ) {
+						return array(
+							'key'                 => sanitize_key( (string) ( $document['key'] ?? '' ) ),
+							'title'               => (string) ( $document['title'] ?? '' ),
+							'description'         => (string) ( $document['description'] ?? '' ),
+							'source_type'         => (string) ( $document['source_type'] ?? '' ),
+							'attachment_id'       => absint( $document['attachment_id'] ?? 0 ),
+							'filename'            => (string) ( $document['filename'] ?? '' ),
+							'button_label'        => (string) ( $document['button_label'] ?? '' ),
+							'view_label'          => (string) ( $document['view_label'] ?? '' ),
+							'admin_view_url'      => (string) ( $document['admin_view_url'] ?? '' ),
+							'admin_download_url'  => (string) ( $document['admin_download_url'] ?? '' ),
+							'public_view_url'     => (string) ( $document['public_view_url'] ?? '' ),
+							'public_download_url' => (string) ( $document['public_download_url'] ?? '' ),
+						);
+					},
+					$signature_documents
+				),
+				'final_customization_pdf' => array(
+					'attachment_id'       => absint( $final_pdf['attachment_id'] ?? 0 ),
+					'filename'            => (string) ( $final_pdf['filename'] ?? '' ),
+					'generated_at'        => (string) ( $final_pdf['generated_at'] ?? '' ),
+					'admin_download_url'  => (string) ( $final_pdf['admin_download_url'] ?? '' ),
+					'public_download_url' => (string) ( $final_pdf['public_download_url'] ?? '' ),
+				),
+			),
+		);
 	}
 
 	private static function get_progress_steps( WC_Order $order, $state ) {
@@ -2183,6 +2653,334 @@ class EOP_Post_Confirmation_Flow {
 
 	private static function get_pdf_filename( WC_Order $order ) {
 		return sanitize_file_name( 'complemento-proposta-' . $order->get_id() . '.pdf' );
+	}
+
+	private static function get_final_customization_pdf_record( WC_Order $order, $state = null, $include_urls = false, $ensure_generated = true ) {
+		if ( ! self::is_enabled_for_order( $order ) ) {
+			return array();
+		}
+
+		$state  = is_array( $state ) ? $state : self::get_state( $order );
+		$record = is_array( $state['final_pdf'] ?? null ) ? $state['final_pdf'] : array();
+
+		if ( $ensure_generated && 'completed' === self::get_current_stage( $order, $state ) ) {
+			$record = self::ensure_final_customization_pdf_generated( $order );
+		}
+
+		if ( empty( $record['attachment_id'] ) ) {
+			return array();
+		}
+
+		$record['attachment_id'] = absint( $record['attachment_id'] );
+		$record['filename']      = (string) ( $record['filename'] ?? '' );
+		$record['generated_at']  = (string) ( $record['generated_at'] ?? '' );
+		$record['state_hash']    = (string) ( $record['state_hash'] ?? '' );
+
+		if ( ! $include_urls ) {
+			return $record;
+		}
+
+		$record['admin_view_url']      = self::get_final_customization_pdf_url( $order, false, false );
+		$record['admin_download_url']  = self::get_final_customization_pdf_url( $order, true, false );
+		$record['public_view_url']     = self::get_final_customization_pdf_url( $order, false, true );
+		$record['public_download_url'] = self::get_final_customization_pdf_url( $order, true, true );
+
+		return $record;
+	}
+
+	public static function ensure_final_customization_pdf_generated( WC_Order $order, $force = false ) {
+		if ( ! self::is_enabled_for_order( $order ) ) {
+			return array();
+		}
+
+		$state = self::get_state( $order );
+
+		if ( 'completed' !== self::get_current_stage( $order, $state ) ) {
+			return array();
+		}
+
+		$existing_record = is_array( $state['final_pdf'] ?? null ) ? $state['final_pdf'] : array();
+
+		if ( ! $force && self::final_customization_pdf_record_is_valid( $existing_record, $order, $state ) ) {
+			return $existing_record;
+		}
+
+		$binary = self::build_final_customization_pdf_binary( $order, $state );
+
+		if ( '' === $binary ) {
+			return array();
+		}
+
+		$attachment_id = self::store_generated_final_customization_pdf( $order, $binary );
+
+		if ( ! $attachment_id ) {
+			return array();
+		}
+
+		$record = array(
+			'attachment_id' => $attachment_id,
+			'filename'      => wp_basename( (string) get_attached_file( $attachment_id ) ),
+			'generated_at'  => current_time( 'mysql' ),
+			'state_hash'    => self::get_final_customization_pdf_state_hash( $order, $state ),
+		);
+
+		$state['final_pdf'] = $record;
+		self::persist_state( $order, $state );
+
+		return $record;
+	}
+
+	private static function final_customization_pdf_record_is_valid( $record, WC_Order $order, $state ) {
+		if ( empty( $record ) || empty( $record['attachment_id'] ) ) {
+			return false;
+		}
+
+		$attachment_id = absint( $record['attachment_id'] );
+		$file_path     = get_attached_file( $attachment_id );
+		$mime_type     = self::get_attachment_mime_type( $attachment_id );
+		$state_hash    = self::get_final_customization_pdf_state_hash( $order, $state );
+
+		return ! empty( $file_path )
+			&& file_exists( $file_path )
+			&& 'application/pdf' === $mime_type
+			&& (string) ( $record['state_hash'] ?? '' ) === $state_hash;
+	}
+
+	private static function get_final_customization_pdf_state_hash( WC_Order $order, $state ) {
+		unset( $order );
+
+		return md5(
+			wp_json_encode(
+				array(
+					'attachment' => array(
+						'id'          => absint( $state['attachment']['id'] ?? 0 ),
+						'filename'    => (string) ( $state['attachment']['filename'] ?? '' ),
+						'uploaded_at' => (string) ( $state['attachment']['uploaded_at'] ?? '' ),
+					),
+					'products'   => is_array( $state['products'] ?? null ) ? $state['products'] : array(),
+					'completed_at' => (string) ( $state['completed_at'] ?? '' ),
+				)
+			)
+		);
+	}
+
+	private static function get_final_customization_pdf_filename( WC_Order $order ) {
+		return sanitize_file_name( 'personalizacao-final-' . $order->get_id() . '.pdf' );
+	}
+
+	private static function build_final_customization_pdf_binary( WC_Order $order, $state ) {
+		$html = self::get_final_customization_pdf_html( $order, $state );
+
+		if ( '' === $html ) {
+			return '';
+		}
+
+		$binary = self::maybe_build_dompdf_pdf( $html );
+
+		if ( '' !== $binary ) {
+			return $binary;
+		}
+
+		return self::maybe_build_headless_pdf( $html, self::get_final_customization_pdf_filename( $order ) );
+	}
+
+	private static function get_final_customization_pdf_html( WC_Order $order, $state ) {
+		$settings          = EOP_Settings::get_all();
+		$font_css          = method_exists( 'EOP_Settings', 'get_font_css_family' ) ? EOP_Settings::get_font_css_family( $settings['font_family'] ?? '' ) : "'Segoe UI', sans-serif";
+		$customer_name     = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
+		$order_date        = $order->get_date_created();
+		$order_rows        = self::get_item_customizations( $order, $state );
+		$attachment_id     = absint( $state['attachment']['id'] ?? 0 );
+		$attachment_label  = (string) ( $state['attachment']['filename'] ?? '' );
+		$attachment_preview = self::get_final_customization_pdf_attachment_preview( $attachment_id );
+
+		if ( empty( $order_rows ) ) {
+			return '';
+		}
+
+		ob_start();
+		?>
+		<!doctype html>
+		<html>
+		<head>
+			<meta charset="utf-8">
+			<style>
+				@page { size: A4; margin: 16mm; }
+				body { margin: 0; color: #172033; background: #ffffff; font-family: <?php echo esc_html( $font_css ); ?>; font-size: 12px; line-height: 1.6; }
+				* { box-sizing: border-box; }
+				h1, h2, h3, p { margin: 0; }
+				.eop-final-pdf__header { padding: 24px; border: 1px solid #dbe3f0; border-radius: 18px; background: #f7f9fc; }
+				.eop-final-pdf__eyebrow { display: block; margin-bottom: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #61708d; }
+				.eop-final-pdf__title { margin-bottom: 10px; font-size: 28px; line-height: 1.1; color: #11162f; }
+				.eop-final-pdf__lead { color: #44506a; }
+				.eop-final-pdf__meta { margin-top: 16px; width: 100%; border-collapse: collapse; }
+				.eop-final-pdf__meta td { padding: 6px 0; vertical-align: top; }
+				.eop-final-pdf__meta td:first-child { width: 150px; color: #61708d; }
+				.eop-final-pdf__section { margin-top: 22px; }
+				.eop-final-pdf__section-title { margin-bottom: 12px; font-size: 15px; color: #11162f; }
+				.eop-final-pdf__upload { padding: 18px; border: 1px solid #dbe3f0; border-radius: 18px; background: #ffffff; }
+				.eop-final-pdf__upload img { display: block; max-width: 220px; max-height: 120px; margin-bottom: 12px; }
+				.eop-final-pdf__upload-note { color: #61708d; }
+				.eop-final-pdf__table { width: 100%; border-collapse: collapse; }
+				.eop-final-pdf__table th, .eop-final-pdf__table td { padding: 12px 14px; border: 1px solid #dbe3f0; text-align: left; vertical-align: top; }
+				.eop-final-pdf__table th { background: #f7f9fc; color: #11162f; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
+				.eop-final-pdf__table td small { display: block; margin-top: 4px; color: #61708d; }
+				.eop-final-pdf__footer { margin-top: 22px; color: #61708d; font-size: 11px; }
+			</style>
+		</head>
+		<body>
+			<section class="eop-final-pdf__header">
+				<span class="eop-final-pdf__eyebrow"><?php esc_html_e( 'Fluxo complementar concluido', EOP_TEXT_DOMAIN ); ?></span>
+				<h1 class="eop-final-pdf__title"><?php esc_html_e( 'Resumo final da personalizacao', EOP_TEXT_DOMAIN ); ?></h1>
+				<p class="eop-final-pdf__lead"><?php esc_html_e( 'Documento consolidado com o anexo enviado e a relacao de itens originais e personalizados para a equipe interna.', EOP_TEXT_DOMAIN ); ?></p>
+				<table class="eop-final-pdf__meta">
+					<tr>
+						<td><?php esc_html_e( 'Pedido', EOP_TEXT_DOMAIN ); ?></td>
+						<td><?php echo esc_html( $order->get_order_number() ); ?></td>
+					</tr>
+					<tr>
+						<td><?php esc_html_e( 'Cliente', EOP_TEXT_DOMAIN ); ?></td>
+						<td><?php echo esc_html( '' !== $customer_name ? $customer_name : __( 'Nao informado', EOP_TEXT_DOMAIN ) ); ?></td>
+					</tr>
+					<tr>
+						<td><?php esc_html_e( 'Data do pedido', EOP_TEXT_DOMAIN ); ?></td>
+						<td><?php echo esc_html( $order_date ? wc_format_datetime( $order_date ) : __( 'Nao informada', EOP_TEXT_DOMAIN ) ); ?></td>
+					</tr>
+					<tr>
+						<td><?php esc_html_e( 'Fluxo concluido em', EOP_TEXT_DOMAIN ); ?></td>
+						<td><?php echo esc_html( ! empty( $state['completed_at'] ) ? (string) $state['completed_at'] : __( 'Nao informado', EOP_TEXT_DOMAIN ) ); ?></td>
+					</tr>
+				</table>
+			</section>
+
+			<section class="eop-final-pdf__section">
+				<h2 class="eop-final-pdf__section-title"><?php esc_html_e( 'Anexo enviado pelo cliente', EOP_TEXT_DOMAIN ); ?></h2>
+				<div class="eop-final-pdf__upload">
+					<?php if ( 'image' === $attachment_preview['type'] && '' !== $attachment_preview['src'] ) : ?>
+						<img src="<?php echo esc_attr( $attachment_preview['src'] ); ?>" alt="<?php echo esc_attr( $attachment_label ); ?>" />
+					<?php endif; ?>
+					<p><strong><?php echo esc_html( '' !== $attachment_label ? $attachment_label : __( 'Nenhum anexo enviado', EOP_TEXT_DOMAIN ) ); ?></strong></p>
+					<?php if ( 'file' === $attachment_preview['type'] ) : ?>
+						<p class="eop-final-pdf__upload-note"><?php esc_html_e( 'O arquivo enviado foi registrado no pedido, mas nao pode ser incorporado visualmente neste PDF porque nao e uma imagem.', EOP_TEXT_DOMAIN ); ?></p>
+					<?php elseif ( '' === $attachment_label ) : ?>
+						<p class="eop-final-pdf__upload-note"><?php esc_html_e( 'Nenhum arquivo complementar foi anexado nesta etapa.', EOP_TEXT_DOMAIN ); ?></p>
+					<?php endif; ?>
+				</div>
+			</section>
+
+			<section class="eop-final-pdf__section">
+				<h2 class="eop-final-pdf__section-title"><?php esc_html_e( 'Itens personalizados', EOP_TEXT_DOMAIN ); ?></h2>
+				<table class="eop-final-pdf__table">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Produto original', EOP_TEXT_DOMAIN ); ?></th>
+							<th><?php esc_html_e( 'Nome personalizado', EOP_TEXT_DOMAIN ); ?></th>
+							<th><?php esc_html_e( 'Quantidade', EOP_TEXT_DOMAIN ); ?></th>
+							<th><?php esc_html_e( 'Status', EOP_TEXT_DOMAIN ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $order_rows as $row ) : ?>
+							<tr>
+								<td>
+									<?php echo esc_html( $row['original_name'] ); ?>
+									<?php if ( '' !== $row['sku'] ) : ?>
+										<small><?php echo esc_html( sprintf( __( 'SKU: %s', EOP_TEXT_DOMAIN ), $row['sku'] ) ); ?></small>
+									<?php endif; ?>
+								</td>
+								<td><?php echo esc_html( '' !== $row['custom_name'] ? $row['custom_name'] : __( 'Nao informado', EOP_TEXT_DOMAIN ) ); ?></td>
+								<td><?php echo esc_html( $row['quantity'] ); ?></td>
+								<td><?php echo esc_html( $row['locked'] ? __( 'Bloqueado', EOP_TEXT_DOMAIN ) : __( 'Personalizado', EOP_TEXT_DOMAIN ) ); ?></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</section>
+
+			<p class="eop-final-pdf__footer"><?php esc_html_e( 'Este arquivo foi gerado automaticamente a partir do fluxo complementar salvo no pedido.', EOP_TEXT_DOMAIN ); ?></p>
+		</body>
+		</html>
+		<?php
+
+		return ob_get_clean();
+	}
+
+	private static function get_final_customization_pdf_attachment_preview( $attachment_id ) {
+		$attachment_id = absint( $attachment_id );
+
+		if ( ! $attachment_id ) {
+			return array(
+				'type' => '',
+				'src'  => '',
+			);
+		}
+
+		$file_path = get_attached_file( $attachment_id );
+		$mime_type = self::get_attachment_mime_type( $attachment_id );
+
+		if ( empty( $file_path ) || ! file_exists( $file_path ) ) {
+			return array(
+				'type' => '',
+				'src'  => '',
+			);
+		}
+
+		if ( 0 !== strpos( (string) $mime_type, 'image/' ) ) {
+			return array(
+				'type' => 'file',
+				'src'  => '',
+			);
+		}
+
+		$binary = (string) @file_get_contents( $file_path );
+
+		if ( '' === $binary ) {
+			return array(
+				'type' => 'file',
+				'src'  => '',
+			);
+		}
+
+		return array(
+			'type' => 'image',
+			'src'  => 'data:' . $mime_type . ';base64,' . base64_encode( $binary ),
+		);
+	}
+
+	private static function store_generated_final_customization_pdf( WC_Order $order, $binary ) {
+		$filename = self::get_final_customization_pdf_filename( $order );
+		$upload   = wp_upload_bits( $filename, null, $binary );
+
+		if ( ! empty( $upload['error'] ) || empty( $upload['file'] ) ) {
+			return 0;
+		}
+
+		$attachment_id = wp_insert_attachment(
+			array(
+				'post_mime_type' => 'application/pdf',
+				'post_title'     => __( 'PDF final da personalizacao', EOP_TEXT_DOMAIN ),
+				'post_content'   => '',
+				'post_status'    => 'inherit',
+				'post_parent'    => $order->get_id(),
+			),
+			$upload['file'],
+			$order->get_id()
+		);
+
+		if ( is_wp_error( $attachment_id ) || ! $attachment_id ) {
+			return 0;
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		update_attached_file( $attachment_id, $upload['file'] );
+
+		$metadata = wp_generate_attachment_metadata( $attachment_id, $upload['file'] );
+
+		if ( ! is_wp_error( $metadata ) && is_array( $metadata ) ) {
+			wp_update_attachment_metadata( $attachment_id, $metadata );
+		}
+
+		return absint( $attachment_id );
 	}
 
 	private static function build_pdf_binary( WC_Order $order, $state ) {
@@ -3544,25 +4342,77 @@ class EOP_Post_Confirmation_Flow {
 		return self::implode_address_parts( $parts );
 	}
 
+	private static function get_allowed_attachment_upload_mimes() {
+		return apply_filters(
+			'eop_post_confirmation_allowed_attachment_mimes',
+			array(
+				'jpg|jpeg' => 'image/jpeg',
+				'png'      => 'image/png',
+				'pdf'      => 'application/pdf',
+			)
+		);
+	}
+
+	private static function get_max_attachment_upload_size() {
+		$default_limit = 8 * MB_IN_BYTES;
+		$wp_limit      = function_exists( 'wp_max_upload_size' ) ? (int) wp_max_upload_size() : 0;
+
+		if ( $wp_limit > 0 ) {
+			$default_limit = min( $default_limit, $wp_limit );
+		}
+
+		return max( 1, (int) apply_filters( 'eop_post_confirmation_max_attachment_upload_size', $default_limit ) );
+	}
+
+	private static function get_upload_notice_from_error( WP_Error $error ) {
+		$code = sanitize_key( (string) $error->get_error_code() );
+
+		if ( in_array( $code, array( 'invalid_file_type', 'file_too_large', 'upload_failed', 'missing_file' ), true ) ) {
+			return $code;
+		}
+
+		return 'invalid_file';
+	}
+
 	private static function store_upload( $file ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/media.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 
+		if ( ! is_array( $file ) || empty( $file['name'] ) || empty( $file['tmp_name'] ) ) {
+			return new WP_Error( 'missing_file', __( 'Nenhum arquivo foi enviado.', EOP_TEXT_DOMAIN ) );
+		}
+
+		$upload_error = isset( $file['error'] ) ? (int) $file['error'] : UPLOAD_ERR_OK;
+
+		if ( UPLOAD_ERR_OK !== $upload_error ) {
+			return new WP_Error( 'upload_failed', __( 'Falha ao receber o arquivo enviado.', EOP_TEXT_DOMAIN ) );
+		}
+
+		$max_upload_size = self::get_max_attachment_upload_size();
+
+		if ( ! empty( $file['size'] ) && (int) $file['size'] > $max_upload_size ) {
+			return new WP_Error( 'file_too_large', __( 'Arquivo acima do limite permitido.', EOP_TEXT_DOMAIN ) );
+		}
+
+		$allowed_mimes = self::get_allowed_attachment_upload_mimes();
+		$file_check    = wp_check_filetype_and_ext( (string) $file['tmp_name'], (string) $file['name'], $allowed_mimes );
+		$detected_type = isset( $file_check['type'] ) ? (string) $file_check['type'] : '';
+
+		if ( '' === $detected_type || ! in_array( $detected_type, array_values( $allowed_mimes ), true ) ) {
+			return new WP_Error( 'invalid_file_type', __( 'Formato de arquivo nao permitido.', EOP_TEXT_DOMAIN ) );
+		}
+
 		$uploaded = wp_handle_upload(
 			$file,
 			array(
 				'test_form' => false,
-				'mimes'     => array(
-					'jpg|jpeg' => 'image/jpeg',
-					'png'      => 'image/png',
-					'pdf'      => 'application/pdf',
-				),
+				'mimes'     => $allowed_mimes,
 			)
 		);
 
 		if ( isset( $uploaded['error'] ) || empty( $uploaded['file'] ) ) {
-			return new WP_Error( 'invalid_file', __( 'Arquivo invalido.', EOP_TEXT_DOMAIN ) );
+			return new WP_Error( 'upload_failed', __( 'Arquivo invalido.', EOP_TEXT_DOMAIN ) );
 		}
 
 		$attachment = array(

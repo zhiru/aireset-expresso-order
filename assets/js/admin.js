@@ -1456,6 +1456,7 @@
                 html += '<span class="eop-order-card__flow-pill">' + escapeHtml((i18n.orders_flow_contract || 'Contrato') + ': ' + ((order.post_confirmation_flow_summary.contract && order.post_confirmation_flow_summary.contract.accepted) ? (i18n.post_flow_contract_done || 'Aceite registrado.') : (i18n.post_flow_pending || 'Pendente'))) + '</span>';
                 html += '<span class="eop-order-card__flow-pill">' + escapeHtml((i18n.orders_flow_fields || 'Campos') + ': ' + (order.post_confirmation_flow_summary.documents ? (order.post_confirmation_flow_summary.documents.completed + '/' + order.post_confirmation_flow_summary.documents.total) : '0/0')) + '</span>';
                 html += '<span class="eop-order-card__flow-pill">' + escapeHtml((i18n.orders_flow_attachment || 'Anexo') + ': ' + (order.post_confirmation_flow_summary.attachment ? (order.post_confirmation_flow_summary.attachment.uploaded ? (i18n.orders_flow_uploaded || 'Enviado') : (order.post_confirmation_flow_summary.attachment.required ? (i18n.post_flow_pending || 'Pendente') : (i18n.orders_flow_optional || 'Opcional'))) : '—')) + '</span>';
+                html += '<span class="eop-order-card__flow-pill">' + escapeHtml((i18n.orders_flow_final_pdf || 'PDF final') + ': ' + ((order.post_confirmation_flow_summary.final_pdf && order.post_confirmation_flow_summary.final_pdf.ready) ? (i18n.orders_flow_ready || 'Pronto') : (i18n.post_flow_pending || 'Pendente'))) + '</span>';
                 html += '<span class="eop-order-card__flow-pill">' + escapeHtml((i18n.orders_flow_products || 'Produtos') + ': ' + (order.post_confirmation_flow_summary.products ? (order.post_confirmation_flow_summary.products.completed + '/' + order.post_confirmation_flow_summary.products.editable) : '0/0')) + '</span>';
                 html += '</div>';
                 html += '</div>';
@@ -1833,8 +1834,26 @@
         $('#eop-post-flow-order-data').html('<p>' + escapeHtml(i18n.post_flow_documents_empty || 'Nenhum dado do pedido preenchido no WooCommerce ate agora.') + '</p>');
         $('#eop-post-flow-attachment').html('<p>' + escapeHtml(i18n.post_flow_attachment_missing || 'Nenhum anexo registrado.') + '</p>');
         $('#eop-post-flow-products').html('<p>' + escapeHtml(i18n.post_flow_products_empty || 'Nenhuma personalizacao registrada ate agora.') + '</p>');
+        $('#eop-post-flow-downloads').html('<p>' + escapeHtml(i18n.post_flow_downloads_empty || 'Nenhum download complementar disponivel ainda.') + '</p>');
         $('#eop-post-flow-public-link').prop('hidden', true).attr('href', '#');
         $('#eop-post-flow-pdf-link').prop('hidden', true).attr('href', '#');
+        $('#eop-post-flow-final-pdf-link').prop('hidden', true).attr('href', '#');
+    }
+
+    function appendPostFlowDownloadRow($container, label, url, linkLabel, note) {
+        if (!$container || !$container.length || !url) {
+            return;
+        }
+
+        $container.append(
+            '<div class="eop-post-flow-row eop-post-flow-row--download">' +
+                '<strong>' + escapeHtml(label || '') + '</strong>' +
+                '<span>' +
+                    '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(linkLabel || label || 'Abrir') + '</a>' +
+                    (note ? '<small>' + escapeHtml(note) + '</small>' : '') +
+                '</span>' +
+            '</div>'
+        );
     }
 
     function renderPostConfirmationFlow(flow) {
@@ -1852,15 +1871,19 @@
         $('#eop-post-flow-order-data').empty();
         $('#eop-post-flow-attachment').empty();
         $('#eop-post-flow-products').empty();
+        $('#eop-post-flow-downloads').empty();
 
         var orderData = flow.order_data || flow.documents || [];
         var orderDataFilled = (flow.summary && typeof flow.summary.order_data_filled !== 'undefined') ? flow.summary.order_data_filled : (flow.summary ? flow.summary.documents_completed : 0);
         var orderDataTotal = (flow.summary && typeof flow.summary.order_data_total !== 'undefined') ? flow.summary.order_data_total : (flow.summary ? flow.summary.documents_total : 0);
+        var $downloads = $('#eop-post-flow-downloads');
 
         [
             { label: i18n.post_flow_stat_stage || 'Etapa atual', value: (flow.status && flow.status.current_stage_label) || '—' },
             { label: i18n.post_flow_stat_documents || 'Dados do pedido', value: orderDataFilled + '/' + orderDataTotal },
+            { label: i18n.post_flow_stat_signature_documents || 'Documentos para assinatura', value: (flow.summary ? (flow.summary.signature_documents_ready + '/' + flow.summary.signature_documents_total) : '0/0') },
             { label: i18n.post_flow_stat_attachment || 'Anexo', value: (flow.summary && flow.summary.attachment_uploaded) ? (i18n.post_flow_attachment_done || 'Anexo registrado com sucesso.') : ((flow.summary && flow.summary.attachment_required) ? (i18n.post_flow_pending || 'Pendente') : (i18n.orders_flow_optional || 'Opcional')) },
+            { label: i18n.post_flow_stat_final_pdf || 'PDF final', value: (flow.summary && flow.summary.final_pdf_ready) ? (i18n.post_flow_final_pdf_done || 'PDF final salvo no pedido.') : (i18n.post_flow_pending || 'Pendente') },
             { label: i18n.post_flow_stat_products || 'Produtos', value: (flow.summary ? (flow.summary.products_completed + '/' + flow.summary.products_editable) : '0/0') }
         ].forEach(function (stat) {
             $('#eop-post-flow-stats').append(
@@ -1921,6 +1944,7 @@
 
             if (flow.attachment.url) {
                 $('#eop-post-flow-attachment').append('<p><a href="' + escapeHtml(flow.attachment.url) + '" target="_blank" rel="noopener">' + escapeHtml(flow.attachment.filename || 'Arquivo') + '</a></p>');
+                appendPostFlowDownloadRow($downloads, i18n.post_flow_link_attachment || 'Logo enviada', flow.attachment.url, flow.attachment.filename || 'Arquivo', flow.attachment.uploaded_at || '');
             }
         } else {
             $('#eop-post-flow-attachment').html('<p>' + escapeHtml(i18n.post_flow_attachment_missing || 'Nenhum anexo registrado.') + '</p>');
@@ -1943,6 +1967,28 @@
         }
 
         if (flow.links && flow.links.public_url) {
+            appendPostFlowDownloadRow($downloads, i18n.post_flow_link_public || 'Jornada publica', flow.links.public_url, i18n.post_flow_open_public || 'Abrir link publico');
+        }
+
+        if (flow.signature_documents && flow.signature_documents.length) {
+            flow.signature_documents.forEach(function (documentRow) {
+                appendPostFlowDownloadRow($downloads, documentRow.title || (i18n.post_flow_stat_signature_documents || 'Documentos para assinatura'), documentRow.admin_view_url || documentRow.public_view_url || '', documentRow.filename || documentRow.title || 'PDF');
+            });
+        }
+
+        if (flow.links && flow.links.admin_pdf_url) {
+            appendPostFlowDownloadRow($downloads, i18n.post_flow_download_pdf || 'Baixar PDF complementar', flow.links.admin_pdf_url, i18n.post_flow_download_pdf || 'Baixar PDF complementar');
+        }
+
+        if (flow.links && flow.links.admin_final_pdf_url) {
+            appendPostFlowDownloadRow($downloads, i18n.post_flow_stat_final_pdf || 'PDF final', flow.links.admin_final_pdf_url, i18n.post_flow_download_final_pdf || 'Baixar PDF final da personalizacao', (flow.final_customization_pdf && flow.final_customization_pdf.generated_at) ? flow.final_customization_pdf.generated_at : '');
+        }
+
+        if (!$downloads.children().length) {
+            $downloads.html('<p>' + escapeHtml(i18n.post_flow_downloads_empty || 'Nenhum download complementar disponivel ainda.') + '</p>');
+        }
+
+        if (flow.links && flow.links.public_url) {
             $('#eop-post-flow-public-link').prop('hidden', false).attr('href', flow.links.public_url).text(i18n.post_flow_open_public || 'Abrir link publico');
         } else {
             $('#eop-post-flow-public-link').prop('hidden', true).attr('href', '#');
@@ -1952,6 +1998,12 @@
             $('#eop-post-flow-pdf-link').prop('hidden', false).attr('href', flow.links.admin_pdf_url).text(i18n.post_flow_download_pdf || 'Baixar PDF complementar');
         } else {
             $('#eop-post-flow-pdf-link').prop('hidden', true).attr('href', '#');
+        }
+
+        if (flow.links && flow.links.admin_final_pdf_url) {
+            $('#eop-post-flow-final-pdf-link').prop('hidden', false).attr('href', flow.links.admin_final_pdf_url).text(i18n.post_flow_download_final_pdf || 'Baixar PDF final da personalizacao');
+        } else {
+            $('#eop-post-flow-final-pdf-link').prop('hidden', true).attr('href', '#');
         }
     }
 

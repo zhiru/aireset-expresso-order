@@ -246,9 +246,15 @@ defined( 'ABSPATH' ) || exit;
                         <div class="eop-post-flow-list" id="eop-post-flow-products"></div>
                     </div>
 
+                    <div class="eop-post-flow-card__section">
+                        <h3><?php esc_html_e( 'Downloads e links', EOP_TEXT_DOMAIN ); ?></h3>
+                        <div class="eop-post-flow-list" id="eop-post-flow-downloads"></div>
+                    </div>
+
                     <div class="eop-post-flow-card__actions">
                         <a class="eop-btn" id="eop-post-flow-public-link" href="#" target="_blank" rel="noopener" hidden><?php esc_html_e( 'Abrir link publico', EOP_TEXT_DOMAIN ); ?></a>
                         <a class="eop-btn eop-btn-secondary" id="eop-post-flow-pdf-link" href="#" target="_blank" rel="noopener" hidden><?php esc_html_e( 'Baixar PDF complementar', EOP_TEXT_DOMAIN ); ?></a>
+                        <a class="eop-btn eop-btn-secondary" id="eop-post-flow-final-pdf-link" href="#" target="_blank" rel="noopener" hidden><?php esc_html_e( 'Baixar PDF final da personalizacao', EOP_TEXT_DOMAIN ); ?></a>
                     </div>
                 </div>
             </div>
