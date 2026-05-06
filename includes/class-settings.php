@@ -19,6 +19,7 @@ class EOP_Settings {
             'flow_mode'                              => 'proposal',
             'discount_mode'                          => 'both',
             'enable_checkout_confirmation'           => 'no',
+            'service_products'                       => '',
             'order_page_id'                          => 0,
             'proposal_page_id'                       => 0,
             'brand_logo_url'                         => '',
@@ -139,6 +140,7 @@ class EOP_Settings {
             'flow_mode'                             => in_array( $input['flow_mode'] ?? $defaults['flow_mode'], array( 'proposal', 'direct_order' ), true ) ? (string) ( $input['flow_mode'] ?? $defaults['flow_mode'] ) : $defaults['flow_mode'],
             'discount_mode'                         => in_array( $input['discount_mode'] ?? $defaults['discount_mode'], array( 'both', 'percent', 'fixed' ), true ) ? (string) ( $input['discount_mode'] ?? $defaults['discount_mode'] ) : $defaults['discount_mode'],
             'enable_checkout_confirmation'         => 'yes' === ( $input['enable_checkout_confirmation'] ?? 'no' ) ? 'yes' : 'no',
+            'service_products'                     => sanitize_text_field( str_replace( array( "\r", "\n", ';' ), ',', (string) ( $input['service_products'] ?? $defaults['service_products'] ) ) ),
             'order_page_id'                        => absint( $input['order_page_id'] ?? $defaults['order_page_id'] ),
             'proposal_page_id'                     => absint( $input['proposal_page_id'] ?? $defaults['proposal_page_id'] ),
             'brand_logo_url'                       => esc_url_raw( $input['brand_logo_url'] ?? $defaults['brand_logo_url'] ),
@@ -303,6 +305,50 @@ class EOP_Settings {
     public static function get_post_confirmation_locked_product_selector_state( $settings = array() ) {
 		$settings = ! empty( $settings ) && is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
         $raw      = str_replace( array( "\r", "\n", ';' ), ',', (string) ( $settings['post_confirmation_locked_products'] ?? '' ) );
+
+        return self::get_product_selector_state_from_raw( $raw );
+    }
+
+    public static function get_service_product_selector_state( $settings = array() ) {
+		$settings = ! empty( $settings ) && is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
+        $raw      = str_replace( array( "\r", "\n", ';' ), ',', (string) ( $settings['service_products'] ?? '' ) );
+
+        return self::get_product_selector_state_from_raw( $raw );
+    }
+
+    public static function get_service_product_tokens( $settings = array() ) {
+		$settings = ! empty( $settings ) && is_array( $settings ) ? wp_parse_args( $settings, self::get_defaults() ) : self::get_all();
+        $raw      = str_replace( array( "\r", "\n", ';' ), ',', (string) ( $settings['service_products'] ?? '' ) );
+
+        return array_values( array_unique( array_filter( array_map( 'strtolower', array_map( 'trim', explode( ',', $raw ) ) ) ) ) );
+    }
+
+    public static function is_service_product( $product ) {
+        if ( ! $product instanceof WC_Product ) {
+            return false;
+        }
+
+        $tokens = self::get_service_product_tokens();
+
+        if ( empty( $tokens ) ) {
+            return false;
+        }
+
+        $candidates = array_filter(
+            array(
+                strtolower( (string) $product->get_id() ),
+                strtolower( (string) $product->get_parent_id() ),
+                strtolower( (string) $product->get_sku() ),
+            ),
+            static function ( $value ) {
+                return '' !== trim( (string) $value ) && '0' !== (string) $value;
+            }
+        );
+
+        return (bool) array_intersect( $tokens, $candidates );
+    }
+
+    private static function get_product_selector_state_from_raw( $raw ) {
         $tokens   = array_values( array_unique( array_filter( array_map( 'trim', explode( ',', $raw ) ) ) ) );
 
         if ( ! class_exists( 'WC_Product' ) || ! function_exists( 'wc_get_product' ) || ! function_exists( 'wc_get_products' ) ) {
@@ -481,6 +527,7 @@ class EOP_Settings {
             'post_confirmation_contract_document_description' => self::build_help_tooltip_payload( __( 'Descricao do documento principal', EOP_TEXT_DOMAIN ), __( 'Texto curto exibido abaixo do titulo do documento principal na etapa contratual.', EOP_TEXT_DOMAIN ), __( 'Serve como contexto rapido antes da leitura e do aceite.', EOP_TEXT_DOMAIN ) ),
             'post_confirmation_contract_checkbox_label' => self::build_help_tooltip_payload( __( 'Texto do aceite', EOP_TEXT_DOMAIN ), __( 'Frase que acompanha o checkbox de aceite do contrato.', EOP_TEXT_DOMAIN ), __( 'Deixa explicito o consentimento antes do avanço.', EOP_TEXT_DOMAIN ) ),
             'post_confirmation_contract_button_label' => self::build_help_tooltip_payload( __( 'Botao do contrato', EOP_TEXT_DOMAIN ), __( 'Texto do botao que envia o aceite e libera a proxima etapa do fluxo.', EOP_TEXT_DOMAIN ), __( 'Muda a chamada para a acao principal na etapa do contrato.', EOP_TEXT_DOMAIN ) ),
+            'service_products' => self::build_help_tooltip_payload( __( 'Produtos considerados servicos', EOP_TEXT_DOMAIN ), __( 'Selecione produtos que devem aparecer separados dos produtos comuns nos totalizadores.', EOP_TEXT_DOMAIN ), __( 'Tambem remove esses itens da edicao de nomes no fluxo complementar.', EOP_TEXT_DOMAIN ) ),
             'post_confirmation_locked_products' => self::build_help_tooltip_payload( __( 'Produtos bloqueados', EOP_TEXT_DOMAIN ), __( 'Selecione os produtos cujo nome nao deve ser alterado na etapa final de personalizacao.', EOP_TEXT_DOMAIN ), __( 'Esses itens ficam protegidos contra edicao do nome pelo cliente.', EOP_TEXT_DOMAIN ) ),
             'post_confirmation_require_attachment' => self::build_help_tooltip_payload( __( 'Exigir anexo', EOP_TEXT_DOMAIN ), __( 'Define se o envio do anexo sera obrigatorio antes de continuar o fluxo.', EOP_TEXT_DOMAIN ), __( 'Quando ativado, o cliente precisa anexar o arquivo para seguir.', EOP_TEXT_DOMAIN ) ),
             'post_confirmation_upload_title' => self::build_help_tooltip_payload( __( 'Titulo do upload', EOP_TEXT_DOMAIN ), __( 'Titulo principal da etapa em que o cliente envia arquivos complementares.', EOP_TEXT_DOMAIN ), __( 'Aparece no topo do bloco de upload.', EOP_TEXT_DOMAIN ) ),
@@ -786,8 +833,8 @@ class EOP_Settings {
         }
 
         $wc_version   = defined( 'WC_VERSION' ) ? WC_VERSION : EOP_VERSION;
-        $font_css_path = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/css/jquery.fontselect.css';
-        $font_js_path  = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/js/jquery.fontselect.js';
+        $font_css_path = EOP_PLUGIN_DIR . 'assets/css/jquery.fontselect.css';
+        $font_js_path  = EOP_PLUGIN_DIR . 'assets/js/jquery.fontselect.js';
 
         wp_enqueue_style( 'select2', WC()->plugin_url() . '/assets/css/select2.css', array(), $wc_version );
         wp_enqueue_script( 'select2', WC()->plugin_url() . '/assets/js/select2/select2.full.min.js', array( 'jquery' ), $wc_version, true );
@@ -811,9 +858,9 @@ class EOP_Settings {
         if ( file_exists( $font_css_path ) ) {
             wp_enqueue_style(
                 'eop-fontselect',
-                content_url( 'plugins/checkout-aireset-master/backend/assets/css/jquery.fontselect.css' ),
+                EOP_PLUGIN_URL . 'assets/css/jquery.fontselect.css',
                 array(),
-                EOP_VERSION
+                (string) filemtime( $font_css_path )
             );
         }
 
@@ -822,9 +869,9 @@ class EOP_Settings {
         if ( file_exists( $font_js_path ) ) {
             wp_enqueue_script(
                 'eop-fontselect',
-                content_url( 'plugins/checkout-aireset-master/backend/assets/js/jquery.fontselect.js' ),
+                EOP_PLUGIN_URL . 'assets/js/jquery.fontselect.js',
                 array( 'jquery' ),
-                EOP_VERSION,
+                (string) filemtime( $font_js_path ),
                 true
             );
         }
@@ -887,6 +934,11 @@ class EOP_Settings {
         $should_render_confirmation_documents = self::should_render_admin_section( $section, 'confirmation-flow-documents' );
         $should_render_confirmation_preview = self::should_render_admin_section( $section, 'confirmation-flow-preview' );
         $pages                          = $should_render_general_config ? get_pages() : array();
+        $service_selector               = $should_render_general_config ? self::get_service_product_selector_state( $settings ) : array(
+            'options'          => array(),
+            'missing_tokens'   => array(),
+            'serialized_value' => '',
+        );
         $locked_selector                = $should_render_confirmation_general ? self::get_post_confirmation_locked_product_selector_state( $settings ) : array(
             'options'          => array(),
             'missing_tokens'   => array(),
@@ -948,6 +1000,19 @@ class EOP_Settings {
                                         </span>
                                     </div>
                                     <small class="eop-settings-help"><?php esc_html_e( 'Mostra o botao de pagar apenas depois que o cliente confirmar a proposta.', EOP_TEXT_DOMAIN ); ?></small>
+                                </div>
+                                <div class="eop-settings-field is-full">
+                                    <?php self::render_help_label( 'label', __( 'Produtos considerados servicos', EOP_TEXT_DOMAIN ), 'service_products', array( 'for' => 'eop_service_products_selector' ) ); ?>
+                                    <input id="eop_service_products" type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[service_products]" value="<?php echo esc_attr( $service_selector['serialized_value'] ); ?>" />
+                                    <select id="eop_service_products_selector" class="eop-settings-product-selector" data-target-input="#eop_service_products" multiple>
+                                        <?php foreach ( $service_selector['options'] as $option ) : ?>
+                                            <option value="<?php echo esc_attr( $option['id'] ); ?>" selected="selected"><?php echo esc_html( $option['text'] ); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <small class="eop-settings-help"><?php esc_html_e( 'Esses itens aparecem em uma linha Servicos antes do total e nao entram na edicao do fluxo complementar.', EOP_TEXT_DOMAIN ); ?></small>
+                                    <?php if ( ! empty( $service_selector['missing_tokens'] ) ) : ?>
+                                        <small class="eop-settings-help"><?php echo esc_html( sprintf( __( 'Tokens antigos preservados ate a proxima atualizacao desta lista: %s', EOP_TEXT_DOMAIN ), implode( ', ', $service_selector['missing_tokens'] ) ) ); ?></small>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="eop-settings-field is-full">
                                     <label for="eop_order_page"><?php esc_html_e( 'Pagina do pedido', EOP_TEXT_DOMAIN ); ?></label>

@@ -393,8 +393,8 @@ class EOP_Document_Manager {
             $rows[] = array(
                 'key'   => 'subtotal',
                 'label' => __( 'Subtotal', EOP_TEXT_DOMAIN ),
-                'raw'   => (float) $totals['items_subtotal'],
-                'value' => wc_price( (float) $totals['items_subtotal'] ),
+                'raw'   => (float) ( $totals['items_subtotal'] ?? 0 ),
+                'value' => wc_price( (float) ( $totals['items_subtotal'] ?? 0 ) ),
                 'class' => '',
             );
         }
@@ -403,8 +403,8 @@ class EOP_Document_Manager {
             $rows[] = array(
                 'key'   => 'shipping',
                 'label' => __( 'Frete', EOP_TEXT_DOMAIN ),
-                'raw'   => (float) $totals['shipping_total'],
-                'value' => wc_price( (float) $totals['shipping_total'] ),
+                'raw'   => (float) ( $totals['shipping_total'] ?? 0 ),
+                'value' => wc_price( (float) ( $totals['shipping_total'] ?? 0 ) ),
                 'class' => '',
             );
         }
@@ -425,8 +425,20 @@ class EOP_Document_Manager {
             $rows[] = array(
                 'key'   => 'discount',
                 'label' => __( 'Desconto', EOP_TEXT_DOMAIN ),
-                'raw'   => (float) $totals['discount_total'] * -1,
-                'value' => wc_price( (float) $totals['discount_total'] * -1 ),
+                'raw'   => (float) ( $totals['discount_total'] ?? 0 ) * -1,
+                'value' => wc_price( (float) ( $totals['discount_total'] ?? 0 ) * -1 ),
+                'class' => '',
+            );
+        }
+
+        $services_total = isset( $totals['services_total'] ) ? (float) $totals['services_total'] : 0.0;
+
+        if ( $services_total > 0.0 ) {
+            $rows[] = array(
+                'key'   => 'services',
+                'label' => __( 'Servicos', EOP_TEXT_DOMAIN ),
+                'raw'   => $services_total,
+                'value' => wc_price( $services_total ),
                 'class' => '',
             );
         }
@@ -435,8 +447,8 @@ class EOP_Document_Manager {
             $rows[] = array(
                 'key'   => 'total',
                 'label' => __( 'Total', EOP_TEXT_DOMAIN ),
-                'raw'   => (float) $totals['grand_total'],
-                'value' => wc_price( (float) $totals['grand_total'] ),
+                'raw'   => (float) ( $totals['grand_total'] ?? 0 ),
+                'value' => wc_price( (float) ( $totals['grand_total'] ?? 0 ) ),
                 'class' => 'is-grand',
             );
         }
@@ -1672,6 +1684,7 @@ class EOP_Document_Manager {
             $rows[] = array(
                 'item'              => $item,
                 'product'           => $item->get_product(),
+                'is_service'        => class_exists( 'EOP_Settings' ) && method_exists( 'EOP_Settings', 'is_service_product' ) && EOP_Settings::is_service_product( $item->get_product() ),
                 'quantity'          => $quantity,
                 'unit_price'        => round( $unit_price, $decimals ),
                 'discount_percent'  => round( $discount_percent, 2 ),

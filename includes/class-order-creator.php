@@ -26,6 +26,8 @@ class EOP_Order_Creator {
     public static function sync_order_totals( WC_Order $order ) {
         $items_subtotal     = 0.0;
         $items_total        = 0.0;
+        $services_subtotal  = 0.0;
+        $services_total     = 0.0;
         $item_discount      = 0.0;
         $shipping_total     = 0.0;
         $fees_total         = 0.0;
@@ -34,9 +36,17 @@ class EOP_Order_Creator {
         foreach ( $order->get_items( 'line_item' ) as $item ) {
             $line_subtotal = (float) $item->get_subtotal();
             $line_total    = (float) $item->get_total();
+            $product       = $item instanceof WC_Order_Item_Product ? $item->get_product() : null;
+            $is_service    = class_exists( 'EOP_Settings' ) && method_exists( 'EOP_Settings', 'is_service_product' ) && EOP_Settings::is_service_product( $product );
 
-            $items_subtotal += $line_subtotal;
-            $items_total    += $line_total;
+            if ( $is_service ) {
+                $services_subtotal += $line_subtotal;
+                $services_total    += $line_total;
+            } else {
+                $items_subtotal += $line_subtotal;
+                $items_total    += $line_total;
+            }
+
             $item_discount  += max( 0, $line_subtotal - $line_total );
         }
 
@@ -57,7 +67,7 @@ class EOP_Order_Creator {
         $shipping_tax = (float) $order->get_shipping_tax();
         $tax_total    = round( max( 0, $cart_tax + $shipping_tax ), wc_get_price_decimals() );
         $discount     = round( $item_discount + $fee_discount_total, wc_get_price_decimals() );
-        $grand_total  = round( max( 0, $items_total + $fees_total + $shipping_total + $tax_total ), wc_get_price_decimals() );
+        $grand_total  = round( max( 0, $items_total + $services_total + $fees_total + $shipping_total + $tax_total ), wc_get_price_decimals() );
 
         $needs_save = false;
 
@@ -83,6 +93,8 @@ class EOP_Order_Creator {
         return array(
             'items_subtotal' => $items_subtotal,
             'items_total'    => $items_total,
+            'services_subtotal' => $services_subtotal,
+            'services_total' => $services_total,
             'shipping_total' => $shipping_total,
             'fees_total'     => $fees_total,
             'tax_total'      => $tax_total,

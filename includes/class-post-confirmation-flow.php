@@ -1071,6 +1071,9 @@ class EOP_Post_Confirmation_Flow {
                                         $item      = $line_item['item'];
                                         $product   = $line_item['product'];
                                         $item_id   = $item->get_id();
+                                        if ( self::is_service_product( $product ) ) {
+                                            continue;
+                                        }
                                         $locked    = self::is_product_locked( $product );
                                         $image_url = $product ? wp_get_attachment_image_url( $product->get_image_id(), 'thumbnail' ) : '';
                                         $sku       = $product ? (string) $product->get_sku() : '';
@@ -1904,6 +1907,9 @@ class EOP_Post_Confirmation_Flow {
 							$item      = $line_item['item'];
 							$product   = $line_item['product'];
 							$item_id   = $item->get_id();
+							if ( self::is_service_product( $product ) ) {
+								continue;
+							}
 							$locked    = self::is_product_locked( $product );
 							$image_url = $product ? wp_get_attachment_image_url( $product->get_image_id(), 'thumbnail' ) : '';
 							$sku       = $product ? (string) $product->get_sku() : '';
@@ -2091,6 +2097,10 @@ class EOP_Post_Confirmation_Flow {
 			$locked  = self::is_product_locked( $product );
 			$sku     = $product ? (string) $product->get_sku() : '';
 
+			if ( self::is_service_product( $product ) ) {
+				continue;
+			}
+
 			if ( $locked ) {
 				$updates[] = array(
 					'item'          => $item,
@@ -2232,7 +2242,7 @@ class EOP_Post_Confirmation_Flow {
 
 			$product = $item->get_product();
 
-			if ( ! self::is_product_locked( $product ) ) {
+			if ( ! self::is_service_product( $product ) && ! self::is_product_locked( $product ) ) {
 				return true;
 			}
 		}
@@ -2245,7 +2255,7 @@ class EOP_Post_Confirmation_Flow {
 			/** @var WC_Order_Item_Product $item */
 			$product = $item->get_product();
 
-			if ( self::is_product_locked( $product ) ) {
+			if ( self::is_service_product( $product ) || self::is_product_locked( $product ) ) {
 				continue;
 			}
 
@@ -2277,6 +2287,10 @@ class EOP_Post_Confirmation_Flow {
 			}
 
 			$product = $item->get_product();
+			if ( self::is_service_product( $product ) ) {
+				continue;
+			}
+
 			$rows[]  = array(
 				'original_name' => (string) $item->get_meta( '_eop_original_product_snapshot', true ) ?: $item->get_name(),
 				'custom_name'   => self::get_item_custom_name( $item, $state ),
@@ -2298,6 +2312,10 @@ class EOP_Post_Confirmation_Flow {
 			}
 
 			$product       = $item->get_product();
+			if ( self::is_service_product( $product ) ) {
+				continue;
+			}
+
 			$image_id      = $product ? $product->get_image_id() : 0;
 			$rows[] = array(
 				'item_id'       => $item->get_id(),
@@ -2559,6 +2577,10 @@ class EOP_Post_Confirmation_Flow {
 
 			$product = $item->get_product();
 
+			if ( self::is_service_product( $product ) ) {
+				continue;
+			}
+
 			if ( self::is_product_locked( $product ) ) {
 				$locked++;
 				continue;
@@ -2586,6 +2608,10 @@ class EOP_Post_Confirmation_Flow {
 		foreach ( $line_items as $line_item ) {
 			$item    = $line_item['item'];
 			$product = $line_item['product'];
+
+			if ( self::is_service_product( $product ) ) {
+				continue;
+			}
 
 			if ( self::is_product_locked( $product ) ) {
 				$locked++;
@@ -3226,6 +3252,10 @@ class EOP_Post_Confirmation_Flow {
 		}
 
 		return false;
+	}
+
+	private static function is_service_product( $product ) {
+		return class_exists( 'EOP_Settings' ) && method_exists( 'EOP_Settings', 'is_service_product' ) && EOP_Settings::is_service_product( $product );
 	}
 
 	private static function get_locked_product_tokens() {

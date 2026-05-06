@@ -571,8 +571,8 @@ class EOP_Admin_Page {
             'scripts' => array( 'select2', 'eop-admin', 'eop-admin-flyinmenu', 'eop-coloris', 'eop-settings-admin' ),
         );
 
-        $font_css_path = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/css/jquery.fontselect.css';
-        $font_js_path  = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/js/jquery.fontselect.js';
+        $font_css_path = EOP_PLUGIN_DIR . 'assets/css/jquery.fontselect.css';
+        $font_js_path  = EOP_PLUGIN_DIR . 'assets/js/jquery.fontselect.js';
 
         wp_enqueue_media();
         wp_enqueue_style( 'eop-coloris', EOP_PLUGIN_URL . 'assets/css/coloris.min.css', array(), EOP_VERSION );
@@ -586,9 +586,9 @@ class EOP_Admin_Page {
         if ( file_exists( $font_css_path ) ) {
             wp_enqueue_style(
                 'eop-fontselect',
-                content_url( 'plugins/checkout-aireset-master/backend/assets/css/jquery.fontselect.css' ),
+                EOP_PLUGIN_URL . 'assets/css/jquery.fontselect.css',
                 array(),
-                EOP_VERSION
+                (string) filemtime( $font_css_path )
             );
         }
 
@@ -601,9 +601,9 @@ class EOP_Admin_Page {
         if ( file_exists( $font_js_path ) ) {
             wp_enqueue_script(
                 'eop-fontselect',
-                content_url( 'plugins/checkout-aireset-master/backend/assets/js/jquery.fontselect.js' ),
+                EOP_PLUGIN_URL . 'assets/js/jquery.fontselect.js',
                 array( 'jquery' ),
-                EOP_VERSION,
+                (string) filemtime( $font_js_path ),
                 true
             );
         }
