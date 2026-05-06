@@ -229,6 +229,7 @@ class EOP_Document_Manager {
             'show_quantity'       => $settings[ $prefix . '_show_quantity' ] ?? 'yes',
             'show_unit_price'     => $settings[ $prefix . '_show_unit_price' ] ?? 'yes',
             'show_discount'       => $settings[ $prefix . '_show_discount' ] ?? 'yes',
+            'discount_display_mode' => $settings[ $prefix . '_discount_display_mode' ] ?? 'both',
             'show_discounted_unit_price' => $settings[ $prefix . '_show_discounted_unit_price' ] ?? 'yes',
             'show_line_total'     => $settings[ $prefix . '_show_line_total' ] ?? 'yes',
             'show_total_subtotal' => $settings[ $prefix . '_show_total_subtotal' ] ?? 'yes',
@@ -253,6 +254,7 @@ class EOP_Document_Manager {
                 'meta_font_size'          => '13',
                 'table_header_font_size'  => '12',
                 'table_body_font_size'    => '14',
+                'table_body_line_height'  => '1.35',
                 'totals_font_size'        => '16',
                 'note_font_size'          => '13',
             );
@@ -267,6 +269,7 @@ class EOP_Document_Manager {
             'meta_font_size'          => self::sanitize_pdf_font_size( $settings[ $prefix . '_meta_font_size' ] ?? $defaults['meta_font_size'], $defaults['meta_font_size'] ),
             'table_header_font_size'  => self::sanitize_pdf_font_size( $settings[ $prefix . '_table_header_font_size' ] ?? $defaults['table_header_font_size'], $defaults['table_header_font_size'] ),
             'table_body_font_size'    => self::sanitize_pdf_font_size( $settings[ $prefix . '_table_body_font_size' ] ?? $defaults['table_body_font_size'], $defaults['table_body_font_size'] ),
+            'table_body_line_height'  => self::sanitize_pdf_line_height( $settings[ $prefix . '_table_body_line_height' ] ?? $defaults['table_body_line_height'], $defaults['table_body_line_height'] ),
             'totals_font_size'        => self::sanitize_pdf_font_size( $settings[ $prefix . '_totals_font_size' ] ?? $defaults['totals_font_size'], $defaults['totals_font_size'] ),
             'note_font_size'          => self::sanitize_pdf_font_size( $settings[ $prefix . '_note_font_size' ] ?? $defaults['note_font_size'], $defaults['note_font_size'] ),
         );
@@ -283,6 +286,27 @@ class EOP_Document_Manager {
         }
 
         return sanitize_text_field( (string) ( $settings[ $prefix . '_discount_suffix' ] ?? $default ) );
+    }
+
+    public static function get_document_discounted_unit_price_suffix( $document_type = 'order' ) {
+        $settings = self::get_pdf_settings();
+        $prefix   = 'proposal' === self::normalize_document_type( $document_type ) ? 'proposal' : 'order';
+        $default  = '/ un.';
+
+        if ( class_exists( 'EOP_PDF_Settings' ) ) {
+            $defaults = EOP_PDF_Settings::get_defaults();
+            $default  = (string) ( $defaults[ $prefix . '_discounted_unit_price_suffix' ] ?? $default );
+        }
+
+        return sanitize_text_field( (string) ( $settings[ $prefix . '_discounted_unit_price_suffix' ] ?? $default ) );
+    }
+
+    public static function get_document_discount_display_mode( $document_type = 'order' ) {
+        $settings = self::get_pdf_settings();
+        $prefix   = 'proposal' === self::normalize_document_type( $document_type ) ? 'proposal' : 'order';
+        $mode     = sanitize_key( (string) ( $settings[ $prefix . '_discount_display_mode' ] ?? 'both' ) );
+
+        return in_array( $mode, array( 'percent', 'currency', 'both' ), true ) ? $mode : 'both';
     }
 
     public static function get_document_item_labels( $document_type = 'order' ) {
@@ -636,6 +660,7 @@ class EOP_Document_Manager {
         $column_labels    = self::get_document_item_labels( $document_type );
         $line_items       = self::get_order_line_items_display_data( $order );
         $discount_suffix  = self::get_document_discount_suffix( $document_type );
+        $discount_display_mode = self::get_document_discount_display_mode( $document_type );
         $shop_name        = trim( (string) $settings['shop_name'] );
         $shop_logo_url    = self::get_document_logo_source( $settings, $embed_assets );
         $shop_logo_height = self::sanitize_css_measurement( $settings['shop_logo_height'] ?? '' );
@@ -669,6 +694,7 @@ class EOP_Document_Manager {
                 '--eop-doc-meta-size: ' . absint( $visual_settings['meta_font_size'] ) . 'px',
                 '--eop-doc-table-header-size: ' . absint( $visual_settings['table_header_font_size'] ) . 'px',
                 '--eop-doc-table-body-size: ' . absint( $visual_settings['table_body_font_size'] ) . 'px',
+                '--eop-doc-table-body-line-height: ' . self::sanitize_pdf_line_height( $visual_settings['table_body_line_height'] ?? '1.35', '1.35' ),
                 '--eop-doc-totals-size: ' . absint( $visual_settings['totals_font_size'] ) . 'px',
                 '--eop-doc-note-size: ' . absint( $visual_settings['note_font_size'] ) . 'px',
             )
@@ -762,17 +788,21 @@ class EOP_Document_Manager {
                                         <?php elseif ( 'unit_price' === $column['key'] ) : ?>
                                             <span class="eop-pdf-preview__money"><?php echo wp_kses_post( wc_price( $line_item['unit_price'] ) ); ?></span>
                                         <?php elseif ( 'discount' === $column['key'] ) : ?>
-                                            <span class="eop-pdf-preview__discount-line">
-                                                <strong><?php echo esc_html( self::format_percentage( $line_item['discount_percent'] ) ); ?></strong>
-                                                <span class="eop-pdf-preview__discount-meta">
-                                                    <span class="eop-pdf-preview__money"><?php echo wp_kses_post( wc_price( $line_item['discount_per_unit'] ) ); ?></span>
-                                                    <?php if ( '' !== $discount_line ) : ?>
-                                                        <?php echo ' ' . esc_html( $discount_line ); ?>
-                                                    <?php endif; ?>
+                                            <?php if ( 'both' === $discount_display_mode ) : ?>
+                                                <span class="eop-pdf-preview__discount-line">
+                                                    <strong><?php echo esc_html( self::format_percentage( $line_item['discount_percent'] ) ); ?></strong>
+                                                    <span class="eop-pdf-preview__discount-meta">
+                                                        <span class="eop-pdf-preview__money"><?php echo wp_kses_post( wc_price( $line_item['discount_per_unit'] ) ); ?></span>
+                                                        <?php if ( '' !== $discount_line ) : ?>
+                                                            <?php echo ' ' . esc_html( $discount_line ); ?>
+                                                        <?php endif; ?>
+                                                    </span>
                                                 </span>
-                                            </span>
+                                            <?php else : ?>
+                                                <span class="eop-pdf-preview__money"><?php echo esc_html( self::format_discount_column_value( $line_item, $document_type ) ); ?></span>
+                                            <?php endif; ?>
                                         <?php elseif ( 'discounted_unit_price' === $column['key'] ) : ?>
-                                            <span class="eop-pdf-preview__money"><?php echo wp_kses_post( wc_price( $line_item['discounted_unit_price'] ) ); ?></span>
+                                            <span class="eop-pdf-preview__money"><?php echo esc_html( self::format_discounted_unit_price_value( $line_item, $document_type ) ); ?></span>
                                         <?php elseif ( 'line_total' === $column['key'] ) : ?>
                                             <span class="eop-pdf-preview__money"><?php echo wp_kses_post( wc_price( $line_item['line_total'] ) ); ?></span>
                                         <?php endif; ?>
@@ -1012,7 +1042,6 @@ class EOP_Document_Manager {
         $column_lookup   = array_fill_keys( $column_keys, true );
         $column_positions = self::get_pdf_table_positions( $column_keys );
         $column_labels   = self::get_document_item_labels( $document_type );
-        $discount_suffix = self::get_document_discount_suffix( $document_type );
         $date            = $order->get_date_created();
         $document_number = self::get_document_number( $order, $document_type, false );
         $company_name    = trim( (string) $settings['shop_name'] );
@@ -1028,12 +1057,14 @@ class EOP_Document_Manager {
         $meta_font_size  = self::scale_pdf_font_size( $visual_settings['meta_font_size'], 9 );
         $table_header_font_size = self::scale_pdf_font_size( $visual_settings['table_header_font_size'], 8 );
         $table_body_font_size   = self::scale_pdf_font_size( $visual_settings['table_body_font_size'], 9 );
+        $table_body_line_height = self::sanitize_pdf_line_height( $visual_settings['table_body_line_height'] ?? '1.35', '1.35' );
         $totals_font_size       = self::scale_pdf_font_size( $visual_settings['totals_font_size'], 11 );
         $note_font_size         = self::scale_pdf_font_size( $visual_settings['note_font_size'], 9 );
         $company_font_size      = max( 12, $meta_font_size + 5 );
         $summary_label_size     = max( 8, $meta_font_size - 1 );
         $summary_value_size     = max( 10, $meta_font_size + 1 );
         $discount_secondary_size = max( 8, $table_body_font_size - 1 );
+        $body_line_step         = max( $table_body_font_size + 1, (int) round( $table_body_font_size * max( 1.0, (float) $table_body_line_height ) ) );
         $header_background_color = $visual_settings['header_background_color'];
         $header_text_color       = $visual_settings['header_text_color'];
         $body_text_color         = $visual_settings['body_text_color'];
@@ -1117,6 +1148,7 @@ class EOP_Document_Manager {
         $start_page();
 
         $document_heading = 'proposal' === $document_type ? __( 'PROPOSTA', EOP_TEXT_DOMAIN ) : __( 'PEDIDO', EOP_TEXT_DOMAIN );
+        $document_heading_y = $y + 10;
         $summary_blocks   = array();
 
         $summary_blocks[] = array(
@@ -1154,7 +1186,7 @@ class EOP_Document_Manager {
             $add_text_at( $company_line, $page_left, $y - 24 - ( $line_index * 14 ), 'F1', $meta_font_size, 'left', $muted_text_color );
         }
 
-        $add_text_at( $document_heading, $page_right, $y + 2, 'F2', $title_font_size, 'right', $body_text_color );
+        $add_text_at( $document_heading, $page_right, $document_heading_y, 'F2', $title_font_size, 'right', $body_text_color );
         if ( $test_mode ) {
             $add_text_at( __( 'MODO DE TESTE', EOP_TEXT_DOMAIN ), $page_right, $y - 16, 'F2', max( 10, $meta_font_size ), 'right', '#c93535' );
         }
@@ -1234,19 +1266,11 @@ class EOP_Document_Manager {
             }
 
             if ( isset( $column_lookup['discount'] ) ) {
-                $discount_parts = array(
-                    self::format_percentage( $line_item['discount_percent'] ),
-                    trim( self::format_money( $line_item['discount_per_unit'] ) . ( '' !== $discount_suffix ? ' ' . $discount_suffix : '' ) ),
-                );
-                $discount_parts = array_values( array_filter( $discount_parts, 'strlen' ) );
-
-                if ( ! empty( $discount_parts ) ) {
-                    $meta_lines['discount'] = implode( ' ', $discount_parts );
-                }
+                $meta_lines['discount'] = self::format_discount_column_value( $line_item, $document_type );
             }
 
             if ( isset( $column_lookup['discounted_unit_price'] ) ) {
-                $meta_lines['discounted_unit_price'] = self::format_money( $line_item['discounted_unit_price'] );
+                $meta_lines['discounted_unit_price'] = self::format_discounted_unit_price_value( $line_item, $document_type );
             }
 
             if ( isset( $column_lookup['line_total'] ) ) {
@@ -1254,7 +1278,7 @@ class EOP_Document_Manager {
             }
 
             $sku_line   = $show_sku && $product && $product->get_sku() ? sprintf( __( 'SKU: %s', EOP_TEXT_DOMAIN ), $product->get_sku() ) : '';
-            $row_height = max( 26, count( $name_lines ) * ( $table_body_font_size + 3 ) + ( '' !== $sku_line ? $meta_font_size + 4 : 0 ), $table_body_font_size ) + 14;
+            $row_height = max( 26, count( $name_lines ) * $body_line_step + ( '' !== $sku_line ? $meta_font_size + 4 : 0 ), $table_body_font_size ) + 14;
 
             $ensure_space( $row_height + 18 );
 
@@ -1263,7 +1287,7 @@ class EOP_Document_Manager {
 
             foreach ( $name_lines as $name_line ) {
                 $add_text_at( $name_line, $product_x, $line_y, 'F2', $table_body_font_size, 'left', $body_text_color );
-                $line_y -= $table_body_font_size + 3;
+                $line_y -= $body_line_step;
             }
 
             if ( '' !== $sku_line ) {
@@ -1516,6 +1540,7 @@ class EOP_Document_Manager {
         $font_url   = method_exists( 'EOP_Settings', 'get_font_stylesheet_url' ) ? EOP_Settings::get_font_stylesheet_url( $settings['font_family'] ?? '' ) : '';
         $font_css   = method_exists( 'EOP_Settings', 'get_font_css_family' ) ? EOP_Settings::get_font_css_family( $settings['font_family'] ?? '' ) : "'Segoe UI', sans-serif";
         $paper_size = isset( $settings['paper_size'] ) && 'letter' === $settings['paper_size'] ? 'Letter' : 'A4';
+        $visual     = self::get_document_visual_settings( $document_type );
         $css_path   = EOP_PLUGIN_DIR . 'assets/css/pdf-admin.css';
         $css        = file_exists( $css_path ) ? (string) file_get_contents( $css_path ) : '';
         $preview    = self::get_preview_html( $order, $document_type, true );
@@ -1531,6 +1556,7 @@ class EOP_Document_Manager {
         $css .= ".eop-pdf-preview__sheet { max-width: none !important; width: auto !important; margin: 0 auto !important; box-shadow: none !important; }\n";
         $css .= ".eop-pdf-preview__sheet--a4 { max-width: none !important; }\n";
         $css .= ".eop-pdf-preview__sheet--letter { max-width: none !important; }\n";
+        $css .= ".eop-pdf-preview__table thead th { background-color: " . $visual['header_background_color'] . " !important; color: " . $visual['header_text_color'] . " !important; }\n";
 
         return '<!doctype html><html><head><meta charset="utf-8">'
             . ( $font_url ? '<link rel="stylesheet" href="' . esc_url( $font_url ) . '">' : '' )
@@ -1776,6 +1802,30 @@ class EOP_Document_Manager {
         return number_format_i18n( $value, $decimals ) . '%';
     }
 
+    private static function format_discount_column_value( $line_item, $document_type = 'order' ) {
+        $mode   = self::get_document_discount_display_mode( $document_type );
+        $suffix = self::get_document_discount_suffix( $document_type );
+        $parts   = array();
+
+        if ( 'percent' === $mode || 'both' === $mode ) {
+            $parts[] = self::format_percentage( $line_item['discount_percent'] ?? 0 );
+        }
+
+        if ( 'currency' === $mode || 'both' === $mode ) {
+            $money = self::format_money( $line_item['discount_per_unit'] ?? 0 );
+            $parts[] = trim( $money . ( '' !== $suffix ? ' ' . $suffix : '' ) );
+        }
+
+        return trim( implode( ' ', array_filter( $parts, 'strlen' ) ) );
+    }
+
+    private static function format_discounted_unit_price_value( $line_item, $document_type = 'order' ) {
+        $suffix = self::get_document_discounted_unit_price_suffix( $document_type );
+        $money  = self::format_money( $line_item['discounted_unit_price'] ?? 0 );
+
+        return trim( $money . ( '' !== $suffix ? ' ' . $suffix : '' ) );
+    }
+
     private static function sanitize_pdf_font_size( $value, $default = 12 ) {
         $size     = absint( $value );
         $fallback = max( 8, min( 72, absint( $default ) ) );
@@ -1785,6 +1835,19 @@ class EOP_Document_Manager {
         }
 
         return $size;
+    }
+
+    private static function sanitize_pdf_line_height( $value, $default = '1.35' ) {
+        $height   = floatval( str_replace( ',', '.', (string) $value ) );
+        $fallback = max( 1.0, min( 3.0, floatval( str_replace( ',', '.', (string) $default ) ) ) );
+
+        if ( $height < 0.8 || $height > 3.0 ) {
+            $height = $fallback;
+        }
+
+        $formatted = rtrim( rtrim( number_format( $height, 2, '.', '' ), '0' ), '.' );
+
+        return '' === $formatted ? (string) $fallback : $formatted;
     }
 
     private static function scale_pdf_font_size( $value, $minimum = 8 ) {

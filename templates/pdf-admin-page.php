@@ -585,8 +585,20 @@ if ( 'pdf' === $pdf_form_view ) {
                                 <input id="eop_doc_discount_suffix" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discount_suffix]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discount_suffix' ] ); ?>" placeholder="/ un." />
                             </div>
                             <div class="eop-settings-field">
+                                <label for="eop_doc_discount_display_mode"><?php esc_html_e( 'Formato da coluna de desconto', EOP_TEXT_DOMAIN ); ?></label>
+                                <select id="eop_doc_discount_display_mode" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discount_display_mode]">
+                                    <option value="percent" <?php selected( $pdf_settings[ $document . '_discount_display_mode' ], 'percent' ); ?>><?php esc_html_e( 'Porcentagem', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="currency" <?php selected( $pdf_settings[ $document . '_discount_display_mode' ], 'currency' ); ?>><?php esc_html_e( 'Moeda', EOP_TEXT_DOMAIN ); ?></option>
+                                    <option value="both" <?php selected( $pdf_settings[ $document . '_discount_display_mode' ], 'both' ); ?>><?php esc_html_e( 'Ambos', EOP_TEXT_DOMAIN ); ?></option>
+                                </select>
+                            </div>
+                            <div class="eop-settings-field">
                                 <label for="eop_doc_discounted_unit_price_label"><?php esc_html_e( 'Texto da coluna de valor unitario com desconto', EOP_TEXT_DOMAIN ); ?></label>
                                 <input id="eop_doc_discounted_unit_price_label" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discounted_unit_price_label]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discounted_unit_price_label' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_discounted_unit_price_suffix"><?php esc_html_e( 'Texto complementar do valor unitario com desconto', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_discounted_unit_price_suffix" type="text" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_discounted_unit_price_suffix]" value="<?php echo esc_attr( $pdf_settings[ $document . '_discounted_unit_price_suffix' ] ); ?>" placeholder="/ un." />
                             </div>
                             <div class="eop-settings-field">
                                 <label for="eop_doc_line_total_label"><?php esc_html_e( 'Texto da coluna de total do item', EOP_TEXT_DOMAIN ); ?></label>
@@ -633,6 +645,10 @@ if ( 'pdf' === $pdf_form_view ) {
                             <div class="eop-settings-field">
                                 <label for="eop_doc_table_body_font_size"><?php esc_html_e( 'Tamanho da fonte do corpo da tabela', EOP_TEXT_DOMAIN ); ?></label>
                                 <input id="eop_doc_table_body_font_size" type="number" min="8" max="72" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_table_body_font_size]" value="<?php echo esc_attr( $pdf_settings[ $document . '_table_body_font_size' ] ); ?>" />
+                            </div>
+                            <div class="eop-settings-field">
+                                <label for="eop_doc_table_body_line_height"><?php esc_html_e( 'Altura da linha do corpo da tabela', EOP_TEXT_DOMAIN ); ?></label>
+                                <input id="eop_doc_table_body_line_height" type="text" inputmode="decimal" name="<?php echo esc_attr( EOP_PDF_Settings::OPTION_KEY ); ?>[<?php echo esc_attr( $document ); ?>_table_body_line_height]" value="<?php echo esc_attr( $pdf_settings[ $document . '_table_body_line_height' ] ); ?>" placeholder="1.35" />
                             </div>
                             <div class="eop-settings-field">
                                 <label for="eop_doc_totals_font_size"><?php esc_html_e( 'Tamanho da fonte dos totais', EOP_TEXT_DOMAIN ); ?></label>

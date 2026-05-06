@@ -612,6 +612,7 @@
     --eop-doc-meta-size: 13px;
     --eop-doc-table-header-size: 12px;
     --eop-doc-table-body-size: 14px;
+    --eop-doc-table-body-line-height: 1.35;
     --eop-doc-totals-size: 16px;
     --eop-doc-note-size: 13px;
     color: var(--eop-doc-body-text);
@@ -638,6 +639,7 @@
 .eop-pdf-preview__header {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     gap: 24px;
     margin-bottom: 28px;
 }
@@ -645,7 +647,7 @@
 .eop-pdf-preview__brand {
     display: flex;
     gap: 18px;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .eop-pdf-preview__brand span,
@@ -697,6 +699,7 @@
     text-align: right;
     color: var(--eop-doc-muted-text);
     font-size: var(--eop-doc-meta-size);
+    padding-top: 2px;
 }
 
 .eop-pdf-preview__meta h3 {
@@ -743,6 +746,7 @@
 .eop-pdf-preview__table td {
     color: var(--eop-doc-body-text);
     font-size: var(--eop-doc-table-body-size);
+    line-height: var(--eop-doc-table-body-line-height);
 }
 
 .eop-pdf-preview__table thead th {
@@ -764,6 +768,7 @@
     color: var(--eop-doc-muted-text);
     white-space: nowrap;
     font-size: calc(var(--eop-doc-table-body-size) - 1px);
+    line-height: 1.35;
 }
 
 .eop-pdf-preview__discount-line {

@@ -81,6 +81,7 @@ class EOP_PDF_Settings {
             'meta_font_size'          => (string) $defaults[ $document_type . '_meta_font_size' ],
             'table_header_font_size'  => (string) $defaults[ $document_type . '_table_header_font_size' ],
             'table_body_font_size'    => (string) $defaults[ $document_type . '_table_body_font_size' ],
+            'table_body_line_height'   => (string) $defaults[ $document_type . '_table_body_line_height' ],
             'totals_font_size'        => (string) $defaults[ $document_type . '_totals_font_size' ],
             'note_font_size'          => (string) $defaults[ $document_type . '_note_font_size' ],
         );
@@ -172,7 +173,9 @@ class EOP_PDF_Settings {
                     'unit_price_label',
                     'discount_label',
                     'discount_suffix',
+                    'discount_display_mode',
                     'discounted_unit_price_label',
+                    'discounted_unit_price_suffix',
                     'line_total_label',
                     'quantity_position',
                     'unit_price_position',
@@ -188,6 +191,7 @@ class EOP_PDF_Settings {
                     'meta_font_size',
                     'table_header_font_size',
                     'table_body_font_size',
+                    'table_body_line_height',
                     'totals_font_size',
                     'note_font_size',
                     'show_total_subtotal',
@@ -251,13 +255,16 @@ class EOP_PDF_Settings {
             'eop_doc_show_quantity'            => self::build_tooltip_payload( $fields['document_show_quantity'] ),
             'eop_doc_show_unit_price'          => self::build_tooltip_payload( $fields['document_show_unit_price'] ),
             'eop_doc_show_discount'            => self::build_tooltip_payload( $fields['document_show_discount'] ),
+            'eop_doc_discount_display_mode'     => self::build_tooltip_payload( $fields['document_discount_display_mode'] ),
             'eop_doc_show_discounted_unit_price' => self::build_tooltip_payload( $fields['document_show_discounted_unit_price'] ),
             'eop_doc_show_line_total'          => self::build_tooltip_payload( $fields['document_show_line_total'] ),
             'eop_doc_product_label'            => self::build_tooltip_payload( $fields['document_product_label'] ),
             'eop_doc_quantity_label'           => self::build_tooltip_payload( $fields['document_quantity_label'] ),
             'eop_doc_unit_price_label'         => self::build_tooltip_payload( $fields['document_unit_price_label'] ),
             'eop_doc_discount_label'           => self::build_tooltip_payload( $fields['document_discount_label'] ),
+            'eop_doc_discount_suffix'          => self::build_tooltip_payload( $fields['document_discount_suffix'] ),
             'eop_doc_discounted_unit_price_label' => self::build_tooltip_payload( $fields['document_discounted_unit_price_label'] ),
+            'eop_doc_discounted_unit_price_suffix' => self::build_tooltip_payload( $fields['document_discounted_unit_price_suffix'] ),
             'eop_doc_line_total_label'         => self::build_tooltip_payload( $fields['document_line_total_label'] ),
             'eop_doc_show_total_subtotal'      => self::build_tooltip_payload( $fields['document_show_total_subtotal'] ),
             'eop_doc_show_total_shipping'      => self::build_tooltip_payload( $fields['document_show_total_shipping'] ),
@@ -309,7 +316,12 @@ class EOP_PDF_Settings {
             array(
                 'title'       => __( 'Colunas e totais', EOP_TEXT_DOMAIN ),
                 'description' => __( 'Definem quais colunas aparecem no detalhamento, como sao nomeadas e quais totais vao ao final do documento.', EOP_TEXT_DOMAIN ),
-                'fields'      => self::collect_documentation_fields( $fields, array( 'document_show_sku', 'document_show_quantity', 'document_show_unit_price', 'document_show_discount', 'document_show_discounted_unit_price', 'document_show_line_total', 'document_product_label', 'document_quantity_label', 'document_unit_price_label', 'document_discount_label', 'document_discounted_unit_price_label', 'document_line_total_label', 'document_show_total_subtotal', 'document_show_total_shipping', 'document_show_total_discount', 'document_show_total_total' ) ),
+                'fields'      => self::collect_documentation_fields( $fields, array( 'document_show_sku', 'document_show_quantity', 'document_show_unit_price', 'document_show_discount', 'document_discount_display_mode', 'document_show_discounted_unit_price', 'document_show_line_total', 'document_product_label', 'document_quantity_label', 'document_unit_price_label', 'document_discount_label', 'document_discount_suffix', 'document_discounted_unit_price_label', 'document_discounted_unit_price_suffix', 'document_line_total_label', 'document_show_total_subtotal', 'document_show_total_shipping', 'document_show_total_discount', 'document_show_total_total' ) ),
+            ),
+            array(
+                'title'       => __( 'Visual do documento', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Ajusta ritmo visual das linhas, tamanho de texto e escolhas de exibicao na tabela.', EOP_TEXT_DOMAIN ),
+                'fields'      => self::collect_documentation_fields( $fields, array( 'document_table_body_line_height', 'document_discount_display_mode', 'document_discount_suffix', 'document_discounted_unit_price_suffix' ) ),
             ),
             array(
                 'title'       => __( 'Documentos eletronicos', EOP_TEXT_DOMAIN ),
@@ -617,10 +629,23 @@ class EOP_PDF_Settings {
                 'effect' => __( 'Afeta preview, PDF e proposta publica.', EOP_TEXT_DOMAIN ),
                 'status' => 'active',
             ),
+            'document_discount_display_mode' => array(
+                'label'  => __( 'Formato da coluna de desconto', EOP_TEXT_DOMAIN ),
+                'help'   => __( 'Escolhe se a coluna de desconto mostra porcentagem, valor monetario ou ambos.', EOP_TEXT_DOMAIN ),
+                'effect' => __( 'Afeta preview, PDF e proposta publica.', EOP_TEXT_DOMAIN ),
+                'status' => 'active',
+                'values' => array( 'percent', 'currency', 'both' ),
+            ),
             'document_show_discounted_unit_price' => array(
                 'label'  => __( 'Exibir coluna de valor unitario com desconto', EOP_TEXT_DOMAIN ),
                 'help'   => __( 'Mostra o valor unitario final apos desconto.', EOP_TEXT_DOMAIN ),
                 'effect' => __( 'Afeta preview, PDF e proposta publica.', EOP_TEXT_DOMAIN ),
+                'status' => 'active',
+            ),
+            'document_table_body_line_height' => array(
+                'label'  => __( 'Altura da linha do corpo da tabela', EOP_TEXT_DOMAIN ),
+                'help'   => __( 'Controla o espacamento vertical das linhas de itens na tabela do PDF.', EOP_TEXT_DOMAIN ),
+                'effect' => __( 'Aumenta ou reduz a altura visual das linhas do PDF e do preview.', EOP_TEXT_DOMAIN ),
                 'status' => 'active',
             ),
             'document_show_line_total' => array(
@@ -653,10 +678,22 @@ class EOP_PDF_Settings {
                 'effect' => __( 'Aparece no preview, PDF e proposta publica.', EOP_TEXT_DOMAIN ),
                 'status' => 'active',
             ),
+            'document_discount_suffix' => array(
+                'label'  => __( 'Texto complementar da coluna de desconto', EOP_TEXT_DOMAIN ),
+                'help'   => __( 'Texto opcional mostrado depois do valor monetario do desconto por unidade.', EOP_TEXT_DOMAIN ),
+                'effect' => __( 'Aparece quando a coluna de desconto mostra o valor monetario.', EOP_TEXT_DOMAIN ),
+                'status' => 'active',
+            ),
             'document_discounted_unit_price_label' => array(
                 'label'  => __( 'Texto da coluna de valor unitario com desconto', EOP_TEXT_DOMAIN ),
                 'help'   => __( 'Personaliza o nome da coluna de valor final por unidade.', EOP_TEXT_DOMAIN ),
                 'effect' => __( 'Aparece no preview, PDF e proposta publica.', EOP_TEXT_DOMAIN ),
+                'status' => 'active',
+            ),
+            'document_discounted_unit_price_suffix' => array(
+                'label'  => __( 'Texto complementar do valor unitario com desconto', EOP_TEXT_DOMAIN ),
+                'help'   => __( 'Texto opcional mostrado depois do valor unitario ja com desconto, como / un..', EOP_TEXT_DOMAIN ),
+                'effect' => __( 'Aparece na coluna de valor unitario com desconto quando ela estiver ativa.', EOP_TEXT_DOMAIN ),
                 'status' => 'active',
             ),
             'document_line_total_label' => array(
@@ -838,7 +875,9 @@ class EOP_PDF_Settings {
             'order_unit_price_label'    => __( 'Valor unitario', EOP_TEXT_DOMAIN ),
             'order_discount_label'      => __( 'Desconto aplicado', EOP_TEXT_DOMAIN ),
             'order_discount_suffix'     => '/ un.',
+            'order_discount_display_mode' => 'both',
             'order_discounted_unit_price_label' => __( 'Valor unitario com desconto', EOP_TEXT_DOMAIN ),
+            'order_discounted_unit_price_suffix' => '/ un.',
             'order_line_total_label'    => __( 'Total', EOP_TEXT_DOMAIN ),
             'order_quantity_position'   => '10',
             'order_unit_price_position' => '20',
@@ -854,6 +893,7 @@ class EOP_PDF_Settings {
             'order_meta_font_size'      => '13',
             'order_table_header_font_size' => '12',
             'order_table_body_font_size' => '14',
+            'order_table_body_line_height' => '1.35',
             'order_totals_font_size'    => '16',
             'order_note_font_size'      => '13',
             'order_show_total_subtotal' => 'yes',
@@ -888,7 +928,9 @@ class EOP_PDF_Settings {
             'proposal_unit_price_label' => __( 'Valor unitario', EOP_TEXT_DOMAIN ),
             'proposal_discount_label'   => __( 'Desconto aplicado', EOP_TEXT_DOMAIN ),
             'proposal_discount_suffix'  => '/ un.',
+            'proposal_discount_display_mode' => 'both',
             'proposal_discounted_unit_price_label' => __( 'Valor unitario com desconto', EOP_TEXT_DOMAIN ),
+            'proposal_discounted_unit_price_suffix' => '/ un.',
             'proposal_line_total_label' => __( 'Total', EOP_TEXT_DOMAIN ),
             'proposal_quantity_position' => '10',
             'proposal_unit_price_position' => '20',
@@ -904,6 +946,7 @@ class EOP_PDF_Settings {
             'proposal_meta_font_size'    => '13',
             'proposal_table_header_font_size' => '12',
             'proposal_table_body_font_size' => '14',
+            'proposal_table_body_line_height' => '1.35',
             'proposal_totals_font_size'  => '16',
             'proposal_note_font_size'    => '13',
             'proposal_show_total_subtotal' => 'yes',
@@ -988,7 +1031,9 @@ class EOP_PDF_Settings {
             'order_unit_price_label'    => self::sanitize_label( $input['order_unit_price_label'] ?? $defaults['order_unit_price_label'], $defaults['order_unit_price_label'] ),
             'order_discount_label'      => self::sanitize_label( $input['order_discount_label'] ?? $defaults['order_discount_label'], $defaults['order_discount_label'] ),
             'order_discount_suffix'     => sanitize_text_field( $input['order_discount_suffix'] ?? $defaults['order_discount_suffix'] ),
+            'order_discount_display_mode' => in_array( $input['order_discount_display_mode'] ?? '', array( 'percent', 'currency', 'both' ), true ) ? $input['order_discount_display_mode'] : 'both',
             'order_discounted_unit_price_label' => self::sanitize_label( $input['order_discounted_unit_price_label'] ?? $defaults['order_discounted_unit_price_label'], $defaults['order_discounted_unit_price_label'] ),
+            'order_discounted_unit_price_suffix' => sanitize_text_field( $input['order_discounted_unit_price_suffix'] ?? $defaults['order_discounted_unit_price_suffix'] ),
             'order_line_total_label'    => self::sanitize_label( $input['order_line_total_label'] ?? $defaults['order_line_total_label'], $defaults['order_line_total_label'] ),
             'order_quantity_position'   => self::sanitize_column_position_value( $input['order_quantity_position'] ?? $defaults['order_quantity_position'], $defaults['order_quantity_position'] ),
             'order_unit_price_position' => self::sanitize_column_position_value( $input['order_unit_price_position'] ?? $defaults['order_unit_price_position'], $defaults['order_unit_price_position'] ),
@@ -1004,6 +1049,7 @@ class EOP_PDF_Settings {
             'order_meta_font_size'      => self::sanitize_font_size_value( $input['order_meta_font_size'] ?? $defaults['order_meta_font_size'], $defaults['order_meta_font_size'] ),
             'order_table_header_font_size' => self::sanitize_font_size_value( $input['order_table_header_font_size'] ?? $defaults['order_table_header_font_size'], $defaults['order_table_header_font_size'] ),
             'order_table_body_font_size' => self::sanitize_font_size_value( $input['order_table_body_font_size'] ?? $defaults['order_table_body_font_size'], $defaults['order_table_body_font_size'] ),
+            'order_table_body_line_height' => self::sanitize_line_height_value( $input['order_table_body_line_height'] ?? $defaults['order_table_body_line_height'], $defaults['order_table_body_line_height'] ),
             'order_totals_font_size'    => self::sanitize_font_size_value( $input['order_totals_font_size'] ?? $defaults['order_totals_font_size'], $defaults['order_totals_font_size'] ),
             'order_note_font_size'      => self::sanitize_font_size_value( $input['order_note_font_size'] ?? $defaults['order_note_font_size'], $defaults['order_note_font_size'] ),
             'order_show_total_subtotal' => self::sanitize_toggle( $input['order_show_total_subtotal'] ?? $defaults['order_show_total_subtotal'] ),
@@ -1038,7 +1084,9 @@ class EOP_PDF_Settings {
             'proposal_unit_price_label' => self::sanitize_label( $input['proposal_unit_price_label'] ?? $defaults['proposal_unit_price_label'], $defaults['proposal_unit_price_label'] ),
             'proposal_discount_label'   => self::sanitize_label( $input['proposal_discount_label'] ?? $defaults['proposal_discount_label'], $defaults['proposal_discount_label'] ),
             'proposal_discount_suffix'  => sanitize_text_field( $input['proposal_discount_suffix'] ?? $defaults['proposal_discount_suffix'] ),
+            'proposal_discount_display_mode' => in_array( $input['proposal_discount_display_mode'] ?? '', array( 'percent', 'currency', 'both' ), true ) ? $input['proposal_discount_display_mode'] : 'both',
             'proposal_discounted_unit_price_label' => self::sanitize_label( $input['proposal_discounted_unit_price_label'] ?? $defaults['proposal_discounted_unit_price_label'], $defaults['proposal_discounted_unit_price_label'] ),
+            'proposal_discounted_unit_price_suffix' => sanitize_text_field( $input['proposal_discounted_unit_price_suffix'] ?? $defaults['proposal_discounted_unit_price_suffix'] ),
             'proposal_line_total_label' => self::sanitize_label( $input['proposal_line_total_label'] ?? $defaults['proposal_line_total_label'], $defaults['proposal_line_total_label'] ),
             'proposal_quantity_position' => self::sanitize_column_position_value( $input['proposal_quantity_position'] ?? $defaults['proposal_quantity_position'], $defaults['proposal_quantity_position'] ),
             'proposal_unit_price_position' => self::sanitize_column_position_value( $input['proposal_unit_price_position'] ?? $defaults['proposal_unit_price_position'], $defaults['proposal_unit_price_position'] ),
@@ -1054,6 +1102,7 @@ class EOP_PDF_Settings {
             'proposal_meta_font_size'    => self::sanitize_font_size_value( $input['proposal_meta_font_size'] ?? $defaults['proposal_meta_font_size'], $defaults['proposal_meta_font_size'] ),
             'proposal_table_header_font_size' => self::sanitize_font_size_value( $input['proposal_table_header_font_size'] ?? $defaults['proposal_table_header_font_size'], $defaults['proposal_table_header_font_size'] ),
             'proposal_table_body_font_size' => self::sanitize_font_size_value( $input['proposal_table_body_font_size'] ?? $defaults['proposal_table_body_font_size'], $defaults['proposal_table_body_font_size'] ),
+            'proposal_table_body_line_height' => self::sanitize_line_height_value( $input['proposal_table_body_line_height'] ?? $defaults['proposal_table_body_line_height'], $defaults['proposal_table_body_line_height'] ),
             'proposal_totals_font_size'  => self::sanitize_font_size_value( $input['proposal_totals_font_size'] ?? $defaults['proposal_totals_font_size'], $defaults['proposal_totals_font_size'] ),
             'proposal_note_font_size'    => self::sanitize_font_size_value( $input['proposal_note_font_size'] ?? $defaults['proposal_note_font_size'], $defaults['proposal_note_font_size'] ),
             'proposal_show_total_subtotal' => self::sanitize_toggle( $input['proposal_show_total_subtotal'] ?? $defaults['proposal_show_total_subtotal'] ),
@@ -1362,6 +1411,19 @@ class EOP_PDF_Settings {
         }
 
         return (string) $size;
+    }
+
+    private static function sanitize_line_height_value( $value, $default ) {
+        $height   = floatval( str_replace( ',', '.', (string) $value ) );
+        $fallback = max( 1.0, min( 3.0, floatval( str_replace( ',', '.', (string) $default ) ) ) );
+
+        if ( $height < 0.8 || $height > 3.0 ) {
+            $height = $fallback;
+        }
+
+        $formatted = rtrim( rtrim( number_format( $height, 2, '.', '' ), '0' ), '.' );
+
+        return '' === $formatted ? (string) $fallback : $formatted;
     }
 
     private static function sanitize_column_position_value( $value, $default ) {
