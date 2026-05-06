@@ -2,6 +2,42 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.80 - 2026-05-06
+
+- o baseline de performance voltou a abrir e fechar corretamente, a listagem de pedidos ganhou filtros mais confiaveis e o fluxo complementar ficou mais legivel
+
+## 1.1.81 - 2026-05-06
+
+- o accordion do baseline passou a iniciar colapsado de forma consistente
+
+## 1.1.79 - 2026-05-06
+
+- o PDF ganhou controle de line-height da tabela, modo de exibição da coluna de desconto e sufixo separado para valor unitario com desconto
+
+## 1.1.78 - 2026-05-06
+
+- o resumo do fluxo complementar na listagem de pedidos ficou mais legivel e organizado em chips
+
+## 1.1.77 - 2026-05-06
+
+- o accordion do baseline de performance ganhou seta menor e transicao mais suave
+
+## 1.1.76 - 2026-05-06
+
+- a listagem de pedidos passou a filtrar corretamente por busca e o baseline de performance agora inicia fechado como accordion
+
+## 1.1.75 - 2026-05-06
+
+- a tela de pedidos no admin ganhou busca em formulario com Enter funcionando e o campo de busca passou a ocupar toda a largura disponivel
+
+## 1.1.74 - 2026-05-06
+
+- a pagina publica da proposta passou a respeitar os ajustes visuais configurados no admin, incluindo modos solid/gradient, fontes e cores base
+
+## 1.1.73 - 2026-05-06
+
+- corrige a cor do cabecalho do PDF no caminho de geracao via navegador, aplicando o fundo configurado no `thead`
+
 ## 1.1.72 - 2026-05-06
 
 - consolidacao dos ajustes recentes antes do deploy em producao
