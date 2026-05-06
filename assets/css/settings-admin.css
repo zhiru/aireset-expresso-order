@@ -305,6 +305,185 @@ body.eop-settings-screen .error {
   display: none;
 }
 
+.eop-signature-documents {
+  display: grid;
+  gap: 18px;
+}
+.eop-signature-documents .is-hidden {
+  display: none !important;
+}
+.eop-signature-documents__intro {
+  display: grid;
+  gap: 8px;
+}
+.eop-signature-documents__intro span {
+  color: #17327c;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.eop-signature-documents__intro h3 {
+  margin: 0;
+  color: #06142f;
+  font-size: 24px;
+  line-height: 1.2;
+}
+.eop-signature-documents__intro p {
+  margin: 0;
+  color: #4f5f83;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.eop-signature-documents__create.button {
+  justify-self: start;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border-color: #b8c7ff;
+  color: #17327c;
+  background: #fff;
+}
+.eop-signature-documents__empty {
+  padding: 18px;
+  border: 1px dashed #b8c7ff;
+  border-radius: 16px;
+  background: #f8faff;
+  color: #4f5f83;
+}
+.eop-signature-documents__empty strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #06142f;
+  font-size: 15px;
+}
+.eop-signature-documents__empty p {
+  margin: 0;
+}
+.eop-signature-documents__list {
+  display: grid;
+  gap: 14px;
+}
+
+.eop-signature-document {
+  overflow: hidden;
+  border: 1px solid #d9e2ff;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(0, 3, 75, 0.08);
+}
+.eop-signature-document__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #f9fbff 0%, #edf3ff 100%);
+}
+.eop-signature-document__summary {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.eop-signature-document__heading {
+  overflow: hidden;
+  color: #06142f;
+  font-size: 16px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.eop-signature-document__type {
+  color: #6b7897;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.eop-signature-document__actions, .eop-signature-document__attachment-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.eop-signature-document__edit.button {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border-color: #b8c7ff;
+  color: #17327c;
+  background: #fff;
+}
+.eop-signature-document__remove, .eop-signature-document__attachment-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 1px solid #ffd5d2;
+  border-radius: 10px;
+  background: #fff7f6;
+  color: #b42318;
+  text-decoration: none;
+  box-shadow: none;
+}
+.eop-signature-document__remove:hover, .eop-signature-document__remove:focus, .eop-signature-document__attachment-remove:hover, .eop-signature-document__attachment-remove:focus {
+  border-color: #f7a39c;
+  background: #fff0ee;
+  color: #912018;
+}
+.eop-signature-document__body {
+  padding: 20px;
+  border-top: 1px solid #e6ecff;
+}
+.eop-signature-document.is-collapsed .eop-signature-document__body, .eop-signature-document__body.is-hidden {
+  display: none;
+}
+.eop-signature-document__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.45fr);
+  gap: 16px;
+  align-items: start;
+}
+.eop-signature-document__panel.is-hidden {
+  display: none !important;
+}
+.eop-signature-document__attachment-shell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid #d9e2ff;
+  border-radius: 14px;
+  background: #f8faff;
+}
+.eop-signature-document__attachment-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #4f5f83;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.eop-signature-document__editor {
+  min-height: 260px;
+  resize: vertical;
+}
+
+@media (max-width: 960px) {
+  .eop-signature-document__header, .eop-signature-document__attachment-shell {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .eop-signature-document__grid {
+    grid-template-columns: 1fr;
+  }
+  .eop-signature-document__heading {
+    white-space: normal;
+  }
+}
 .eop-settings-switch-shell {
   display: flex;
   flex-direction: column;
