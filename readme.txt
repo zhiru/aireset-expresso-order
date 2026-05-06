@@ -3,7 +3,7 @@ Contributors: aireset
 Tags: woocommerce, pedido expresso, vendas, proposta, administrativo
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 1.1.66
+Stable tag: 1.1.67
 
 Pedido expresso para vendedores do WooCommerce: busca e selecao rapida de cliente e produto, geracao de pedido, proposta publica e PDF nativo com navegacao SPA no admin.
 
@@ -33,6 +33,9 @@ Basta ter o WooCommerce ativo e o plugin instalado; as configuracoes de pedido e
 
 == Upgrade Notice ==
 
+= 1.1.67 =
+* Navegação administrativa refinada com fly-in menu lateral, controle de recolhimento da sidebar e ajustes no flyout compartilhado para testes em outro ambiente.
+
 = 1.1.66 =
 * PDF final da personalizacao salvo no pedido, governanca melhor de upload e flyout admin compartilhado mais robusto.
 
@@ -40,6 +43,11 @@ Basta ter o WooCommerce ativo e o plugin instalado; as configuracoes de pedido e
 * Etapa final do fluxo complementar unificada com upload, personalizacao e carregamento confiavel do CSS publico.
 
 == Changelog ==
+
+= 1.1.67 =
+* shell admin com fly-in menu lateral dedicado e inclusão desses assets na auditoria de performance
+* cabeçalho do painel com ação para recolher a sidebar e deixar a navegação mais compacta
+* flyout administrativo compartilhado refinado para conviver melhor com a nova navegação lateral
 
 = 1.1.66 =
 * fluxo complementar agora salva o PDF final da personalizacao no pedido, exibe downloads centralizados no admin e persiste um payload estruturado versionado para integracoes futuras

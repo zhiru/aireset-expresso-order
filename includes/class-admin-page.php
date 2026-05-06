@@ -548,9 +548,27 @@ class EOP_Admin_Page {
         wp_enqueue_style( 'eop-pdf-admin', EOP_PLUGIN_URL . 'assets/css/pdf-admin.css', array( 'eop-admin' ), EOP_VERSION );
         wp_enqueue_script( 'eop-admin', EOP_PLUGIN_URL . 'assets/js/admin.js', array( 'jquery', 'select2' ), EOP_VERSION, true );
 
+        $flyin_style_path  = EOP_PLUGIN_DIR . 'assets/css/admin-flyinmenu.css';
+        $flyin_script_path = EOP_PLUGIN_DIR . 'assets/js/admin-flyinmenu.js';
+
+        wp_enqueue_style(
+            'eop-admin-flyinmenu',
+            EOP_PLUGIN_URL . 'assets/css/admin-flyinmenu.css',
+            array( 'eop-admin' ),
+            file_exists( $flyin_style_path ) ? (string) filemtime( $flyin_style_path ) : EOP_VERSION
+        );
+
+        wp_enqueue_script(
+            'eop-admin-flyinmenu',
+            EOP_PLUGIN_URL . 'assets/js/admin-flyinmenu.js',
+            array(),
+            file_exists( $flyin_script_path ) ? (string) filemtime( $flyin_script_path ) : EOP_VERSION,
+            true
+        );
+
         $performance_asset_handles = array(
-            'styles'  => array( 'select2', 'eop-admin', 'eop-frontend', 'eop-pdf-admin', 'eop-coloris', 'eop-settings-admin' ),
-            'scripts' => array( 'select2', 'eop-admin', 'eop-coloris', 'eop-settings-admin' ),
+            'styles'  => array( 'select2', 'eop-admin', 'eop-frontend', 'eop-pdf-admin', 'eop-admin-flyinmenu', 'eop-coloris', 'eop-settings-admin' ),
+            'scripts' => array( 'select2', 'eop-admin', 'eop-admin-flyinmenu', 'eop-coloris', 'eop-settings-admin' ),
         );
 
         $font_css_path = ABSPATH . 'wp-content/plugins/checkout-aireset-master/backend/assets/css/jquery.fontselect.css';

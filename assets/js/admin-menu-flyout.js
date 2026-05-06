@@ -12,6 +12,9 @@
     'use strict';
 
     if (window.airesetAdminMenuFlyoutBootstrapped) {
+        if (typeof window.airesetAdminMenuFlyoutRenderAll === 'function') {
+            window.setTimeout(window.airesetAdminMenuFlyoutRenderAll, 0);
+        }
         return;
     }
     window.airesetAdminMenuFlyoutBootstrapped = true;
@@ -59,12 +62,10 @@
         collectConfigs: function () {
             var configs = [];
 
-            /* New array-based configs from any plugin */
             if (Array.isArray(window.airesetAdminFlyouts)) {
                 configs = configs.concat(window.airesetAdminFlyouts);
             }
 
-            /* Backward compat: legacy single-config from aireset-expresso-order */
             if (typeof eopAdminMenuFlyout !== 'undefined' && eopAdminMenuFlyout && Array.isArray(eopAdminMenuFlyout.items)) {
                 var dominated = configs.some(function (c) {
                     return c.anchorPage === eopAdminMenuFlyout.anchorPage;
@@ -224,6 +225,7 @@
 
         getCurrentState: function () {
             return {
+                hash: (window.location.hash || '').replace(/^#/, ''),
                 params: new URLSearchParams(window.location.search || '')
             };
         },
@@ -232,6 +234,10 @@
             if (!item) { return false; }
 
             if (item.query && this.queryMatchesCurrent(item.query, currentState)) {
+                return true;
+            }
+
+            if (item.hash && currentState && String(item.hash) === String(currentState.hash || '')) {
                 return true;
             }
 
@@ -304,8 +310,6 @@
             });
         },
 
-        /* --- Hover events with safe-zone triangle --- */
-
         attachHover: function (parentLi, flyout) {
             var self = this;
 
@@ -333,8 +337,6 @@
             });
         },
 
-        /* --- Focus events --- */
-
         attachFocus: function (parentLi, flyout) {
             var self = this;
             var parentLink = parentLi.querySelector(':scope > a');
@@ -351,8 +353,6 @@
                 }
             });
         },
-
-        /* --- Keyboard navigation (Arrow keys + Escape) --- */
 
         attachKeyboard: function (parentLi, flyout) {
             var self = this;
@@ -397,8 +397,6 @@
                 }
             });
         },
-
-        /* --- Show / Hide --- */
 
         showFlyout: function (parentLi, flyout) {
             if (this.activeMenu && this.activeMenu !== flyout && !this.isSameFlyoutBranch(parentLi)) {
@@ -497,8 +495,6 @@
             return null;
         },
 
-        /* --- Delayed close with safe-zone check --- */
-
         scheduleClose: function (parentLi, flyout) {
             var self = this;
             this.clearClose();
@@ -528,8 +524,6 @@
             }
         },
 
-        /* --- Mouse position tracking --- */
-
         startMouseTracking: function () {
             var self = this;
             this.stopMouseTracking();
@@ -546,8 +540,6 @@
             }
             this.lastMousePos = null;
         },
-
-        /* --- Safe-zone triangle (Elementor technique) --- */
 
         isCursorInSafeZone: function () {
             if (!this.lastMousePos || !this.activeMenu || !this.activeParent) {
@@ -599,8 +591,6 @@
             return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0));
         },
 
-        /* --- Smart positioning (prevent off-screen) --- */
-
         positionFlyout: function (parentLi, flyout) {
             var prevDisplay = flyout.style.display;
             var prevVisibility = flyout.style.visibility;
@@ -631,8 +621,6 @@
             flyout.style.display = prevDisplay;
             flyout.style.visibility = prevVisibility;
         },
-
-        /* --- Mobile support --- */
 
         setupMobileSupport: function () {
             if (window.innerWidth > 782) { return; }
@@ -758,6 +746,9 @@
             parents.forEach(function (parentLi) {
                 var flyout = parentLi.querySelector(':scope > .eop-submenu-flyout');
                 if (!flyout) { return; }
+                if (parentLi.getAttribute('data-aireset-flyout-bound') === '1') { return; }
+
+                parentLi.setAttribute('data-aireset-flyout-bound', '1');
 
                 self.attachHover(parentLi, flyout);
                 self.attachFocus(parentLi, flyout);
@@ -925,6 +916,9 @@
 
         setupMobileSupport: function () {
             if (window.innerWidth > 782) { return; }
+            if (document.documentElement.getAttribute('data-aireset-flyout-mobile-bound') === '1') { return; }
+
+            document.documentElement.setAttribute('data-aireset-flyout-mobile-bound', '1');
 
             var self = this;
             var links = document.querySelectorAll('#adminmenu li.eop-has-flyout > a');
@@ -1038,7 +1032,6 @@
             var menuRoot = document.getElementById(String(cfg.menuRoot || ''));
             if (!menuRoot) { return; }
 
-            /* Force-activate the Aireset top-level menu */
             document.querySelectorAll('#adminmenu li.wp-has-current-submenu').forEach(function (item) {
                 if (item !== menuRoot) {
                     item.classList.remove('wp-has-current-submenu', 'wp-menu-open', 'selected');
@@ -1056,7 +1049,6 @@
                 rootLink.classList.add('wp-has-current-submenu', 'wp-menu-open');
             }
 
-            /* Highlight the anchor submenu item */
             var anchorSlug = String(cfg.anchorPage || '');
             var submenuItems = menuRoot.querySelectorAll('.wp-submenu li');
 
@@ -1077,15 +1069,14 @@
         }
     };
 
-    /* ------------------------------------------------------------------ */
-    /*  Bootstrap                                                          */
-    /* ------------------------------------------------------------------ */
     function init() {
         if (FlyoutRenderer.renderAll()) {
             FlyoutInteraction.handle();
             SidebarHighlight.handle();
         }
     }
+
+    window.airesetAdminMenuFlyoutRenderAll = init;
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

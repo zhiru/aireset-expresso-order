@@ -1,0 +1,344 @@
+.cwmp-admin-app .cwmp-spa-sidebar {
+  z-index: 60;
+  transition: width 0.22s ease, min-width 0.22s ease, box-shadow 0.22s ease;
+}
+
+.cwmp-admin-app .cwmp-spa-category {
+  position: relative;
+}
+
+.cwmp-admin-app .cwmp-spa-category-sections {
+  display: none;
+}
+
+.cwmp-admin-app .cwmp-spa-category-open > .cwmp-spa-category-sections {
+  display: block;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-sidebar {
+  width: 76px;
+  min-width: 76px;
+  overflow: visible;
+  box-shadow: 0 18px 30px rgba(9, 21, 51, 0.24);
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-brand {
+  align-items: center;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-brand-mark,
+.cwmp-admin-app.is-sidebar-collapsed .eop-admin-spa__brand-mark {
+  width: 100%;
+  justify-content: center;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-brand-mark img,
+.cwmp-admin-app.is-sidebar-collapsed .eop-admin-spa__brand-mark img {
+  max-width: 42px;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-brand-copy {
+  padding: 10px;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-brand-copy__head {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-brand-actions {
+  flex-direction: column;
+  margin-left: 0;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-brand-copy h1,
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-brand-copy p,
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-name,
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-arrow {
+  display: none;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-nav {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-header,
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-header-single {
+  justify-content: center;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-active > .cwmp-spa-category-header,
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-header-single.active {
+  background: linear-gradient(135deg, rgba(21, 92, 125, 0.92) 0%, rgba(20, 77, 116, 0.92) 100%);
+  border-color: rgba(80, 201, 194, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(80, 201, 194, 0.2), 0 12px 24px rgba(4, 17, 45, 0.24);
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-active > .cwmp-spa-category-header .cwmp-spa-category-icon,
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-header-single.active .cwmp-spa-category-icon {
+  min-height: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-icon {
+  width: 100%;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-sections {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 10px);
+  min-width: 230px;
+  max-width: 280px;
+  margin-top: 0;
+  padding: 8px 0;
+  background: linear-gradient(180deg, rgba(15, 37, 87, 0.98) 0%, rgba(9, 21, 51, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 24px 48px rgba(9, 21, 51, 0.38);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-8px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 1100;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-sections::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -14px;
+  width: 14px;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category:hover > .cwmp-spa-category-sections,
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category:focus-within > .cwmp-spa-category-sections,
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category.cwmp-flyinmenu-open > .cwmp-spa-category-sections {
+  display: block;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category:hover > .cwmp-spa-category-header,
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category:focus-within > .cwmp-spa-category-header,
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category.cwmp-flyinmenu-open > .cwmp-spa-category-header {
+  background: linear-gradient(135deg, rgba(21, 50, 103, 0.95) 0%, rgba(22, 91, 121, 0.9) 100%);
+  color: var(--brand-white);
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-sections .cwmp-spa-section-item {
+  margin: 0;
+  padding: 10px 14px;
+  border-left-width: 0;
+  border-radius: 0;
+  justify-content: flex-start;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-sections .cwmp-spa-section-item span {
+  display: inline;
+}
+
+.cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-sections .cwmp-spa-section-item i {
+  width: 20px;
+  color: var(--brand-white);
+}
+
+@media (max-width: 1024px) {
+  .cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-sidebar {
+    width: 72px;
+    min-width: 72px;
+  }
+}
+@media (max-width: 768px) {
+  .cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-sidebar {
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+  }
+  .cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-brand-copy h1,
+  .cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-brand-copy p,
+  .cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-name,
+  .cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-arrow,
+  .cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-section-item span {
+    display: inline;
+  }
+  .cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-sections {
+    position: static;
+    min-width: 0;
+    max-width: none;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+  .cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-category-open > .cwmp-spa-category-sections {
+    display: block;
+  }
+}
+.eop-admin-spa .eop-admin-spa__sidebar {
+  z-index: 60;
+  transition: width 0.22s ease, min-width 0.22s ease, box-shadow 0.22s ease;
+}
+
+.eop-admin-spa .eop-admin-spa-nav__group {
+  position: relative;
+}
+
+.eop-admin-spa .eop-admin-spa__brand-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__sidebar {
+  width: 76px;
+  min-width: 76px;
+  overflow: visible;
+  box-shadow: 0 18px 30px rgba(9, 21, 51, 0.24);
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__brand {
+  align-items: center;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__brand-mark {
+  width: 100%;
+  justify-content: center;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__brand-mark img {
+  max-width: 42px;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__brand-copy {
+  padding: 10px;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__brand-head {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__brand-actions {
+  flex-direction: column;
+  margin-left: 0;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__brand-copy h1,
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__brand-copy p,
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__name,
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__group-arrow {
+  display: none;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__nav {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__item {
+  justify-content: center !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__icon {
+  width: 100% !important;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__submenu {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 10px);
+  min-width: 230px;
+  max-width: 280px;
+  margin-top: 0;
+  padding: 8px 0;
+  background: linear-gradient(180deg, rgba(15, 37, 87, 0.98) 0%, rgba(9, 21, 51, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 24px 48px rgba(9, 21, 51, 0.38);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-8px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 1100;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__submenu::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -14px;
+  width: 14px;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__group:hover > .eop-admin-spa-nav__submenu,
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__group:focus-within > .eop-admin-spa-nav__submenu,
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__group.eop-flyinmenu-open > .eop-admin-spa-nav__submenu {
+  display: grid !important;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__group:hover > .eop-admin-spa-nav__item,
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__group:focus-within > .eop-admin-spa-nav__item,
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__group.eop-flyinmenu-open > .eop-admin-spa-nav__item {
+  background: linear-gradient(135deg, rgba(21, 50, 103, 0.95) 0%, rgba(22, 91, 121, 0.9) 100%) !important;
+  color: #fff !important;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__submenu-item {
+  margin: 0;
+  padding: 10px 14px;
+  border-left-width: 0;
+  border-radius: 0;
+}
+
+.eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__submenu-label {
+  display: inline;
+}
+
+@media (max-width: 1024px) {
+  .eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__sidebar {
+    width: 72px;
+    min-width: 72px;
+  }
+}
+@media (max-width: 768px) {
+  .eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__sidebar {
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+  }
+  .eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__brand-copy h1,
+  .eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__brand-copy p,
+  .eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__name,
+  .eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__group-arrow {
+    display: inline;
+  }
+  .eop-admin-spa.is-sidebar-collapsed .eop-admin-spa-nav__submenu {
+    position: static;
+    min-width: 0;
+    max-width: none;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+}

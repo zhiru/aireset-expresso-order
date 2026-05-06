@@ -2,6 +2,12 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.67 - 2026-05-06
+
+- o shell administrativo ganhou suporte dedicado ao fly-in menu lateral, com assets próprios para o menu recolhível e melhor integração desse comportamento ao baseline de performance
+- o cabeçalho do painel passou a expor um controle de recolhimento da sidebar, deixando a navegação do admin mais compacta para testes em telas menores e fluxos mais densos
+- o flyout administrativo compartilhado foi refinado para conviver melhor com a nova navegação lateral e manter comportamento consistente entre menus e submenus
+
 ## 1.1.66 - 2026-05-05
 
 - o fluxo complementar agora gera e salva um PDF final proprio da personalizacao, exposto no frontend e no admin junto com um resumo operacional mais completo, downloads centralizados e payload estruturado versionado para integracoes futuras

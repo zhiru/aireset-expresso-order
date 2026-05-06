@@ -126,10 +126,16 @@ $performance_initial_metrics = class_exists( 'EOP_Performance_Audit' )
                 <div class="eop-admin-spa__brand-copy">
                     <div class="eop-admin-spa__brand-head">
                         <h1><?php echo esc_html( $settings['panel_title'] ); ?></h1>
-                        <button type="button" class="eop-admin-spa__chrome-toggle" id="eop-admin-chrome-toggle" aria-pressed="false" title="<?php esc_attr_e( 'Ocultar interface do WordPress', EOP_TEXT_DOMAIN ); ?>">
-                            <span class="dashicons dashicons-fullscreen-alt" aria-hidden="true"></span>
-                            <span class="screen-reader-text eop-admin-spa__chrome-toggle-label"><?php esc_html_e( 'Modo foco', EOP_TEXT_DOMAIN ); ?></span>
-                        </button>
+                        <div class="eop-admin-spa__brand-actions">
+                            <button type="button" class="eop-admin-spa__chrome-toggle eop-admin-spa__sidebar-toggle" id="eop-admin-sidebar-toggle" aria-pressed="false" title="<?php esc_attr_e( 'Recolher menu lateral', EOP_TEXT_DOMAIN ); ?>">
+                                <span class="dashicons dashicons-arrow-left-alt2" aria-hidden="true"></span>
+                                <span class="screen-reader-text eop-admin-spa__sidebar-toggle-label"><?php esc_html_e( 'Recolher menu lateral', EOP_TEXT_DOMAIN ); ?></span>
+                            </button>
+                            <button type="button" class="eop-admin-spa__chrome-toggle" id="eop-admin-chrome-toggle" aria-pressed="false" title="<?php esc_attr_e( 'Ocultar interface do WordPress', EOP_TEXT_DOMAIN ); ?>">
+                                <span class="dashicons dashicons-fullscreen-alt" aria-hidden="true"></span>
+                                <span class="screen-reader-text eop-admin-spa__chrome-toggle-label"><?php esc_html_e( 'Modo foco', EOP_TEXT_DOMAIN ); ?></span>
+                            </button>
+                        </div>
                     </div>
                     <?php if ( ! empty( $settings['panel_subtitle'] ) ) : ?>
                         <p><?php echo esc_html( $settings['panel_subtitle'] ); ?></p>
