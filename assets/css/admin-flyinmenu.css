@@ -31,7 +31,10 @@
 .cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-brand-mark,
 .cwmp-admin-app.is-sidebar-collapsed .eop-admin-spa__brand-mark {
   width: 100%;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
 }
 
 .cwmp-admin-app.is-sidebar-collapsed .cwmp-spa-brand-mark img,
@@ -216,7 +219,10 @@
 
 .eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__brand-mark {
   width: 100%;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
 }
 
 .eop-admin-spa.is-sidebar-collapsed .eop-admin-spa__brand-mark img {

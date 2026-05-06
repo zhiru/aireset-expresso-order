@@ -488,6 +488,9 @@ body.eop-admin-spa-screen.is-plugin-fullscreen #wpcontent {
 .eop-admin-spa__brand-mark {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
 }
 .eop-admin-spa__brand-mark img {
   max-width: 138px;
@@ -521,6 +524,14 @@ body.eop-admin-spa-screen.is-plugin-fullscreen #wpcontent {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+.eop-admin-spa__brand-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .eop-admin-spa__chrome-toggle {
   display: inline-flex;

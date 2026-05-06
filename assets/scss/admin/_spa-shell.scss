@@ -133,6 +133,9 @@ body.eop-admin-spa-screen.is-plugin-fullscreen {
   &__brand-mark {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
 
     img {
       max-width: 138px;
@@ -171,6 +174,15 @@ body.eop-admin-spa-screen.is-plugin-fullscreen {
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
+  }
+
+  &__brand-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+    margin-left: auto;
+    flex-shrink: 0;
   }
 
   &__chrome-toggle {
