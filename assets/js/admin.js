@@ -865,7 +865,8 @@
 		var confirmationViews = [
 			'settings-confirmation-general',
 			'settings-confirmation-documents',
-			'settings-confirmation-preview'
+			'settings-confirmation-preview',
+			'settings-confirmation-upload-products-preview'
 		];
 
         if (generalViews.indexOf(String(viewName || '')) !== -1) {
@@ -1295,6 +1296,7 @@
             'settings-confirmation-general',
             'settings-confirmation-documents',
             'settings-confirmation-preview',
+            'settings-confirmation-upload-products-preview',
             'settings-order-link-style',
             'settings-proposal-link-style',
             'settings-customer-experience',

@@ -183,6 +183,7 @@ class EOP_Admin_Page {
             'settings-confirmation-general' => current_user_can( 'manage_options' ),
             'settings-confirmation-documents' => current_user_can( 'manage_options' ),
             'settings-confirmation-preview' => current_user_can( 'manage_options' ),
+            'settings-confirmation-upload-products-preview' => current_user_can( 'manage_options' ),
             'settings-order-link-style'  => current_user_can( 'manage_options' ),
             'settings-proposal-link-style' => current_user_can( 'manage_options' ),
             'settings-customer-experience' => current_user_can( 'manage_options' ),
@@ -340,6 +341,13 @@ class EOP_Admin_Page {
                 'description' => __( 'Edite visualmente a etapa contratual com foco em leitura, aceite e resumo lateral.', EOP_TEXT_DOMAIN ),
                 'renderer' => function () {
                     EOP_Settings::render_embedded_page( 'confirmation-flow-preview' );
+                },
+            ),
+            'settings-confirmation-upload-products-preview' => array(
+				'title' => __( 'Visual da pagina de upload e produtos', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Edite visualmente a etapa em que o cliente envia o arquivo e personaliza os produtos.', EOP_TEXT_DOMAIN ),
+                'renderer' => function () {
+                    EOP_Settings::render_embedded_page( 'confirmation-flow-upload-products-preview' );
                 },
             ),
             'settings-order-link-style' => array(
@@ -907,6 +915,16 @@ class EOP_Admin_Page {
                     'query' => array(
                         'page' => 'eop-pedido-expresso',
                         'view' => 'settings-confirmation-preview',
+                    ),
+                ),
+                array(
+                    'key'   => 'eop-view-settings-confirmation-upload-products-preview',
+					'label' => __( 'Visual da pagina de upload e produtos', EOP_TEXT_DOMAIN ),
+                    'icon'  => 'dashicons-upload',
+                    'url'   => self::get_view_url( 'settings-confirmation-upload-products-preview' ),
+                    'query' => array(
+                        'page' => 'eop-pedido-expresso',
+                        'view' => 'settings-confirmation-upload-products-preview',
                     ),
                 ),
             );

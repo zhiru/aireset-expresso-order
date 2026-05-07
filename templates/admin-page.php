@@ -24,6 +24,7 @@ $confirmation_views = array(
 	'settings-confirmation-general',
 	'settings-confirmation-documents',
 	'settings-confirmation-preview',
+	'settings-confirmation-upload-products-preview',
 );
 $is_general_view = in_array( $initial_view, $general_views, true );
 $is_confirmation_view = in_array( $initial_view, $confirmation_views, true );
@@ -66,6 +67,10 @@ $confirmation_nav_items = array(
 		'label' => __( 'Visual da página de confirmação', EOP_TEXT_DOMAIN ),
         'icon'  => 'dashicons-visibility',
     ),
+    'settings-confirmation-upload-products-preview' => array(
+		'label' => __( 'Visual da pagina de upload e produtos', EOP_TEXT_DOMAIN ),
+        'icon'  => 'dashicons-upload',
+    ),
 );
 $lazy_views = array(
     'new-order',
@@ -76,6 +81,7 @@ $lazy_views = array(
     'settings-confirmation-general',
     'settings-confirmation-documents',
     'settings-confirmation-preview',
+    'settings-confirmation-upload-products-preview',
     'settings-order-link-style',
     'settings-proposal-link-style',
     'settings-customer-experience',
@@ -398,6 +404,20 @@ $performance_initial_metrics = class_exists( 'EOP_Performance_Audit' )
                         <?php EOP_Settings::render_embedded_page( 'confirmation-flow-preview' ); ?>
                     <?php else : ?>
 						<?php $render_lazy_placeholder( __( 'Fluxo de Confirmação - Visual da página de confirmação', EOP_TEXT_DOMAIN ) ); ?>
+                    <?php endif; ?>
+                    </div>
+                </section>
+
+                <section class="eop-pdv-view<?php echo 'settings-confirmation-upload-products-preview' === $initial_view ? ' is-active' : ''; ?>" data-eop-view="settings-confirmation-upload-products-preview" data-eop-lazy="true" data-eop-lazy-loaded="<?php echo 'settings-confirmation-upload-products-preview' === $initial_view ? 'true' : 'false'; ?>"<?php echo 'settings-confirmation-upload-products-preview' === $initial_view ? '' : ' hidden'; ?>>
+                    <div class="eop-admin-panel-head">
+						<h2><?php esc_html_e( 'Visual da pagina de upload e produtos', EOP_TEXT_DOMAIN ); ?></h2>
+                        <p><?php esc_html_e( 'Ajuste a etapa em que o cliente envia o arquivo e personaliza os nomes dos produtos.', EOP_TEXT_DOMAIN ); ?></p>
+                    </div>
+                    <div class="eop-admin-view-main">
+                    <?php if ( 'settings-confirmation-upload-products-preview' === $initial_view ) : ?>
+                        <?php EOP_Settings::render_embedded_page( 'confirmation-flow-upload-products-preview' ); ?>
+                    <?php else : ?>
+						<?php $render_lazy_placeholder( __( 'Fluxo de Confirmacao - Visual da pagina de upload e produtos', EOP_TEXT_DOMAIN ) ); ?>
                     <?php endif; ?>
                     </div>
                 </section>
