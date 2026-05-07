@@ -47,6 +47,7 @@ O modulo PDF agora inclui uma central propria em `Aireset > Pedido Expresso > PD
 ## Planos e arquitetura
 
 - [`POST_CONFIRMATION_FLOW_PLAN.md`](./POST_CONFIRMATION_FLOW_PLAN.md): planejamento completo do fluxo documental pos-proposta, com status atual, backlog e caminhos mapeados
+- [`ARCHITECTURE_MODERNIZATION_ROADMAP.md`](./ARCHITECTURE_MODERNIZATION_ROADMAP.md): diagnostico tecnico do plugin, arquitetura futura recomendada, stack ideal, migracao para API-first/SPA e metas de performance
 
 ## Identidade do admin
 

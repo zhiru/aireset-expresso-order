@@ -896,6 +896,16 @@ class EOP_Settings {
         <?php
     }
 
+    /**
+     * Renderiza o editor visual completo da etapa de upload e produtos.
+     *
+     * Essa funcao atua como ponto de entrada do editor dessa tela no admin:
+     * monta os accordions de conteudo, a base visual global e as secoes
+     * especificas de estilo. Se voce precisar adicionar um novo bloco visual
+     * nessa tela, normalmente o encaixe inicial acontece aqui.
+     *
+     * @param array $settings Configuracoes atuais do plugin.
+     */
     private static function render_post_confirmation_upload_products_visual_editor( $settings ) {
         ?>
         <div class="eop-visual-editor">
@@ -904,6 +914,239 @@ class EOP_Settings {
             <?php foreach ( self::get_post_confirmation_upload_products_style_sections() as $section ) : ?>
                 <?php self::render_post_confirmation_upload_products_style_section( $section, $settings ); ?>
             <?php endforeach; ?>
+        </div>
+        <?php
+    }
+
+    /**
+     * Renderiza o editor visual do link do pedido / pagina publica da proposta.
+     *
+     * A ideia aqui e seguir o mesmo padrao da tela de upload/produtos:
+     * primeiro os accordions de configuracao e depois, fora desta funcao,
+     * o preview em iframe. Se precisar reorganizar a experiencia de edicao
+     * dessa area, este e o ponto principal para mexer.
+     *
+     * @param array $settings Configuracoes atuais do plugin.
+     */
+    private static function render_order_link_visual_editor( $settings ) {
+        ?>
+        <div class="eop-visual-editor">
+            <?php foreach ( self::get_order_link_visual_sections() as $section ) : ?>
+                <?php self::render_order_link_visual_section( $section, $settings ); ?>
+            <?php endforeach; ?>
+        </div>
+        <?php
+    }
+
+    /**
+     * Define a estrutura declarativa das secoes do editor visual do link.
+     *
+     * Cada item retornado aqui vira um accordion no admin. Dentro de cada
+     * secao, os campos carregam metadados simples como label, tipo, grupo
+     * interno e comportamento especial. Em manutencao, o lugar correto para
+     * adicionar/remover campos dessa tela e este array.
+     *
+     * @return array[]
+     */
+    private static function get_order_link_visual_sections() {
+        return array(
+            array(
+                'label'       => __( 'Conteudo da pagina publica', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Edite os textos principais do link do pedido e dos botoes mostrados ao cliente.', EOP_TEXT_DOMAIN ),
+                'expanded'    => true,
+                'fields'      => array(
+                    'proposal_title'            => array( 'label' => __( 'Titulo da proposta', EOP_TEXT_DOMAIN ), 'type' => 'text', 'full' => true, 'group' => __( 'Titulo', EOP_TEXT_DOMAIN ) ),
+                    'proposal_description'      => array( 'label' => __( 'Descricao da proposta', EOP_TEXT_DOMAIN ), 'type' => 'textarea', 'full' => true, 'group' => __( 'Descricao', EOP_TEXT_DOMAIN ) ),
+                    'proposal_button_label'     => array( 'label' => __( 'Texto do botao da proposta', EOP_TEXT_DOMAIN ), 'type' => 'text', 'group' => __( 'Botoes', EOP_TEXT_DOMAIN ) ),
+                    'proposal_pay_button_label' => array( 'label' => __( 'Texto do botao de pagamento', EOP_TEXT_DOMAIN ), 'type' => 'text', 'group' => __( 'Botoes', EOP_TEXT_DOMAIN ) ),
+                ),
+            ),
+            array(
+                'label'       => __( 'Identidade da marca', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Defina a fonte base e a assinatura visual do shell do link do pedido. A logo continua sendo gerenciada em Informacoes sobre a loja.', EOP_TEXT_DOMAIN ),
+                'expanded'    => false,
+                'fields'      => array(
+                    'font_family'   => array(
+                        'label' => __( 'Fonte', EOP_TEXT_DOMAIN ),
+                        'type'  => 'font',
+                        'full'  => true,
+                        'group' => __( 'Tipografia', EOP_TEXT_DOMAIN ),
+                        'help'  => __( 'Selecione uma fonte do Google no mesmo padrao usado em outros plugins Aireset.', EOP_TEXT_DOMAIN ),
+                    ),
+                    'primary_color' => array( 'label' => __( 'Cor principal', EOP_TEXT_DOMAIN ), 'type' => 'color', 'default' => '#00034b', 'group' => __( 'Cores', EOP_TEXT_DOMAIN ) ),
+                    'surface_color' => array( 'label' => __( 'Cor de fundo dos cards', EOP_TEXT_DOMAIN ), 'type' => 'color', 'default' => '#ffffff', 'group' => __( 'Cores', EOP_TEXT_DOMAIN ) ),
+                    'border_color'  => array( 'label' => __( 'Cor da borda', EOP_TEXT_DOMAIN ), 'type' => 'color', 'default' => '#dbe3f0', 'group' => __( 'Borda', EOP_TEXT_DOMAIN ) ),
+                    'border_radius' => array( 'label' => __( 'Radius', EOP_TEXT_DOMAIN ), 'type' => 'number', 'min' => 0, 'max' => 48, 'group' => __( 'Borda', EOP_TEXT_DOMAIN ) ),
+                ),
+            ),
+            array(
+                'label'       => __( 'Pagina publica do cliente', EOP_TEXT_DOMAIN ),
+                'description' => __( 'Controle as cores, a largura e a tipografia base do preview exibido para o cliente.', EOP_TEXT_DOMAIN ),
+                'expanded'    => false,
+                'fields'      => array(
+                    'proposal_background_color' => array( 'label' => __( 'Fundo da pagina', EOP_TEXT_DOMAIN ), 'type' => 'color', 'default' => '#f5f7ff', 'group' => __( 'Container', EOP_TEXT_DOMAIN ) ),
+                    'proposal_card_color'       => array( 'label' => __( 'Fundo do card', EOP_TEXT_DOMAIN ), 'type' => 'color', 'default' => '#ffffff', 'group' => __( 'Container', EOP_TEXT_DOMAIN ) ),
+                    'proposal_max_width'        => array( 'label' => __( 'Largura maxima da proposta', EOP_TEXT_DOMAIN ), 'type' => 'number', 'min' => 720, 'max' => 1600, 'group' => __( 'Container', EOP_TEXT_DOMAIN ) ),
+                    'proposal_text_color'       => array( 'label' => __( 'Texto principal', EOP_TEXT_DOMAIN ), 'type' => 'color', 'default' => '#172033', 'group' => __( 'Tipografia', EOP_TEXT_DOMAIN ) ),
+                    'proposal_muted_color'      => array( 'label' => __( 'Texto auxiliar', EOP_TEXT_DOMAIN ), 'type' => 'color', 'default' => '#5b6474', 'group' => __( 'Tipografia', EOP_TEXT_DOMAIN ) ),
+                    'proposal_title_size'       => array( 'label' => __( 'Tamanho do titulo', EOP_TEXT_DOMAIN ), 'type' => 'text', 'group' => __( 'Tipografia', EOP_TEXT_DOMAIN ) ),
+                    'proposal_text_size'        => array( 'label' => __( 'Tamanho do texto base', EOP_TEXT_DOMAIN ), 'type' => 'text', 'group' => __( 'Tipografia', EOP_TEXT_DOMAIN ) ),
+                ),
+            ),
+        );
+    }
+
+    /**
+     * Renderiza um accordion individual do editor visual do link.
+     *
+     * Recebe uma secao declarativa de get_order_link_visual_sections(),
+     * quebra os campos em grupos internos e imprime o HTML do accordion.
+     * Se o layout de um bloco inteiro precisar mudar, geralmente a alteracao
+     * acontece aqui, e nao na definicao dos campos.
+     *
+     * @param array $section  Definicao declarativa da secao.
+     * @param array $settings Configuracoes atuais do plugin.
+     */
+    private static function render_order_link_visual_section( $section, $settings ) {
+        $field_groups = self::get_order_link_visual_field_groups( $section );
+        $expanded     = ! empty( $section['expanded'] );
+        ?>
+        <div class="eop-accordion eop-visual-accordion">
+            <button type="button" class="eop-accordion__toggle" aria-expanded="<?php echo $expanded ? 'true' : 'false'; ?>">
+                <span>
+                    <strong><?php echo esc_html( (string) $section['label'] ); ?></strong>
+                    <small><?php echo esc_html( (string) $section['description'] ); ?></small>
+                </span>
+                <span class="eop-accordion__icon"><?php echo $expanded ? '-' : '+'; ?></span>
+            </button>
+            <div class="eop-accordion__body"<?php echo $expanded ? '' : ' hidden'; ?>>
+                <div class="eop-visual-groups">
+                    <?php foreach ( $field_groups as $group ) : ?>
+                        <section class="eop-visual-group">
+                            <?php if ( ! empty( $group['label'] ) ) : ?>
+                                <header class="eop-visual-group__head">
+                                    <strong><?php echo esc_html( (string) $group['label'] ); ?></strong>
+                                </header>
+                            <?php endif; ?>
+                            <div class="eop-settings-grid">
+                                <?php foreach ( $group['fields'] as $field_key => $field ) : ?>
+                                    <?php self::render_order_link_visual_field( $field_key, $field, $settings ); ?>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Agrupa os campos de uma secao visual por subtitulo interno.
+     *
+     * Exemplo: dentro de uma mesma secao maior, podemos separar os campos em
+     * grupos como "Titulo", "Descricao", "Botoes", "Tipografia" etc.
+     * Isso deixa a manutencao mais simples porque a ordem visual pode ser
+     * reorganizada sem reescrever o renderer principal.
+     *
+     * @param array $section Definicao declarativa da secao.
+     * @return array[]
+     */
+    private static function get_order_link_visual_field_groups( $section ) {
+        $groups = array();
+
+        foreach ( (array) ( $section['fields'] ?? array() ) as $field_key => $field ) {
+            $group_label = isset( $field['group'] ) ? (string) $field['group'] : '';
+            $group_key   = '' !== $group_label ? sanitize_title( $group_label ) : 'default';
+
+            if ( ! isset( $groups[ $group_key ] ) ) {
+                $groups[ $group_key ] = array(
+                    'label'  => $group_label,
+                    'fields' => array(),
+                );
+            }
+
+            $groups[ $group_key ]['fields'][ $field_key ] = $field;
+        }
+
+        return array_values( $groups );
+    }
+
+    /**
+     * Renderiza um campo individual do editor visual do link.
+     *
+     * Esta funcao centraliza a impressao dos diferentes tipos aceitos no
+     * editor: texto, textarea, cor, fonte, numero e seletor de midia.
+     * Quando surgir um novo tipo de campo nessa tela, o ajuste mais provavel
+     * sera aqui.
+     *
+     * @param string $field_key Chave da configuracao salva no option array.
+     * @param array  $field     Metadados declarativos do campo.
+     * @param array  $settings  Configuracoes atuais do plugin.
+     */
+    private static function render_order_link_visual_field( $field_key, $field, $settings ) {
+        $value      = $settings[ $field_key ] ?? ( $field['default'] ?? '' );
+        $input_id   = 'eop_' . sanitize_html_class( $field_key ) . '_visual';
+        $field_type = (string) ( $field['type'] ?? 'text' );
+        $is_full    = ! empty( $field['full'] );
+        $help       = isset( $field['help'] ) ? (string) $field['help'] : '';
+        ?>
+        <div class="eop-settings-field<?php echo $is_full ? ' is-full' : ''; ?>">
+            <label for="<?php echo esc_attr( $input_id ); ?>"><?php echo esc_html( (string) $field['label'] ); ?></label>
+            <?php if ( 'media' === $field_type ) : ?>
+                <?php
+                $buttons = wp_parse_args(
+                    (array) ( $field['buttons'] ?? array() ),
+                    array(
+                        'select'  => __( 'Selecionar', EOP_TEXT_DOMAIN ),
+                        'replace' => __( 'Trocar', EOP_TEXT_DOMAIN ),
+                        'remove'  => __( 'Remover', EOP_TEXT_DOMAIN ),
+                        'empty'   => __( 'Nenhum arquivo selecionado.', EOP_TEXT_DOMAIN ),
+                    )
+                );
+                ?>
+                <div class="eop-settings-media">
+                    <div class="eop-settings-media__preview<?php echo ! empty( $value ) ? ' has-image' : ''; ?>" data-media-preview>
+                        <?php if ( ! empty( $value ) ) : ?>
+                            <img src="<?php echo esc_url( (string) $value ); ?>" alt="<?php esc_attr_e( 'Preview da logo', EOP_TEXT_DOMAIN ); ?>" />
+                        <?php else : ?>
+                            <span class="eop-settings-media__empty"><?php echo esc_html( $buttons['empty'] ); ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="eop-settings-media__details">
+                        <input
+                            id="<?php echo esc_attr( $input_id ); ?>"
+                            type="url"
+                            class="eop-settings-media__url"
+                            name="<?php echo esc_attr( self::OPTION_KEY ); ?>[<?php echo esc_attr( $field_key ); ?>]"
+                            value="<?php echo esc_attr( (string) $value ); ?>"
+                            readonly
+                            data-media-url
+                        />
+                        <div class="eop-settings-media__actions">
+                            <button type="button" class="button button-secondary eop-settings-media__select" data-media-select>
+                                <?php echo ! empty( $value ) ? esc_html( $buttons['replace'] ) : esc_html( $buttons['select'] ); ?>
+                            </button>
+                            <button type="button" class="button button-link-delete eop-settings-media__remove<?php echo ! empty( $value ) ? '' : ' is-hidden'; ?>" data-media-remove>
+                                <?php echo esc_html( $buttons['remove'] ); ?>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            <?php elseif ( 'color' === $field_type ) : ?>
+                <input id="<?php echo esc_attr( $input_id ); ?>" class="eop-color-field" type="text" data-default-color="<?php echo esc_attr( (string) ( $field['default'] ?? '' ) ); ?>" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[<?php echo esc_attr( $field_key ); ?>]" value="<?php echo esc_attr( (string) $value ); ?>" />
+            <?php elseif ( 'font' === $field_type ) : ?>
+                <input id="<?php echo esc_attr( $input_id ); ?>" class="select_font eop-font-field" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[<?php echo esc_attr( $field_key ); ?>]" value="<?php echo esc_attr( (string) $value ); ?>" />
+            <?php elseif ( 'textarea' === $field_type ) : ?>
+                <textarea id="<?php echo esc_attr( $input_id ); ?>" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[<?php echo esc_attr( $field_key ); ?>]"><?php echo esc_textarea( (string) $value ); ?></textarea>
+            <?php elseif ( 'number' === $field_type ) : ?>
+                <input id="<?php echo esc_attr( $input_id ); ?>" type="number" min="<?php echo esc_attr( (string) ( $field['min'] ?? 0 ) ); ?>" max="<?php echo esc_attr( (string) ( $field['max'] ?? 9999 ) ); ?>" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[<?php echo esc_attr( $field_key ); ?>]" value="<?php echo esc_attr( (string) $value ); ?>" />
+            <?php else : ?>
+                <input id="<?php echo esc_attr( $input_id ); ?>" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[<?php echo esc_attr( $field_key ); ?>]" value="<?php echo esc_attr( (string) $value ); ?>" />
+            <?php endif; ?>
+            <?php if ( '' !== $help ) : ?>
+                <small class="eop-settings-help"><?php echo esc_html( $help ); ?></small>
+            <?php endif; ?>
         </div>
         <?php
     }
@@ -1658,6 +1901,31 @@ class EOP_Settings {
         return self::normalize_admin_section( $active_section ) === sanitize_key( (string) $section_key ) || 'all' === self::normalize_admin_section( $active_section );
     }
 
+    /**
+     * Renderiza um template isolado das telas de configuracao do admin.
+     *
+     * Isso permite quebrar o HTML grande em arquivos menores dentro de
+     * templates/settings/, deixando a classe principal focada na logica
+     * e na preparacao dos dados de cada tela.
+     *
+     * @param string $template Caminho relativo dentro de templates/settings/.
+     * @param array  $vars     Variaveis que o template precisa receber.
+     */
+    private static function render_admin_settings_template( $template, $vars = array() ) {
+        $template = ltrim( (string) $template, '/\\' );
+        $path     = trailingslashit( EOP_PLUGIN_DIR ) . 'templates/settings/' . $template;
+
+        if ( ! file_exists( $path ) ) {
+            return;
+        }
+
+        if ( ! empty( $vars ) ) {
+            extract( $vars, EXTR_SKIP );
+        }
+
+        include $path;
+    }
+
     private static function render_signature_document_item( $index, $document ) {
         $document        = is_array( $document ) ? $document : array();
         $attachment_name = ! empty( $document['attachment_id'] ) ? get_the_title( absint( $document['attachment_id'] ) ) : '';
@@ -1997,506 +2265,41 @@ class EOP_Settings {
                     </div>
                 <?php endif; ?>
                 <div class="eop-settings-sections">
-                        <?php if ( self::should_render_admin_section( $section, 'general-config' ) ) : ?>
-                        <section class="eop-settings-card">
-                            <h2><?php esc_html_e( 'Fluxo', EOP_TEXT_DOMAIN ); ?></h2>
-                            <p><?php esc_html_e( 'Defina como a equipe comercial trabalha hoje e como o cliente recebe a proposta.', EOP_TEXT_DOMAIN ); ?></p>
-                            <div class="eop-settings-grid">
-                                <div class="eop-settings-field">
-                                    <label for="eop_flow_mode"><?php esc_html_e( 'Modo do fluxo', EOP_TEXT_DOMAIN ); ?></label>
-                                    <select id="eop_flow_mode" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[flow_mode]">
-                                        <option value="proposal" <?php selected( $settings['flow_mode'], 'proposal' ); ?>><?php esc_html_e( 'Proposta publica', EOP_TEXT_DOMAIN ); ?></option>
-                                        <option value="direct_order" <?php selected( $settings['flow_mode'], 'direct_order' ); ?>><?php esc_html_e( 'Pedido direto', EOP_TEXT_DOMAIN ); ?></option>
-                                    </select>
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_discount_mode"><?php esc_html_e( 'Modo do desconto', EOP_TEXT_DOMAIN ); ?></label>
-                                    <select id="eop_discount_mode" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[discount_mode]">
-                                        <option value="both" <?php selected( $settings['discount_mode'], 'both' ); ?>><?php esc_html_e( 'Porcentagem e valor fixo', EOP_TEXT_DOMAIN ); ?></option>
-                                        <option value="percent" <?php selected( $settings['discount_mode'], 'percent' ); ?>><?php esc_html_e( 'Somente porcentagem (%)', EOP_TEXT_DOMAIN ); ?></option>
-                                        <option value="fixed" <?php selected( $settings['discount_mode'], 'fixed' ); ?>><?php esc_html_e( 'Somente valor fixo (R$)', EOP_TEXT_DOMAIN ); ?></option>
-                                    </select>
-                                    <small class="eop-settings-help"><?php esc_html_e( 'Define se o campo de desconto aceita porcentagem, valor fixo ou ambos.', EOP_TEXT_DOMAIN ); ?></small>
-                                </div>
-                                <div class="eop-settings-field">
-                                    <span><?php esc_html_e( 'Liberar pagamento apos confirmacao', EOP_TEXT_DOMAIN ); ?></span>
-                                    <div class="eop-settings-switch-shell">
-                                        <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enable_checkout_confirmation]" value="<?php echo esc_attr( $settings['enable_checkout_confirmation'] ); ?>" />
-                                        <button
-                                            type="button"
-                                            class="eop-settings-switcher<?php echo 'yes' === $settings['enable_checkout_confirmation'] ? ' is-enabled' : ''; ?>"
-                                            role="switch"
-                                            aria-checked="<?php echo 'yes' === $settings['enable_checkout_confirmation'] ? 'true' : 'false'; ?>"
-                                            data-target-name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enable_checkout_confirmation]"
-                                            data-enabled-value="yes"
-                                            data-disabled-value="no"
-                                            aria-label="<?php esc_attr_e( 'Alternar pagamento apos confirmacao', EOP_TEXT_DOMAIN ); ?>"
-                                        >
-                                            <span class="eop-settings-switcher__label eop-settings-switcher__label--off">Off</span>
-                                            <span class="eop-settings-switcher__thumb" aria-hidden="true"></span>
-                                            <span class="eop-settings-switcher__label eop-settings-switcher__label--on">On</span>
-                                        </button>
-                                        <span class="eop-settings-switcher__status" aria-live="polite">
-                                            <?php echo 'yes' === $settings['enable_checkout_confirmation'] ? esc_html__( 'Ativado', EOP_TEXT_DOMAIN ) : esc_html__( 'Desativado', EOP_TEXT_DOMAIN ); ?>
-                                        </span>
-                                    </div>
-                                    <small class="eop-settings-help"><?php esc_html_e( 'Mostra o botao de pagar apenas depois que o cliente confirmar a proposta.', EOP_TEXT_DOMAIN ); ?></small>
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <?php self::render_help_label( 'label', __( 'Produtos considerados servicos', EOP_TEXT_DOMAIN ), 'service_products', array( 'for' => 'eop_service_products_selector' ) ); ?>
-                                    <input id="eop_service_products" type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[service_products]" value="<?php echo esc_attr( $service_selector['serialized_value'] ); ?>" />
-                                    <select
-                                        id="eop_service_products_selector"
-                                        class="eop-settings-product-selector"
-                                        data-target-input="#eop_service_products"
-                                        data-search-action="eop_search_products"
-                                        data-placeholder="<?php echo esc_attr__( 'Busque produtos por nome ou SKU...', EOP_TEXT_DOMAIN ); ?>"
-                                        data-no-results="<?php echo esc_attr__( 'Nenhum produto encontrado.', EOP_TEXT_DOMAIN ); ?>"
-                                        data-minimum-input-length="3"
-                                        multiple
-                                    >
-                                        <?php foreach ( $service_selector['options'] as $option ) : ?>
-                                            <option value="<?php echo esc_attr( $option['id'] ); ?>" selected="selected"><?php echo esc_html( $option['text'] ); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <small class="eop-settings-help"><?php esc_html_e( 'Esses itens aparecem em uma linha Servicos antes do total e nao entram na edicao do fluxo complementar.', EOP_TEXT_DOMAIN ); ?></small>
-                                    <?php if ( ! empty( $service_selector['missing_tokens'] ) ) : ?>
-                                        <small class="eop-settings-help"><?php echo esc_html( sprintf( __( 'Tokens antigos preservados ate a proxima atualizacao desta lista: %s', EOP_TEXT_DOMAIN ), implode( ', ', $service_selector['missing_tokens'] ) ) ); ?></small>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <?php self::render_help_label( 'label', __( 'Categorias de produtos considerados servicos', EOP_TEXT_DOMAIN ), 'service_product_categories', array( 'for' => 'eop_service_product_categories_selector' ) ); ?>
-                                    <input id="eop_service_product_categories" type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[service_product_categories]" value="<?php echo esc_attr( $service_category_selector['serialized_value'] ); ?>" />
-                                    <select
-                                        id="eop_service_product_categories_selector"
-                                        class="eop-settings-category-selector"
-                                        data-target-input="#eop_service_product_categories"
-                                        data-search-action="eop_search_product_categories"
-                                        data-placeholder="<?php echo esc_attr__( 'Busque categorias de produto...', EOP_TEXT_DOMAIN ); ?>"
-                                        data-no-results="<?php echo esc_attr__( 'Nenhuma categoria encontrada.', EOP_TEXT_DOMAIN ); ?>"
-                                        data-minimum-input-length="1"
-                                        multiple
-                                    >
-                                        <?php foreach ( $service_category_selector['options'] as $option ) : ?>
-                                            <option value="<?php echo esc_attr( $option['id'] ); ?>" selected="selected"><?php echo esc_html( $option['text'] ); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <small class="eop-settings-help"><?php esc_html_e( 'Essas categorias fazem qualquer produto delas entrar no grupo de servicos nos totalizadores e no fluxo complementar.', EOP_TEXT_DOMAIN ); ?></small>
-                                    <?php if ( ! empty( $service_category_selector['missing_tokens'] ) ) : ?>
-                                        <small class="eop-settings-help"><?php echo esc_html( sprintf( __( 'Tokens antigos preservados ate a proxima atualizacao desta lista: %s', EOP_TEXT_DOMAIN ), implode( ', ', $service_category_selector['missing_tokens'] ) ) ); ?></small>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_order_page"><?php esc_html_e( 'Pagina do pedido', EOP_TEXT_DOMAIN ); ?></label>
-                                    <select id="eop_order_page" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[order_page_id]">
-                                        <option value="0"><?php esc_html_e( 'Selecione uma pagina', EOP_TEXT_DOMAIN ); ?></option>
-                                        <?php foreach ( $pages as $page ) : ?>
-                                            <option value="<?php echo esc_attr( $page->ID ); ?>" <?php selected( (int) $settings['order_page_id'], (int) $page->ID ); ?>><?php echo esc_html( $page->post_title ); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <small class="eop-settings-help"><?php esc_html_e( 'Pagina usada para o shortcode [expresso_order]. O plugin cria essa pagina automaticamente na ativacao.', EOP_TEXT_DOMAIN ); ?></small>
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_proposal_page"><?php esc_html_e( 'Pagina da proposta', EOP_TEXT_DOMAIN ); ?></label>
-                                    <select id="eop_proposal_page" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_page_id]">
-                                        <option value="0"><?php esc_html_e( 'Selecione uma pagina', EOP_TEXT_DOMAIN ); ?></option>
-                                        <?php foreach ( $pages as $page ) : ?>
-                                            <option value="<?php echo esc_attr( $page->ID ); ?>" <?php selected( (int) $settings['proposal_page_id'], (int) $page->ID ); ?>><?php echo esc_html( $page->post_title ); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <small class="eop-settings-help"><?php esc_html_e( 'Pagina publica do shortcode [expresso_order_proposal]. O plugin tambem repara esse vinculo automaticamente.', EOP_TEXT_DOMAIN ); ?></small>
-                                </div>
-                            </div>
-                        </section>
+                    <?php if ( $should_render_general_config ) : ?>
+                        <?php self::render_admin_settings_template( 'embedded/general-config.php', compact( 'settings', 'pages', 'service_selector', 'service_category_selector' ) ); ?>
+                    <?php endif; ?>
 
-                        <section class="eop-settings-card">
-                            <h2><?php esc_html_e( 'PDF nativo', EOP_TEXT_DOMAIN ); ?></h2>
-                            <p><?php esc_html_e( 'Defina os dados exibidos pelo gerador interno de PDF do plugin.', EOP_TEXT_DOMAIN ); ?></p>
-                            <div class="eop-settings-grid">
-                                <div class="eop-settings-field">
-                                    <label for="eop_pdf_company_name"><?php esc_html_e( 'Nome da empresa', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_pdf_company_name" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[pdf_company_name]" value="<?php echo esc_attr( $settings['pdf_company_name'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_pdf_company_document"><?php esc_html_e( 'Documento da empresa', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_pdf_company_document" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[pdf_company_document]" value="<?php echo esc_attr( $settings['pdf_company_document'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_pdf_company_address"><?php esc_html_e( 'Endereco da empresa', EOP_TEXT_DOMAIN ); ?></label>
-                                    <textarea id="eop_pdf_company_address" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[pdf_company_address]"><?php echo esc_textarea( $settings['pdf_company_address'] ); ?></textarea>
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_pdf_footer_note"><?php esc_html_e( 'Rodape do documento', EOP_TEXT_DOMAIN ); ?></label>
-                                    <textarea id="eop_pdf_footer_note" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[pdf_footer_note]"><?php echo esc_textarea( $settings['pdf_footer_note'] ); ?></textarea>
-                                </div>
-                            </div>
-                        </section>
+                    <?php if ( $should_render_confirmation_general ) : ?>
+                        <?php self::render_admin_settings_template( 'embedded/confirmation-general.php', compact( 'settings', 'locked_selector' ) ); ?>
+                    <?php endif; ?>
 
-                        <?php endif; ?>
+                    <?php if ( $should_render_confirmation_documents ) : ?>
+                        <?php self::render_admin_settings_template( 'embedded/confirmation-documents.php', compact( 'signature_documents' ) ); ?>
+                    <?php endif; ?>
 
-                        <?php if ( $should_render_confirmation_general ) : ?>
-                        <section class="eop-settings-card">
-                            <h2><?php esc_html_e( 'Fluxo complementar apos a proposta', EOP_TEXT_DOMAIN ); ?></h2>
-                            <p><?php esc_html_e( 'Centralize aqui as regras gerais, os textos principais e o comportamento do fluxo depois que a proposta ja foi aprovada.', EOP_TEXT_DOMAIN ); ?></p>
-                            <div class="eop-settings-grid">
-                                <div class="eop-settings-field is-full">
-                                    <?php self::render_help_label( 'span', __( 'Ativar fluxo complementar', EOP_TEXT_DOMAIN ), 'enable_post_confirmation_flow' ); ?>
-                                    <div class="eop-settings-switch-shell">
-                                        <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enable_post_confirmation_flow]" value="<?php echo esc_attr( $settings['enable_post_confirmation_flow'] ); ?>" />
-                                        <button
-                                            type="button"
-                                            class="eop-settings-switcher<?php echo 'yes' === $settings['enable_post_confirmation_flow'] ? ' is-enabled' : ''; ?>"
-                                            role="switch"
-                                            aria-checked="<?php echo 'yes' === $settings['enable_post_confirmation_flow'] ? 'true' : 'false'; ?>"
-                                            data-target-name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enable_post_confirmation_flow]"
-                                            data-enabled-value="yes"
-                                            data-disabled-value="no"
-                                            aria-label="<?php esc_attr_e( 'Alternar fluxo complementar', EOP_TEXT_DOMAIN ); ?>"
-                                        >
-                                            <span class="eop-settings-switcher__label eop-settings-switcher__label--off">Off</span>
-                                            <span class="eop-settings-switcher__thumb" aria-hidden="true"></span>
-                                            <span class="eop-settings-switcher__label eop-settings-switcher__label--on">On</span>
-                                        </button>
-                                        <span class="eop-settings-switcher__status" aria-live="polite">
-                                            <?php echo 'yes' === $settings['enable_post_confirmation_flow'] ? esc_html__( 'Ativado', EOP_TEXT_DOMAIN ) : esc_html__( 'Desativado', EOP_TEXT_DOMAIN ); ?>
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="eop-settings-field">
-                                    <?php self::render_help_label( 'label', __( 'Produtos bloqueados', EOP_TEXT_DOMAIN ), 'post_confirmation_locked_products', array( 'for' => 'eop_post_confirmation_locked_products_selector' ) ); ?>
-                                    <input id="eop_post_confirmation_locked_products" type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_locked_products]" value="<?php echo esc_attr( $locked_selector['serialized_value'] ); ?>" />
-                                    <select id="eop_post_confirmation_locked_products_selector" class="eop-settings-product-selector" data-target-input="#eop_post_confirmation_locked_products" multiple>
-                                        <?php foreach ( $locked_selector['options'] as $option ) : ?>
-                                            <option value="<?php echo esc_attr( $option['id'] ); ?>" selected="selected"><?php echo esc_html( $option['text'] ); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <small class="eop-settings-help"><?php esc_html_e( 'Busque produtos por nome ou SKU para bloquear a alteracao do nome na etapa final.', EOP_TEXT_DOMAIN ); ?></small>
-                                    <?php if ( ! empty( $locked_selector['missing_tokens'] ) ) : ?>
-                                        <small class="eop-settings-help"><?php echo esc_html( sprintf( __( 'Tokens antigos preservados ate a proxima atualizacao desta lista: %s', EOP_TEXT_DOMAIN ), implode( ', ', $locked_selector['missing_tokens'] ) ) ); ?></small>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <?php self::render_help_label( 'span', __( 'Exigir anexo', EOP_TEXT_DOMAIN ), 'post_confirmation_require_attachment' ); ?>
-                                    <div class="eop-settings-switch-shell">
-                                        <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_require_attachment]" value="<?php echo esc_attr( $settings['post_confirmation_require_attachment'] ); ?>" />
-                                        <button
-                                            type="button"
-                                            class="eop-settings-switcher<?php echo 'yes' === $settings['post_confirmation_require_attachment'] ? ' is-enabled' : ''; ?>"
-                                            role="switch"
-                                            aria-checked="<?php echo 'yes' === $settings['post_confirmation_require_attachment'] ? 'true' : 'false'; ?>"
-                                            data-target-name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_require_attachment]"
-                                            data-enabled-value="yes"
-                                            data-disabled-value="no"
-                                            aria-label="<?php esc_attr_e( 'Alternar anexo obrigatorio', EOP_TEXT_DOMAIN ); ?>"
-                                        >
-                                            <span class="eop-settings-switcher__label eop-settings-switcher__label--off">Off</span>
-                                            <span class="eop-settings-switcher__thumb" aria-hidden="true"></span>
-                                            <span class="eop-settings-switcher__label eop-settings-switcher__label--on">On</span>
-                                        </button>
-                                        <span class="eop-settings-switcher__status" aria-live="polite">
-                                            <?php echo 'yes' === $settings['post_confirmation_require_attachment'] ? esc_html__( 'Ativado', EOP_TEXT_DOMAIN ) : esc_html__( 'Desativado', EOP_TEXT_DOMAIN ); ?>
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="eop-settings-field">
-                                    <?php self::render_help_label( 'label', __( 'Titulo do upload', EOP_TEXT_DOMAIN ), 'post_confirmation_upload_title', array( 'for' => 'eop_post_confirmation_upload_title' ) ); ?>
-                                    <input id="eop_post_confirmation_upload_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_upload_title]" value="<?php echo esc_attr( $settings['post_confirmation_upload_title'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <?php self::render_help_label( 'label', __( 'Label do anexo', EOP_TEXT_DOMAIN ), 'post_confirmation_upload_field_label', array( 'for' => 'eop_post_confirmation_upload_field_label' ) ); ?>
-                                    <input id="eop_post_confirmation_upload_field_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_upload_field_label]" value="<?php echo esc_attr( $settings['post_confirmation_upload_field_label'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <?php self::render_help_label( 'label', __( 'Descricao do upload', EOP_TEXT_DOMAIN ), 'post_confirmation_upload_description', array( 'for' => 'eop_post_confirmation_upload_description' ) ); ?>
-                                    <textarea id="eop_post_confirmation_upload_description" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_upload_description]"><?php echo esc_textarea( $settings['post_confirmation_upload_description'] ); ?></textarea>
-                                </div>
-                                <div class="eop-settings-field">
-                                    <?php self::render_help_label( 'label', __( 'Botao do upload', EOP_TEXT_DOMAIN ), 'post_confirmation_upload_button_label', array( 'for' => 'eop_post_confirmation_upload_button_label' ) ); ?>
-                                    <input id="eop_post_confirmation_upload_button_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_upload_button_label]" value="<?php echo esc_attr( $settings['post_confirmation_upload_button_label'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <?php self::render_help_label( 'label', __( 'Titulo da personalizacao', EOP_TEXT_DOMAIN ), 'post_confirmation_products_title', array( 'for' => 'eop_post_confirmation_products_title' ) ); ?>
-                                    <input id="eop_post_confirmation_products_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_products_title]" value="<?php echo esc_attr( $settings['post_confirmation_products_title'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <?php self::render_help_label( 'label', __( 'Descricao da personalizacao', EOP_TEXT_DOMAIN ), 'post_confirmation_products_description', array( 'for' => 'eop_post_confirmation_products_description' ) ); ?>
-                                    <textarea id="eop_post_confirmation_products_description" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_products_description]"><?php echo esc_textarea( $settings['post_confirmation_products_description'] ); ?></textarea>
-                                </div>
-                                <div class="eop-settings-field">
-                                    <?php self::render_help_label( 'label', __( 'Botao da personalizacao', EOP_TEXT_DOMAIN ), 'post_confirmation_products_button_label', array( 'for' => 'eop_post_confirmation_products_button_label' ) ); ?>
-                                    <input id="eop_post_confirmation_products_button_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_products_button_label]" value="<?php echo esc_attr( $settings['post_confirmation_products_button_label'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <?php self::render_help_label( 'label', __( 'Titulo da conclusao', EOP_TEXT_DOMAIN ), 'post_confirmation_completion_title', array( 'for' => 'eop_post_confirmation_completion_title' ) ); ?>
-                                    <input id="eop_post_confirmation_completion_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_completion_title]" value="<?php echo esc_attr( $settings['post_confirmation_completion_title'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <?php self::render_help_label( 'label', __( 'Descricao da conclusao', EOP_TEXT_DOMAIN ), 'post_confirmation_completion_description', array( 'for' => 'eop_post_confirmation_completion_description' ) ); ?>
-                                    <textarea id="eop_post_confirmation_completion_description" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[post_confirmation_completion_description]"><?php echo esc_textarea( $settings['post_confirmation_completion_description'] ); ?></textarea>
-                                </div>
-                            </div>
-                        </section>
-                        <?php endif; ?>
+                    <?php if ( $should_render_confirmation_preview ) : ?>
+                        <?php self::render_admin_settings_template( 'embedded/confirmation-preview.php', compact( 'settings' ) ); ?>
+                    <?php endif; ?>
 
-                        <?php if ( $should_render_confirmation_documents ) : ?>
-                            <?php self::render_confirmation_documents_section( $signature_documents ); ?>
-                        <?php endif; ?>
+                    <?php if ( $should_render_confirmation_upload_products_preview ) : ?>
+                        <?php self::render_admin_settings_template( 'embedded/confirmation-upload-products-preview.php', compact( 'settings' ) ); ?>
+                    <?php endif; ?>
 
-                        <?php if ( $should_render_confirmation_preview ) : ?>
-                            <section class="eop-settings-card eop-contract-preview-settings">
-                                <h2><?php esc_html_e( 'Visual da pagina contratual', EOP_TEXT_DOMAIN ); ?></h2>
-                                <p><?php esc_html_e( 'Ajuste o visual da etapa de aceite e veja como a pagina publica vai ficar antes de publicar.', EOP_TEXT_DOMAIN ); ?></p>
-                                <?php self::render_post_confirmation_contract_visual_editor( $settings ); ?>
-                            </section>
+                    <?php if ( self::should_render_admin_section( $section, 'order-link-style' ) ) : ?>
+                        <?php self::render_admin_settings_template( 'embedded/order-link-style.php', compact( 'settings' ) ); ?>
+                    <?php endif; ?>
 
-                            <?php if ( class_exists( 'EOP_Post_Confirmation_Flow' ) && method_exists( 'EOP_Post_Confirmation_Flow', 'render_admin_contract_preview_markup' ) ) : ?>
-                                <?php echo EOP_Post_Confirmation_Flow::render_admin_contract_preview_markup( $settings ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                            <?php endif; ?>
-                        <?php endif; ?>
+                    <?php if ( self::should_render_admin_section( $section, 'proposal-link-style' ) ) : ?>
+                        <?php self::render_admin_settings_template( 'embedded/proposal-link-style.php', compact( 'settings' ) ); ?>
+                    <?php endif; ?>
 
-                        <?php if ( $should_render_confirmation_upload_products_preview ) : ?>
-                            <section class="eop-settings-card eop-contract-preview-settings">
-                                <h2><?php esc_html_e( 'Visual da pagina de upload e produtos', EOP_TEXT_DOMAIN ); ?></h2>
-                                <p><?php esc_html_e( 'Ajuste os textos e o visual da etapa final em que o cliente envia o arquivo e personaliza os produtos.', EOP_TEXT_DOMAIN ); ?></p>
-                                <?php self::render_post_confirmation_upload_products_visual_editor( $settings ); ?>
-                            </section>
+                    <?php if ( self::should_render_admin_section( $section, 'customer-experience' ) ) : ?>
+                        <?php self::render_admin_settings_template( 'embedded/customer-experience.php', compact( 'settings' ) ); ?>
+                    <?php endif; ?>
 
-                            <?php if ( class_exists( 'EOP_Post_Confirmation_Flow' ) && method_exists( 'EOP_Post_Confirmation_Flow', 'render_admin_upload_products_preview_markup' ) ) : ?>
-                                <?php echo EOP_Post_Confirmation_Flow::render_admin_upload_products_preview_markup( $settings ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                            <?php endif; ?>
-                        <?php endif; ?>
-
-                        <?php if ( self::should_render_admin_section( $section, 'order-link-style' ) ) : ?>
-                        <section class="eop-settings-card eop-proposal-preview-settings">
-                            <h2><?php esc_html_e( 'Visual do Link do Pedido', EOP_TEXT_DOMAIN ); ?></h2>
-                            <p><?php esc_html_e( 'Separe a identidade visual principal do shell e do link do pedido para ajustes rapidos de marca.', EOP_TEXT_DOMAIN ); ?></p>
-                            <?php if ( class_exists( 'EOP_Public_Proposal' ) && method_exists( 'EOP_Public_Proposal', 'render_admin_preview_card' ) ) : ?>
-                                <?php echo EOP_Public_Proposal::render_admin_preview_card( $settings ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                            <?php endif; ?>
-                            <div class="eop-settings-grid eop-proposal-preview-settings__grid">
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_brand_logo_url"><?php esc_html_e( 'Logo', EOP_TEXT_DOMAIN ); ?></label>
-                                    <div class="eop-settings-media">
-                                        <div class="eop-settings-media__preview<?php echo $settings['brand_logo_url'] ? ' has-image' : ''; ?>" data-media-preview>
-                                            <?php if ( $settings['brand_logo_url'] ) : ?>
-                                                <img src="<?php echo esc_url( $settings['brand_logo_url'] ); ?>" alt="<?php esc_attr_e( 'Preview da logo', EOP_TEXT_DOMAIN ); ?>" />
-                                            <?php else : ?>
-                                                <span class="eop-settings-media__empty"><?php esc_html_e( 'Nenhum logo selecionado ainda.', EOP_TEXT_DOMAIN ); ?></span>
-                                            <?php endif; ?>
-                                        </div>
-                                        <div class="eop-settings-media__details">
-                                            <input
-                                                id="eop_brand_logo_url"
-                                                type="url"
-                                                class="eop-settings-media__url"
-                                                value="<?php echo esc_attr( $settings['brand_logo_url'] ); ?>"
-                                                readonly
-                                                data-media-url
-                                            />
-                                            <div class="eop-settings-media__actions">
-                                                <button type="button" class="button button-secondary eop-settings-media__select" data-media-select>
-                                                    <?php echo $settings['brand_logo_url'] ? esc_html__( 'Trocar logo', EOP_TEXT_DOMAIN ) : esc_html__( 'Selecionar logo', EOP_TEXT_DOMAIN ); ?>
-                                                </button>
-                                                <button type="button" class="button button-link-delete eop-settings-media__remove<?php echo $settings['brand_logo_url'] ? '' : ' is-hidden'; ?>" data-media-remove>
-                                                    <?php esc_html_e( 'Remover logo', EOP_TEXT_DOMAIN ); ?>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <small class="eop-settings-help"><?php esc_html_e( 'Use a biblioteca de midia para selecionar a logo usada na pagina publica do cliente.', EOP_TEXT_DOMAIN ); ?></small>
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_primary_color"><?php esc_html_e( 'Cor principal', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_primary_color" class="eop-color-field" type="text" data-default-color="#00034b" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[primary_color]" value="<?php echo esc_attr( $settings['primary_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_surface_color"><?php esc_html_e( 'Cor de fundo dos cards', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_surface_color" class="eop-color-field" type="text" data-default-color="#ffffff" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[surface_color]" value="<?php echo esc_attr( $settings['surface_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_border_color"><?php esc_html_e( 'Cor da borda', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_border_color" class="eop-color-field" type="text" data-default-color="#dbe3f0" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[border_color]" value="<?php echo esc_attr( $settings['border_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_radius"><?php esc_html_e( 'Radius', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_radius" type="number" min="0" max="48" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[border_radius]" value="<?php echo esc_attr( $settings['border_radius'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_font_family"><?php esc_html_e( 'Fonte', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_font_family" class="select_font eop-font-field" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[font_family]" value="<?php echo esc_attr( $settings['font_family'] ); ?>" />
-                                    <small class="eop-settings-help"><?php esc_html_e( 'Selecione uma fonte do Google no mesmo padrao usado em outros plugins Aireset.', EOP_TEXT_DOMAIN ); ?></small>
-                                </div>
-                            </div>
-                        </section>
-
-                        <?php endif; ?>
-
-                        <?php if ( self::should_render_admin_section( $section, 'proposal-link-style' ) ) : ?>
-                        <section class="eop-settings-card">
-                            <h2><?php esc_html_e( 'Visual da pagina do cliente', EOP_TEXT_DOMAIN ); ?></h2>
-                            <p><?php esc_html_e( 'Deixe a proposta publica com uma identidade propria, sem depender do visual interno do vendedor.', EOP_TEXT_DOMAIN ); ?></p>
-                            <div class="eop-settings-grid">
-                                <div class="eop-settings-field">
-                                    <label for="eop_proposal_background_color"><?php esc_html_e( 'Fundo da pagina', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_proposal_background_color" class="eop-color-field" type="text" data-default-color="#f5f7ff" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_background_color]" value="<?php echo esc_attr( $settings['proposal_background_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_proposal_card_color"><?php esc_html_e( 'Fundo do card', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_proposal_card_color" class="eop-color-field" type="text" data-default-color="#ffffff" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_card_color]" value="<?php echo esc_attr( $settings['proposal_card_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_proposal_text_color"><?php esc_html_e( 'Texto principal', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_proposal_text_color" class="eop-color-field" type="text" data-default-color="#172033" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_text_color]" value="<?php echo esc_attr( $settings['proposal_text_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_proposal_muted_color"><?php esc_html_e( 'Texto auxiliar', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_proposal_muted_color" class="eop-color-field" type="text" data-default-color="#5b6474" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_muted_color]" value="<?php echo esc_attr( $settings['proposal_muted_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_proposal_max_width"><?php esc_html_e( 'Largura maxima da proposta (px)', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_proposal_max_width" type="number" min="720" max="1600" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_max_width]" value="<?php echo esc_attr( $settings['proposal_max_width'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_proposal_title_size"><?php esc_html_e( 'Tamanho do titulo', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_proposal_title_size" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_title_size]" value="<?php echo esc_attr( $settings['proposal_title_size'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_proposal_text_size"><?php esc_html_e( 'Tamanho do texto base', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_proposal_text_size" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_text_size]" value="<?php echo esc_attr( $settings['proposal_text_size'] ); ?>" />
-                                </div>
-                            </div>
-                        </section>
-                        <?php endif; ?>
-
-                        <?php if ( self::should_render_admin_section( $section, 'customer-experience' ) ) : ?>
-                        <section class="eop-settings-card">
-                            <h2><?php esc_html_e( 'Experiencia publica confirmada', EOP_TEXT_DOMAIN ); ?></h2>
-                            <p><?php esc_html_e( 'Edite em um unico lugar o visual da pagina confirmada e do fluxo complementar visto pelo cliente.', EOP_TEXT_DOMAIN ); ?></p>
-                            <div class="eop-settings-grid">
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_customer_experience_font_family"><?php esc_html_e( 'Fonte da experiencia publica', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_font_family" class="select_font eop-font-field" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_font_family]" value="<?php echo esc_attr( $settings['customer_experience_font_family'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_title_size"><?php esc_html_e( 'Tamanho do titulo principal', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_title_size" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_title_size]" value="<?php echo esc_attr( $settings['customer_experience_title_size'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_text_size"><?php esc_html_e( 'Tamanho do texto base', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_text_size" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_text_size]" value="<?php echo esc_attr( $settings['customer_experience_text_size'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_background_color"><?php esc_html_e( 'Fundo da pagina', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_background_color" class="eop-color-field" type="text" data-default-color="#edf2fb" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_background_color]" value="<?php echo esc_attr( $settings['customer_experience_background_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_hero_background_color"><?php esc_html_e( 'Fundo do hero', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_hero_background_color" class="eop-color-field" type="text" data-default-color="#0f1b35" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_hero_background_color]" value="<?php echo esc_attr( $settings['customer_experience_hero_background_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_panel_background_color"><?php esc_html_e( 'Fundo dos cards principais', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_panel_background_color" class="eop-color-field" type="text" data-default-color="#ffffff" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_panel_background_color]" value="<?php echo esc_attr( $settings['customer_experience_panel_background_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_sidebar_background_color"><?php esc_html_e( 'Fundo dos cards laterais', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_sidebar_background_color" class="eop-color-field" type="text" data-default-color="#f6f8fc" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_sidebar_background_color]" value="<?php echo esc_attr( $settings['customer_experience_sidebar_background_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_accent_color"><?php esc_html_e( 'Cor de destaque', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_accent_color" class="eop-color-field" type="text" data-default-color="#d78a2f" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_accent_color]" value="<?php echo esc_attr( $settings['customer_experience_accent_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_text_color"><?php esc_html_e( 'Texto principal', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_text_color" class="eop-color-field" type="text" data-default-color="#16243a" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_text_color]" value="<?php echo esc_attr( $settings['customer_experience_text_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_muted_color"><?php esc_html_e( 'Texto auxiliar', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_muted_color" class="eop-color-field" type="text" data-default-color="#66768d" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_muted_color]" value="<?php echo esc_attr( $settings['customer_experience_muted_color'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_eyebrow"><?php esc_html_e( 'Label superior', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_eyebrow" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_eyebrow]" value="<?php echo esc_attr( $settings['customer_experience_eyebrow'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_customer_experience_title"><?php esc_html_e( 'Titulo principal', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_title]" value="<?php echo esc_attr( $settings['customer_experience_title'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_customer_experience_description"><?php esc_html_e( 'Descricao principal', EOP_TEXT_DOMAIN ); ?></label>
-                                    <textarea id="eop_customer_experience_description" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_description]"><?php echo esc_textarea( $settings['customer_experience_description'] ); ?></textarea>
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_customer_experience_total_note"><?php esc_html_e( 'Texto de apoio do total', EOP_TEXT_DOMAIN ); ?></label>
-                                    <textarea id="eop_customer_experience_total_note" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_total_note]"><?php echo esc_textarea( $settings['customer_experience_total_note'] ); ?></textarea>
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_items_eyebrow"><?php esc_html_e( 'Label da secao de itens', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_items_eyebrow" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_items_eyebrow]" value="<?php echo esc_attr( $settings['customer_experience_items_eyebrow'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_items_title"><?php esc_html_e( 'Titulo da secao de itens', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_items_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_items_title]" value="<?php echo esc_attr( $settings['customer_experience_items_title'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_summary_eyebrow"><?php esc_html_e( 'Label do resumo lateral', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_summary_eyebrow" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_summary_eyebrow]" value="<?php echo esc_attr( $settings['customer_experience_summary_eyebrow'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_summary_title"><?php esc_html_e( 'Titulo do resumo lateral', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_summary_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_summary_title]" value="<?php echo esc_attr( $settings['customer_experience_summary_title'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_financial_eyebrow"><?php esc_html_e( 'Label do resumo financeiro', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_financial_eyebrow" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_financial_eyebrow]" value="<?php echo esc_attr( $settings['customer_experience_financial_eyebrow'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_actions_eyebrow"><?php esc_html_e( 'Label do card de acao', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_actions_eyebrow" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_actions_eyebrow]" value="<?php echo esc_attr( $settings['customer_experience_actions_eyebrow'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_actions_title"><?php esc_html_e( 'Titulo do card de acao', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_actions_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_actions_title]" value="<?php echo esc_attr( $settings['customer_experience_actions_title'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_customer_experience_progress_label"><?php esc_html_e( 'Titulo do mapa de jornada', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_customer_experience_progress_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[customer_experience_progress_label]" value="<?php echo esc_attr( $settings['customer_experience_progress_label'] ); ?>" />
-                                </div>
-                            </div>
-                        </section>
-                        <?php endif; ?>
-
-                        <?php if ( self::should_render_admin_section( $section, 'texts' ) ) : ?>
-                        <section class="eop-settings-card">
-                            <h2><?php esc_html_e( 'Textos', EOP_TEXT_DOMAIN ); ?></h2>
-                            <p><?php esc_html_e( 'Refine a narrativa do painel de vendedor e da proposta publica.', EOP_TEXT_DOMAIN ); ?></p>
-                            <div class="eop-settings-grid">
-                                <div class="eop-settings-field">
-                                    <label for="eop_panel_title"><?php esc_html_e( 'Titulo do painel', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_panel_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[panel_title]" value="<?php echo esc_attr( $settings['panel_title'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_proposal_title"><?php esc_html_e( 'Titulo da proposta', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_proposal_title" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_title]" value="<?php echo esc_attr( $settings['proposal_title'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_panel_subtitle"><?php esc_html_e( 'Subtitulo do painel', EOP_TEXT_DOMAIN ); ?></label>
-                                    <textarea id="eop_panel_subtitle" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[panel_subtitle]"><?php echo esc_textarea( $settings['panel_subtitle'] ); ?></textarea>
-                                </div>
-                                <div class="eop-settings-field is-full">
-                                    <label for="eop_proposal_description"><?php esc_html_e( 'Descricao da proposta', EOP_TEXT_DOMAIN ); ?></label>
-                                    <textarea id="eop_proposal_description" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_description]"><?php echo esc_textarea( $settings['proposal_description'] ); ?></textarea>
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_proposal_button_label"><?php esc_html_e( 'Texto do botao da proposta', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_proposal_button_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_button_label]" value="<?php echo esc_attr( $settings['proposal_button_label'] ); ?>" />
-                                </div>
-                                <div class="eop-settings-field">
-                                    <label for="eop_proposal_pay_button_label"><?php esc_html_e( 'Texto do botao de pagamento', EOP_TEXT_DOMAIN ); ?></label>
-                                    <input id="eop_proposal_pay_button_label" type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[proposal_pay_button_label]" value="<?php echo esc_attr( $settings['proposal_pay_button_label'] ); ?>" />
-                                </div>
-                            </div>
-                        </section>
-                        <?php endif; ?>
+                    <?php if ( self::should_render_admin_section( $section, 'texts' ) ) : ?>
+                        <?php self::render_admin_settings_template( 'embedded/texts.php', compact( 'settings' ) ); ?>
+                    <?php endif; ?>
                 </div>
                 <div class="eop-settings-submit eop-admin-submitbar">
                     <?php submit_button( __( 'Salvar alteracoes', EOP_TEXT_DOMAIN ), 'primary large', 'submit', false ); ?>

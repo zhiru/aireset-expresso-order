@@ -529,6 +529,18 @@ class EOP_Public_Proposal {
         return $legacy === $value ? $replacement : $value;
     }
 
+    /**
+     * Renderiza o card de preview usado nas telas visuais do admin.
+     *
+     * Esse metodo monta apenas o shell do preview: titulo, texto auxiliar,
+     * controles Desktop/Mobile e o iframe isolado. O HTML interno exibido no
+     * iframe vem de get_admin_preview_srcdoc(), que por sua vez usa o mesmo
+     * renderer da pagina publica. Se o preview parecer "quebrado" no admin,
+     * este costuma ser o primeiro ponto para investigar.
+     *
+     * @param array $settings Configuracoes atuais do plugin.
+     * @return string
+     */
     public static function render_admin_preview_card( $settings = array() ) {
         $settings = is_array( $settings ) ? wp_parse_args( $settings, EOP_Settings::get_defaults() ) : EOP_Settings::get_all();
         $srcdoc   = self::get_admin_preview_srcdoc( $settings );
@@ -570,6 +582,18 @@ class EOP_Public_Proposal {
         return $fallback;
     }
 
+    /**
+     * Gera o HTML completo usado dentro do srcdoc do iframe de preview.
+     *
+     * Aqui acontece o isolamento de CSS: o admin nao injeta a pagina publica
+     * diretamente no DOM da tela de configuracao, e sim dentro de um iframe
+     * com markup e estilos proprios. Isso evita conflito com CSS do WordPress
+     * e garante que o preview fique o mais proximo possivel da experiencia
+     * real do cliente.
+     *
+     * @param array $settings Configuracoes atuais do plugin.
+     * @return string
+     */
     public static function get_admin_preview_srcdoc( $settings = array() ) {
         $markup = self::render_admin_preview_markup( $settings );
 
