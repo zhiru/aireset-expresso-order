@@ -1015,12 +1015,6 @@ class EOP_Post_Confirmation_Flow {
 		$is_focused_stage = $is_contract_stage || $is_final_step_stage;
 		$totals   = class_exists( 'EOP_Order_Creator' ) ? EOP_Order_Creator::sync_order_totals( $order ) : array( 'total' => $order->get_total() );
 		$total_rows = class_exists( 'EOP_Document_Manager' ) ? EOP_Document_Manager::get_document_total_rows( $totals, 'proposal' ) : array();
-		$experience_accent = $settings['customer_experience_accent_color'] ?? $settings['primary_color'];
-		$experience_text   = $settings['customer_experience_text_color'] ?? $settings['proposal_text_color'];
-		$experience_muted  = $settings['customer_experience_muted_color'] ?? $settings['proposal_muted_color'];
-		$experience_panel  = $settings['customer_experience_panel_background_color'] ?? $settings['proposal_card_color'];
-		$experience_side   = $settings['customer_experience_sidebar_background_color'] ?? '#f6f8fc';
-		$experience_hero   = $settings['customer_experience_hero_background_color'] ?? $settings['primary_color'];
 		$logo_url          = ! empty( $settings['brand_logo_url'] ) ? esc_url_raw( (string) $settings['brand_logo_url'] ) : '';
 		$brand_name        = class_exists( 'EOP_PDF_Settings' ) ? (string) EOP_PDF_Settings::get( 'shop_name', get_bloginfo( 'name' ) ) : get_bloginfo( 'name' );
 		$brand_name        = '' !== trim( $brand_name ) ? $brand_name : get_bloginfo( 'name' );
@@ -1030,6 +1024,10 @@ class EOP_Post_Confirmation_Flow {
 		$heading_note = 'contract' === $stage
 			? __( 'A proposta ja foi confirmada. Agora basta registrar o aceite do contrato para liberar as proximas etapas.', EOP_TEXT_DOMAIN )
 			: __( 'Conclua a etapa atual para o fluxo continuar sem precisar voltar para esta proposta depois.', EOP_TEXT_DOMAIN );
+		$final_intro_title       = 'upload' === $stage ? trim( (string) ( $settings['post_confirmation_upload_title'] ?? '' ) ) : trim( (string) ( $settings['post_confirmation_products_title'] ?? '' ) );
+		$final_intro_description = 'upload' === $stage ? trim( (string) ( $settings['post_confirmation_upload_description'] ?? '' ) ) : trim( (string) ( $settings['post_confirmation_products_description'] ?? '' ) );
+		$final_intro_title       = '' !== $final_intro_title ? $final_intro_title : __( 'Personalize os produtos do pedido', EOP_TEXT_DOMAIN );
+		$final_intro_description = '' !== $final_intro_description ? $final_intro_description : __( 'Envie o anexo do cliente e informe o novo nome de cada item liberado.', EOP_TEXT_DOMAIN );
 		$wrapper_classes = array(
 			'eop-post-flow',
 			'eop-post-flow--stage-' . $stage,
@@ -1069,11 +1067,18 @@ class EOP_Post_Confirmation_Flow {
 			<?php endif; ?>
 			<div class="eop-post-flow__layout">
 				<div class="eop-post-flow__main">
+
+
 					<?php if ( $is_final_step_stage ) : ?>
-						<span class="eop-post-flow__contract-eyebrow"><?php esc_html_e( 'Etapa final do pedido', EOP_TEXT_DOMAIN ); ?></span>
-						<h2 class="eop-post-flow__contract-hero-title"><?php esc_html_e( 'Personalize os produtos do pedido', EOP_TEXT_DOMAIN ); ?></h2>
-						<p class="eop-post-flow__contract-hero-text"><?php esc_html_e( 'Envie o anexo do cliente e informe o novo nome de cada item liberado.', EOP_TEXT_DOMAIN ); ?></p>
+						<div class="eop-post-flow__final-intro">
+							<span class="eop-post-flow__final-intro-eyebrow"><?php esc_html_e( 'Etapa final do pedido', EOP_TEXT_DOMAIN ); ?></span>
+							<h2 class="eop-post-flow__final-intro-title"><?php echo esc_html( $final_intro_title ); ?></h2>
+							<p class="eop-post-flow__final-intro-text"><?php echo esc_html( $final_intro_description ); ?></p>
+						</div>
 					<?php endif; ?>
+
+
+
 					<?php if ( ! $is_focused_stage ) : ?>
 						<div class="eop-post-flow__heading">
 							<div class="eop-post-flow__heading-copy">
@@ -1916,103 +1921,390 @@ class EOP_Post_Confirmation_Flow {
 		return $rows;
 	}
 
+	private static function render_final_step_renderer_markup( $context = array() ) {
+		$context = is_array( $context ) ? $context : array();
+		$settings = is_array( $context['settings'] ?? null ) ? wp_parse_args( $context['settings'], EOP_Settings::get_defaults() ) : EOP_Settings::get_defaults();
+		$brand_name = trim( (string) ( $context['brand_name'] ?? '' ) );
+		$brand_name = '' !== $brand_name ? $brand_name : ( class_exists( 'EOP_PDF_Settings' ) ? (string) EOP_PDF_Settings::get( 'shop_name', get_bloginfo( 'name' ) ) : get_bloginfo( 'name' ) );
+		$brand_name = '' !== trim( $brand_name ) ? $brand_name : get_bloginfo( 'name' );
+		$logo_url   = trim( (string) ( $context['logo_url'] ?? '' ) );
+
+		if ( '' === $logo_url && empty( $context['logo_url'] ) && class_exists( 'EOP_PDF_Settings' ) ) {
+			$logo_url = esc_url_raw( (string) EOP_PDF_Settings::get( 'shop_logo_url', '' ) );
+		}
+
+		$upload_title   = trim( (string) ( $context['upload_title'] ?? ( $settings['post_confirmation_upload_title'] ?? '' ) ) );
+		$upload_text    = trim( (string) ( $context['upload_text'] ?? ( $settings['post_confirmation_upload_description'] ?? '' ) ) );
+		$products_title = trim( (string) ( $context['products_title'] ?? ( $settings['post_confirmation_products_title'] ?? '' ) ) );
+		$products_text  = trim( (string) ( $context['products_text'] ?? ( $settings['post_confirmation_products_description'] ?? '' ) ) );
+		$field_label    = trim( (string) ( $context['field_label'] ?? ( $settings['post_confirmation_upload_field_label'] ?? '' ) ) );
+		$button_label   = trim( (string) ( $context['button_label'] ?? '' ) );
+		$button_label   = '' !== $button_label ? $button_label : ( 'upload' === (string) ( $context['action'] ?? 'upload' ) ? trim( (string) ( $settings['post_confirmation_upload_button_label'] ?? '' ) ) : trim( (string) ( $settings['post_confirmation_products_button_label'] ?? '' ) ) );
+		$upload_title   = '' !== $upload_title ? $upload_title : __( 'Anexo do cliente', EOP_TEXT_DOMAIN );
+		$upload_text    = '' !== $upload_text ? $upload_text : __( 'Selecione um arquivo em PDF ou PNG. Se ja houver um anexo salvo, voce pode visualiza-lo abaixo ou enviar outro para substituir.', EOP_TEXT_DOMAIN );
+		$products_title = '' !== $products_title ? $products_title : __( 'Produtos do pedido', EOP_TEXT_DOMAIN );
+		$products_text  = '' !== $products_text ? $products_text : __( 'Defina como cada produto deve aparecer para os itens liberados.', EOP_TEXT_DOMAIN );
+		$field_label    = '' !== $field_label ? $field_label : __( 'Arquivo', EOP_TEXT_DOMAIN );
+		$action         = 'upload' === (string) ( $context['action'] ?? 'upload' ) ? 'upload' : 'products';
+		$token          = trim( (string) ( $context['token'] ?? '' ) );
+		$include_nonce  = ! empty( $context['include_nonce'] );
+		$attachment_id  = absint( $context['attachment_id'] ?? 0 );
+		$attachment_url = trim( (string) ( $context['attachment_url'] ?? '' ) );
+		$filename       = trim( (string) ( $context['filename'] ?? '' ) );
+		$uploaded_at    = trim( (string) ( $context['uploaded_at'] ?? '' ) );
+		$line_items     = is_array( $context['line_items'] ?? null ) ? $context['line_items'] : array();
+		$steps          = is_array( $context['steps'] ?? null ) ? $context['steps'] : array(
+			array(
+				'key'    => 'contract',
+				'label'  => self::get_stage_label( 'contract' ),
+				'status' => 'completed',
+			),
+			array(
+				'key'    => 'upload',
+				'label'  => self::get_stage_label( 'upload' ),
+				'status' => 'current',
+			),
+			array(
+				'key'    => 'completed',
+				'label'  => self::get_stage_label( 'completed' ),
+				'status' => 'upcoming',
+			),
+		);
+		$order_number = absint( $context['order_number'] ?? 0 );
+		$show_upload_meta = $attachment_id > 0 && '' !== $attachment_url;
+		$image_url      = trim( (string) ( $context['image_url'] ?? '' ) );
+		if ( '' === $image_url && function_exists( 'wc_placeholder_img_src' ) ) {
+			$image_url = wc_placeholder_img_src( 'thumbnail' );
+		}
+
+		ob_start();
+		?>
+		<div class="eop-post-flow__final-step-card">
+			<form method="post" enctype="multipart/form-data" class="eop-post-flow__form eop-post-flow__form--final-step">
+				<?php if ( $include_nonce ) : ?>
+					<?php wp_nonce_field( 'eop_post_confirmation_' . $action, 'eop_post_confirmation_nonce' ); ?>
+				<?php endif; ?>
+				<input type="hidden" name="eop_post_confirmation_action" value="<?php echo esc_attr( $action ); ?>" />
+				<?php if ( '' !== $token ) : ?>
+					<input type="hidden" name="eop_proposal_token" value="<?php echo esc_attr( $token ); ?>" />
+				<?php endif; ?>
+				<div class="eop-post-flow__contract-header">
+					<div class="eop-post-flow__contract-header-main">
+						<div class="eop-post-flow__contract-brand">
+							<?php if ( '' !== $logo_url ) : ?>
+								<img src="<?php echo esc_url( $logo_url ); ?>" alt="<?php echo esc_attr( $brand_name ); ?>">
+							<?php else : ?>
+								<span class="eop-post-flow__contract-brand-fallback"><?php echo esc_html( strtoupper( substr( $brand_name, 0, 1 ) ) ); ?></span>
+							<?php endif; ?>
+						</div>
+						<div class="eop-post-flow__contract-meta">
+							<strong><?php echo esc_html( $brand_name ); ?></strong>
+							<span><?php echo esc_html( sprintf( __( 'Pedido #%d', EOP_TEXT_DOMAIN ), $order_number > 0 ? $order_number : 5238 ) ); ?></span>
+						</div>
+					</div>
+					<?php self::render_stage_breadcrumb( $steps, 'upload' ); ?>
+				</div>
+				<div class="eop-post-flow__layout">
+					<div class="eop-post-flow__main">
+						<div class="eop-post-flow__final-intro">
+							<span class="eop-post-flow__final-intro-eyebrow"><?php esc_html_e( 'Etapa final do pedido', EOP_TEXT_DOMAIN ); ?></span>
+							<h2 class="eop-post-flow__final-intro-title"><?php echo esc_html( $upload_title ); ?></h2>
+							<p class="eop-post-flow__final-intro-text"><?php echo esc_html( $upload_text ); ?></p>
+						</div>
+						<div class="eop-post-flow__final-block">
+							<div class="eop-post-flow__final-block-head">
+								<strong><?php echo esc_html( $upload_title ); ?></strong>
+								<small><?php echo esc_html( $upload_text ); ?></small>
+							</div>
+							<div class="eop-post-flow__final-upload-row">
+								<label class="eop-post-flow__field eop-post-flow__field--file">
+									<span><?php echo esc_html( $field_label ); ?></span>
+									<input type="file" name="eop_post_confirmation_attachment" accept=".jpg,.jpeg,.png,.pdf" <?php echo 0 === $attachment_id ? 'required' : ''; ?> />
+								</label>
+								<?php if ( $show_upload_meta ) : ?>
+									<div class="eop-post-flow__final-upload-meta">
+										<strong><?php echo esc_html( $filename ); ?></strong>
+										<small><?php echo esc_html( $uploaded_at ? sprintf( __( 'Enviado em %s.', EOP_TEXT_DOMAIN ), $uploaded_at ) : __( 'Arquivo ja salvo no pedido.', EOP_TEXT_DOMAIN ) ); ?></small>
+										<a class="eop-proposal-button eop-proposal-button--secondary" target="_blank" rel="noopener" href="<?php echo esc_url( $attachment_url ); ?>"><?php esc_html_e( 'Ver anexo enviado', EOP_TEXT_DOMAIN ); ?></a>
+									</div>
+								<?php endif; ?>
+							</div>
+						</div>
+						<div class="eop-post-flow__final-block">
+							<div class="eop-post-flow__final-block-head">
+								<strong><?php echo esc_html( $products_title ); ?></strong>
+								<small><?php echo esc_html( $products_text ); ?></small>
+							</div>
+							<div class="eop-post-flow__final-products-head" aria-hidden="true">
+								<span><?php esc_html_e( 'Seq.', EOP_TEXT_DOMAIN ); ?></span>
+								<span><?php esc_html_e( 'Produto original', EOP_TEXT_DOMAIN ); ?></span>
+								<span><?php esc_html_e( 'Novo nome', EOP_TEXT_DOMAIN ); ?></span>
+							</div>
+							<div class="eop-post-flow__final-products-list">
+								<?php foreach ( $line_items as $index => $line_item ) : ?>
+									<?php
+									$line_item    = is_array( $line_item ) ? $line_item : array();
+									$item         = $line_item['item'] ?? null;
+									$product      = $line_item['product'] ?? null;
+									$item_id      = 0;
+									$item_name    = '';
+									$sku          = '';
+									$locked       = false;
+									$value        = '';
+									$row_image    = '';
+									$is_service   = ! empty( $line_item['is_service'] );
+
+									if ( $is_service ) {
+										continue;
+									}
+
+									if ( is_object( $item ) && method_exists( $item, 'get_id' ) ) {
+										$item_id = absint( $item->get_id() );
+									} else {
+										$item_id = absint( $line_item['item_id'] ?? 0 );
+									}
+
+									if ( is_object( $item ) && method_exists( $item, 'get_name' ) ) {
+										$item_name = (string) $item->get_name();
+									} else {
+										$item_name = trim( (string) ( $line_item['item_name'] ?? ( $line_item['name'] ?? '' ) ) );
+									}
+
+									if ( is_object( $product ) && method_exists( $product, 'get_sku' ) ) {
+										$sku = (string) $product->get_sku();
+									} else {
+										$sku = trim( (string) ( $line_item['sku'] ?? '' ) );
+									}
+
+									if ( array_key_exists( 'locked', $line_item ) ) {
+										$locked = (bool) $line_item['locked'];
+									} elseif ( is_object( $product ) && $product instanceof WC_Product ) {
+										$locked = self::is_product_locked( $product );
+									}
+
+									if ( array_key_exists( 'value', $line_item ) ) {
+										$value = (string) $line_item['value'];
+									} elseif ( is_object( $item ) ) {
+										$value = self::get_item_custom_name( $item, is_array( $context['state'] ?? null ) ? $context['state'] : array() );
+									}
+
+									if ( array_key_exists( 'image_url', $line_item ) ) {
+										$row_image = trim( (string) $line_item['image_url'] );
+									} elseif ( is_object( $product ) && method_exists( $product, 'get_image_id' ) ) {
+										$row_image = (string) wp_get_attachment_image_url( $product->get_image_id(), 'thumbnail' );
+									}
+
+									if ( '' === $row_image ) {
+										$row_image = $image_url;
+									}
+
+									if ( '' === $item_name && is_object( $product ) && method_exists( $product, 'get_name' ) ) {
+										$item_name = (string) $product->get_name();
+									}
+
+									if ( '' === $item_name ) {
+										$item_name = __( 'Produto de exemplo', EOP_TEXT_DOMAIN );
+									}
+									?>
+									<div class="eop-post-flow__final-product-row<?php echo $locked ? ' is-locked' : ''; ?>">
+										<div class="eop-post-flow__final-sequence"><?php echo esc_html( $index + 1 ); ?></div>
+										<div class="eop-post-flow__final-product-main">
+											<div class="eop-post-flow__final-product-media">
+												<?php if ( '' !== $row_image ) : ?>
+													<img src="<?php echo esc_url( $row_image ); ?>" alt="<?php echo esc_attr( $item_name ); ?>" />
+												<?php endif; ?>
+											</div>
+											<div class="eop-post-flow__final-product-copy">
+												<strong><?php echo esc_html( $item_name ); ?></strong>
+												<small><?php echo esc_html( '' !== $sku ? sprintf( __( 'SKU: %s', EOP_TEXT_DOMAIN ), $sku ) : __( 'SKU nao informado', EOP_TEXT_DOMAIN ) ); ?></small>
+											</div>
+										</div>
+										<label class="eop-post-flow__field eop-post-flow__final-name-field">
+											<input type="text" name="eop_product_name[<?php echo esc_attr( $item_id ); ?>]" value="<?php echo esc_attr( $value ); ?>" <?php echo $locked ? 'disabled' : 'required'; ?> />
+											<?php if ( $locked ) : ?>
+												<small><?php esc_html_e( 'Este item esta bloqueado para alteracao de nome.', EOP_TEXT_DOMAIN ); ?></small>
+											<?php endif; ?>
+										</label>
+									</div>
+								<?php endforeach; ?>
+							</div>
+						</div>
+						<button type="submit" class="eop-proposal-button eop-post-flow__final-submit"><?php echo esc_html( $button_label ); ?></button>
+					</div>
+				</div>
+			</form>
+		</div>
+		<?php
+
+		return ob_get_clean();
+	}
+
+	public static function get_admin_upload_products_preview_srcdoc( $settings = array() ) {
+		$settings = is_array( $settings ) ? wp_parse_args( $settings, EOP_Settings::get_defaults() ) : EOP_Settings::get_defaults();
+		$brand_name = class_exists( 'EOP_PDF_Settings' ) ? (string) EOP_PDF_Settings::get( 'shop_name', get_bloginfo( 'name' ) ) : get_bloginfo( 'name' );
+		$brand_name = '' !== trim( $brand_name ) ? $brand_name : get_bloginfo( 'name' );
+		$logo_url   = ! empty( $settings['brand_logo_url'] ) ? esc_url_raw( (string) $settings['brand_logo_url'] ) : '';
+
+		if ( '' === $logo_url && class_exists( 'EOP_PDF_Settings' ) ) {
+			$logo_url = esc_url_raw( (string) EOP_PDF_Settings::get( 'shop_logo_url', '' ) );
+		}
+
+		$sample_image_url = function_exists( 'wc_placeholder_img_src' ) ? wc_placeholder_img_src( 'thumbnail' ) : '';
+		$sample_items     = array(
+			array(
+				'item_id'   => 1,
+				'item_name' => __( 'Sérum Mágico', EOP_TEXT_DOMAIN ),
+				'sku'       => 'SERMAG0002',
+				'value'     => '',
+				'image_url' => $sample_image_url,
+				'locked'    => false,
+			),
+		);
+		$markup = self::render_final_step_renderer_markup(
+			array(
+				'settings'       => $settings,
+				'brand_name'     => $brand_name,
+				'logo_url'       => $logo_url,
+				'stage'          => 'upload',
+				'order_number'   => 5238,
+				'field_label'    => $settings['post_confirmation_upload_field_label'],
+				'button_label'   => $settings['post_confirmation_upload_button_label'],
+				'action'         => 'upload',
+				'include_nonce'   => false,
+				'attachment_id'  => 1,
+				'attachment_url' => home_url( '/' ),
+				'filename'       => 'plesk-logo.png',
+				'uploaded_at'    => '2026-05-04 18:33:22',
+				'line_items'     => $sample_items,
+				'state'          => array(),
+				'steps'          => array(
+					array(
+						'key'    => 'contract',
+						'label'  => self::get_stage_label( 'contract' ),
+						'status' => 'completed',
+					),
+					array(
+						'key'    => 'upload',
+						'label'  => self::get_stage_label( 'upload' ),
+						'status' => 'current',
+					),
+					array(
+						'key'    => 'completed',
+						'label'  => self::get_stage_label( 'completed' ),
+						'status' => 'upcoming',
+					),
+				),
+			)
+		);
+
+		ob_start();
+		?>
+<!doctype html>
+<html>
+<head>
+	<meta charset="<?php echo esc_attr( get_bloginfo( 'charset' ) ); ?>">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<style>
+		html,
+		body {
+			margin: 0;
+			padding: 0;
+			background: transparent;
+		}
+
+		*,
+		*::before,
+		*::after {
+			box-sizing: border-box;
+		}
+
+		body {
+			color: var(--eop-preview-text, #16243a);
+			font-family: var(--eop-preview-font-family, 'Segoe UI', sans-serif);
+			font-size: var(--eop-preview-text-size, 16px);
+		}
+
+		img {
+			max-width: 100%;
+			height: auto;
+		}
+
+		.eop-final-flow-preview {
+			padding: 18px;
+			background: var(--eop-preview-page-bg, #f5f7ff);
+		}
+	</style>
+	<?php self::render_post_flow_styles( $settings ); ?>
+</head>
+<body>
+	<div class="eop-final-flow-preview">
+		<?php echo $markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+	</div>
+</body>
+</html>
+		<?php
+
+		return (string) ob_get_clean();
+	}
+
 	private static function render_final_step_form( WC_Order $order, $token, $settings, $state, $line_items, $current_stage, $notice = null ) {
 		$attachment_id  = absint( $state['attachment']['id'] ?? 0 );
 		$attachment_url = $attachment_id ? wp_get_attachment_url( $attachment_id ) : '';
 		$filename       = $attachment_id ? get_the_title( $attachment_id ) : '';
 		$uploaded_at    = (string) ( $state['attachment']['uploaded_at'] ?? '' );
 		$action         = 'upload' === $current_stage ? 'upload' : 'products';
+		$button_label   = 'upload' === $action ? trim( (string) ( $settings['post_confirmation_upload_button_label'] ?? '' ) ) : trim( (string) ( $settings['post_confirmation_products_button_label'] ?? '' ) );
+		$button_label   = '' !== $button_label ? $button_label : __( 'Salvar personalizacao', EOP_TEXT_DOMAIN );
 		?>
-		<div class="eop-post-flow__final-step-card">
-			<?php if ( $notice ) : ?>
-				<div class="eop-notice <?php echo 'error' === $notice['type'] ? 'eop-notice-error' : 'eop-notice-success'; ?>">
-					<?php echo esc_html( $notice['message'] ); ?>
-				</div>
-				<script>
-					(function(){
-						var url = new URL(window.location.href);
-						if (url.searchParams.has('eop_flow_notice')) {
-							url.searchParams.delete('eop_flow_notice');
-							window.history.replaceState({}, document.title, url.toString());
-						}
-					}());
-				</script>
-			<?php endif; ?>
-			<form method="post" enctype="multipart/form-data" class="eop-post-flow__form eop-post-flow__form--final-step">
-				<?php wp_nonce_field( 'eop_post_confirmation_' . $action, 'eop_post_confirmation_nonce' ); ?>
-				<input type="hidden" name="eop_post_confirmation_action" value="<?php echo esc_attr( $action ); ?>" />
-				<input type="hidden" name="eop_proposal_token" value="<?php echo esc_attr( $token ); ?>" />
-				<div class="eop-post-flow__final-block">
-					<div class="eop-post-flow__final-block-head">
-						<strong><?php esc_html_e( 'Anexo do cliente', EOP_TEXT_DOMAIN ); ?></strong>
-						<small><?php esc_html_e( 'Selecione um arquivo em PDF ou PNG. Se ja houver um anexo salvo, voce pode visualiza-lo abaixo ou enviar outro para substituir.', EOP_TEXT_DOMAIN ); ?></small>
-					</div>
-					<div class="eop-post-flow__final-upload-row">
-						<label class="eop-post-flow__field eop-post-flow__field--file">
-							<span><?php echo esc_html( $settings['post_confirmation_upload_field_label'] ); ?></span>
-							<input type="file" name="eop_post_confirmation_attachment" accept=".jpg,.jpeg,.png,.pdf" <?php echo 0 === $attachment_id ? 'required' : ''; ?> />
-						</label>
-						<?php if ( $attachment_id && $attachment_url ) : ?>
-							<div class="eop-post-flow__final-upload-meta">
-								<strong><?php echo esc_html( $filename ); ?></strong>
-								<small><?php echo esc_html( $uploaded_at ? sprintf( __( 'Enviado em %s.', EOP_TEXT_DOMAIN ), $uploaded_at ) : __( 'Arquivo ja salvo no pedido.', EOP_TEXT_DOMAIN ) ); ?></small>
-								<a class="eop-proposal-button eop-proposal-button--secondary" target="_blank" rel="noopener" href="<?php echo esc_url( $attachment_url ); ?>"><?php esc_html_e( 'Ver anexo enviado', EOP_TEXT_DOMAIN ); ?></a>
-							</div>
-						<?php endif; ?>
-					</div>
-				</div>
-				<div class="eop-post-flow__final-block">
-					<div class="eop-post-flow__final-block-head">
-						<strong><?php esc_html_e( 'Produtos do pedido', EOP_TEXT_DOMAIN ); ?></strong>
-						<small><?php esc_html_e( 'Defina como cada produto deve aparecer para os itens liberados.', EOP_TEXT_DOMAIN ); ?></small>
-					</div>
-					<div class="eop-post-flow__final-products-head" aria-hidden="true">
-						<span><?php esc_html_e( 'Seq.', EOP_TEXT_DOMAIN ); ?></span>
-						<span><?php esc_html_e( 'Produto original', EOP_TEXT_DOMAIN ); ?></span>
-						<span><?php esc_html_e( 'Novo nome', EOP_TEXT_DOMAIN ); ?></span>
-					</div>
-					<div class="eop-post-flow__final-products-list">
-						<?php foreach ( $line_items as $index => $line_item ) : ?>
-							<?php
-							$item      = $line_item['item'];
-							$product   = $line_item['product'];
-							$item_id   = $item->get_id();
-							if ( self::is_service_product( $product ) ) {
-								continue;
-							}
-							$locked    = self::is_product_locked( $product );
-							$image_url = $product ? wp_get_attachment_image_url( $product->get_image_id(), 'thumbnail' ) : '';
-							$sku       = $product ? (string) $product->get_sku() : '';
-							$value     = self::get_item_custom_name( $item, $state );
-
-							if ( ! $image_url ) {
-								$image_url = wc_placeholder_img_src( 'thumbnail' );
-							}
-							?>
-							<div class="eop-post-flow__final-product-row<?php echo $locked ? ' is-locked' : ''; ?>">
-								<div class="eop-post-flow__final-sequence"><?php echo esc_html( $index + 1 ); ?></div>
-								<div class="eop-post-flow__final-product-main">
-									<div class="eop-post-flow__final-product-media">
-										<img src="<?php echo esc_url( $image_url ); ?>" alt="<?php echo esc_attr( $item->get_name() ); ?>" />
-									</div>
-									<div class="eop-post-flow__final-product-copy">
-										<strong><?php echo esc_html( $item->get_name() ); ?></strong>
-										<small><?php echo esc_html( '' !== $sku ? sprintf( __( 'SKU: %s', EOP_TEXT_DOMAIN ), $sku ) : __( 'SKU nao informado', EOP_TEXT_DOMAIN ) ); ?></small>
-									</div>
-								</div>
-								<label class="eop-post-flow__field eop-post-flow__final-name-field">
-									<input type="text" name="eop_product_name[<?php echo esc_attr( $item_id ); ?>]" value="<?php echo esc_attr( $value ); ?>" <?php echo $locked ? 'disabled' : 'required'; ?> />
-									<?php if ( $locked ) : ?>
-										<small><?php esc_html_e( 'Este item esta bloqueado para alteracao de nome.', EOP_TEXT_DOMAIN ); ?></small>
-									<?php endif; ?>
-								</label>
-							</div>
-						<?php endforeach; ?>
-					</div>
-				</div>
-				<button type="submit" class="eop-proposal-button eop-post-flow__final-submit"><?php esc_html_e( 'Salvar personalizacao', EOP_TEXT_DOMAIN ); ?></button>
-			</form>
-		</div>
+		<?php if ( $notice ) : ?>
+			<div class="eop-notice <?php echo 'error' === $notice['type'] ? 'eop-notice-error' : 'eop-notice-success'; ?>">
+				<?php echo esc_html( $notice['message'] ); ?>
+			</div>
+			<script>
+				(function(){
+					var url = new URL(window.location.href);
+					if (url.searchParams.has('eop_flow_notice')) {
+						url.searchParams.delete('eop_flow_notice');
+						window.history.replaceState({}, document.title, url.toString());
+					}
+				}());
+			</script>
+		<?php endif; ?>
+		<?php echo self::render_final_step_renderer_markup( array( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				'settings'       => $settings,
+				'brand_name'     => class_exists( 'EOP_PDF_Settings' ) ? (string) EOP_PDF_Settings::get( 'shop_name', get_bloginfo( 'name' ) ) : get_bloginfo( 'name' ),
+				'logo_url'       => ! empty( $settings['brand_logo_url'] ) ? esc_url_raw( (string) $settings['brand_logo_url'] ) : '',
+				'stage'          => $current_stage,
+				'order_number'   => $order->get_id(),
+				'field_label'    => $settings['post_confirmation_upload_field_label'],
+				'button_label'   => $button_label,
+				'action'         => $action,
+				'token'          => $token,
+				'include_nonce'  => true,
+				'attachment_id'  => $attachment_id,
+				'attachment_url' => $attachment_url,
+				'filename'       => $filename,
+				'uploaded_at'    => $uploaded_at,
+				'line_items'     => $line_items,
+				'state'          => $state,
+				'steps'          => array(
+					array(
+						'key'    => 'contract',
+						'label'  => self::get_stage_label( 'contract' ),
+						'status' => 'completed',
+					),
+					array(
+						'key'    => 'upload',
+						'label'  => self::get_stage_label( 'upload' ),
+						'status' => 'current',
+					),
+					array(
+						'key'    => 'completed',
+						'label'  => self::get_stage_label( 'completed' ),
+						'status' => 'upcoming',
+					),
+				),
+			) ); ?>
 		<?php
 	}
 
@@ -2570,13 +2862,13 @@ class EOP_Post_Confirmation_Flow {
 			);
 		}
 
-		if ( self::requires_product_customization( $order ) || 'products' === $current_stage ) {
-			$steps[] = array(
-				'key'         => 'products',
-				'label'       => self::get_stage_label( 'products' ),
-				'description' => __( 'Definicao do nome desejado para os itens liberados.', EOP_TEXT_DOMAIN ),
-			);
-		}
+		// if ( self::requires_product_customization( $order ) || 'products' === $current_stage ) {
+		// 	$steps[] = array(
+		// 		'key'         => 'products',
+		// 		'label'       => self::get_stage_label( 'products' ),
+		// 		'description' => __( 'Definicao do nome desejado para os itens liberados.', EOP_TEXT_DOMAIN ),
+		// 	);
+		// }
 
 		$steps[] = array(
 			'key'         => 'completed',
@@ -3525,6 +3817,7 @@ class EOP_Post_Confirmation_Flow {
 		$button_radius        = max( 14, min( 24, absint( $settings['border_radius'] ?? 18 ) ) );
 		$title_size           = max( 24, min( 76, absint( $settings['customer_experience_title_size'] ?? 46 ) ) );
 		$text_size            = max( 13, min( 24, absint( $settings['customer_experience_text_size'] ?? 16 ) ) );
+		$font_family          = self::format_font_family_css_value( $settings['customer_experience_font_family'] ?? '' );
 		$document_title_size  = max( 18, min( 32, (int) round( $title_size * 0.43 ) ) );
 		$document_note_size   = max( 12, min( 18, $text_size - 1 ) );
 		$summary_label_size   = max( 12, min( 16, $text_size - 3 ) );
@@ -3550,6 +3843,9 @@ class EOP_Post_Confirmation_Flow {
 				--eop-post-flow-panel-bg: <?php echo esc_html( $experience_panel ); ?>;
 				--eop-post-flow-side-bg: <?php echo esc_html( $experience_side ); ?>;
 				--eop-post-flow-hero-bg: <?php echo esc_html( $experience_hero ); ?>;
+				--eop-post-flow-font-family: <?php echo esc_html( $font_family ); ?>;
+				--eop-post-flow-title-size: <?php echo esc_html( $title_size ); ?>px;
+				--eop-post-flow-text-size: <?php echo esc_html( $text_size ); ?>px;
 				--eop-post-flow-button-radius: <?php echo esc_html( $button_radius ); ?>px;
 				--eop-post-flow-document-title-size: <?php echo esc_html( $document_title_size ); ?>px;
 				--eop-post-flow-document-note-size: <?php echo esc_html( $document_note_size ); ?>px;
@@ -3559,6 +3855,27 @@ class EOP_Post_Confirmation_Flow {
 			}
 		</style>
 		<?php
+	}
+
+	private static function format_font_family_css_value( $font_family ) {
+		$font_family = is_string( $font_family ) ? trim( $font_family ) : '';
+
+		if ( '' === $font_family ) {
+			return '"Montserrat", sans-serif';
+		}
+
+		$family = preg_replace( '/:.+$/', '', $font_family );
+		$family = trim( str_replace( '+', ' ', (string) $family ) );
+		$family = preg_replace( '/[^a-zA-Z0-9\s\-_,.]/', '', $family );
+		$family = trim( (string) $family, " \t\n\r\0\x0B," );
+
+		if ( '' === $family ) {
+			return '"Montserrat", sans-serif';
+		}
+
+		$fallback = false !== stripos( $family, 'serif' ) ? 'serif' : 'sans-serif';
+
+		return sprintf( '"%s", %s', $family, $fallback );
 	}
 
 	private static function build_alpha_color( $color, $alpha, $fallback = '' ) {
@@ -3599,6 +3916,36 @@ class EOP_Post_Confirmation_Flow {
 		}
 
 		return $primary;
+	}
+
+	public static function render_admin_upload_products_preview_markup( $settings = array() ) {
+		$srcdoc = self::get_admin_upload_products_preview_srcdoc( $settings );
+
+		ob_start();
+		?>
+		<div class="eop-proposal-preview-card" data-eop-proposal-preview-card data-preview-viewport="desktop">
+			<div class="eop-proposal-preview-card__copy">
+				<div class="eop-proposal-preview-card__eyebrow"><?php esc_html_e( 'Preview ao vivo', EOP_TEXT_DOMAIN ); ?></div>
+				<h3><?php esc_html_e( 'Veja a pagina publica antes de salvar', EOP_TEXT_DOMAIN ); ?></h3>
+				<p><?php esc_html_e( 'Este preview usa o mesmo renderer do fluxo do cliente, agora isolado em iframe e com dados de exemplo.', EOP_TEXT_DOMAIN ); ?></p>
+				<div class="eop-proposal-preview-card__status is-ready" aria-live="polite">
+					<span class="eop-proposal-preview-card__status-dot" aria-hidden="true"></span>
+					<span class="eop-proposal-preview-card__status-text"><?php esc_html_e( 'Preview pronto em Desktop.', EOP_TEXT_DOMAIN ); ?></span>
+				</div>
+				<div class="eop-proposal-preview-card__tools">
+					<button type="button" class="button eop-proposal-preview-viewport is-active" data-preview-viewport="desktop" aria-pressed="true"><?php esc_html_e( 'Desktop', EOP_TEXT_DOMAIN ); ?></button>
+					<button type="button" class="button eop-proposal-preview-viewport" data-preview-viewport="mobile" aria-pressed="false"><?php esc_html_e( 'Mobile', EOP_TEXT_DOMAIN ); ?></button>
+				</div>
+			</div>
+			<div class="eop-proposal-preview-card__stage">
+				<div class="eop-proposal-preview-card__shell">
+					<iframe class="eop-proposal-preview-render" title="<?php esc_attr_e( 'Preview da pagina do cliente', EOP_TEXT_DOMAIN ); ?>" srcdoc="<?php echo esc_attr( $srcdoc ); ?>"></iframe>
+				</div>
+			</div>
+		</div>
+		<?php
+
+		return (string) ob_get_clean();
 	}
 
 	private static function get_signature_document_preview_payload( $template ) {

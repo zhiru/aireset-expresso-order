@@ -1621,6 +1621,9 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
   --eop-post-flow-panel-bg: #ffffff;
   --eop-post-flow-side-bg: #f6f8fc;
   --eop-post-flow-hero-bg: linear-gradient(135deg, #00034b 0%, #243553 100%);
+  --eop-post-flow-font-family: "Montserrat", sans-serif;
+  --eop-post-flow-title-size: 46px;
+  --eop-post-flow-text-size: 16px;
   --eop-post-flow-button-radius: 18px;
   --eop-post-flow-document-title-size: 20px;
   --eop-post-flow-document-note-size: 14px;
@@ -1632,7 +1635,16 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
   border: 1px solid rgba(15, 27, 53, 0.08);
   border-radius: 32px;
   background: var(--eop-post-flow-page-bg, linear-gradient(180deg, #edf2fb 0%, #f7f9fc 100%));
+  color: var(--eop-post-flow-text, #172033);
+  font-family: var(--eop-post-flow-font-family, "Montserrat", sans-serif);
+  font-size: var(--eop-post-flow-text-size, 16px);
   box-shadow: 0 28px 64px rgba(15, 27, 53, 0.1);
+}
+.eop-post-flow button,
+.eop-post-flow input,
+.eop-post-flow select,
+.eop-post-flow textarea {
+  font: inherit;
 }
 .eop-post-flow--stage-contract {
   position: relative;
@@ -1641,24 +1653,6 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
   padding: 20px;
   border-radius: 34px;
   box-shadow: none;
-}
-.eop-post-flow--stage-contract::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 154px;
-  border-radius: 28px 28px 0 0;
-  background: var(--eop-post-flow-hero-bg, linear-gradient(135deg, #00034b 0%, #243553 100%));
-}
-.eop-post-flow--stage-contract::after {
-  content: "";
-  position: absolute;
-  top: -80px;
-  right: -30px;
-  width: 260px;
-  height: 260px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--eop-post-flow-accent-glow, rgba(215, 138, 47, 0.28)) 0%, transparent 70%);
 }
 .eop-post-flow--stage-contract > * {
   position: relative;
@@ -1719,11 +1713,18 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
   display: none;
 }
 .eop-post-flow--final-step .eop-post-flow__main {
-  gap: 0;
+  gap: 18px;
 }
 .eop-post-flow--final-step .eop-post-flow__contract-header {
   padding: 20px 20px 24px;
   background: var(--eop-post-flow-hero-bg, linear-gradient(135deg, #00034b 0%, #243553 100%));
+}
+.eop-post-flow--final-step .eop-post-flow__contract-header .eop-post-flow__contract-header-main {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  justify-content: space-between;
 }
 .eop-post-flow--final-step .eop-post-flow__final-step-card {
   margin-top: 0;
@@ -1779,18 +1780,16 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
 }
 .eop-post-flow__contract-header-main {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   gap: 18px;
   min-width: 0;
-
-    justify-content: space-between;
 }
 .eop-post-flow__breadcrumb {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  margin: 0 0 18px;
+  margin: 0;
   padding: 0 6px;
 }
 .eop-post-flow__breadcrumb-item {
@@ -1908,14 +1907,14 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
 .eop-post-flow__contract-hero-title {
   margin: 0;
   color: #ffffff;
-  font-size: 38px;
+  font-size: var(--eop-post-flow-title-size, 38px);
   line-height: 1;
   letter-spacing: -0.05em;
 }
 .eop-post-flow__contract-hero-text {
   margin: 0;
   color: rgba(255, 255, 255, 0.8);
-  font-size: 15px;
+  font-size: var(--eop-post-flow-text-size, 15px);
   line-height: 1.6;
 }
 .eop-post-flow__contract-meta {
@@ -1967,7 +1966,7 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
 }
 .eop-post-flow__title {
   margin: 0;
-  font-size: 36px;
+  font-size: var(--eop-post-flow-title-size, 36px);
   line-height: 1.02;
   letter-spacing: -0.05em;
   color: #ffffff;
@@ -1975,7 +1974,7 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
 .eop-post-flow__heading-note {
   margin: 0;
   color: rgba(255, 255, 255, 0.82);
-  font-size: 15px;
+  font-size: var(--eop-post-flow-text-size, 15px);
   line-height: 1.6;
 }
 .eop-post-flow__badge {
@@ -2230,18 +2229,28 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(252, 253, 255, 0.98));
   box-shadow: 0 16px 36px rgba(15, 27, 53, 0.06);
 }
+.eop-post-flow__final-intro {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 8px;
+  padding: 22px 24px;
+  border: 1px solid rgba(15, 27, 53, 0.08);
+  border-radius: 26px;
+  background: var(--eop-post-flow-panel-bg, #ffffff);
+  box-shadow: 0 12px 28px rgba(15, 27, 53, 0.05);
+}
 .eop-post-flow__final-intro-eyebrow {
   display: block;
-  margin: 0 0 10px;
   color: var(--eop-post-flow-muted, #5d6b82);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 .eop-post-flow__final-intro-title {
   margin: 0;
   color: var(--eop-post-flow-text, #172033);
-  font-size: clamp(30px, 4vw, 48px);
+  font-size: var(--eop-post-flow-title-size, 42px);
   line-height: 1.04;
   letter-spacing: -0.05em;
 }
@@ -2249,7 +2258,7 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
   margin: 12px 0 0;
   max-width: 60ch;
   color: var(--eop-post-flow-muted, #5d6b82);
-  font-size: 16px;
+  font-size: var(--eop-post-flow-text-size, 16px);
   line-height: 1.6;
 }
 .eop-post-flow__form--final-step {
@@ -2625,10 +2634,6 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
   .eop-post-flow--stage-contract {
     padding: 14px;
   }
-  .eop-post-flow--stage-contract::before {
-    height: 122px;
-    border-radius: 22px 22px 0 0;
-  }
   .eop-post-flow--stage-contract .eop-post-flow__layout {
     padding: 8px 4px 4px;
   }
@@ -2644,7 +2649,7 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
     flex-direction: column;
   }
   .eop-post-flow__title, .eop-post-flow__contract-hero-title {
-    font-size: 28px;
+    font-size: min(var(--eop-post-flow-title-size, 28px), 28px);
   }
   .eop-post-flow__text {
     font-size: 22px;
@@ -2700,10 +2705,10 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
     border-radius: 24px;
   }
   .eop-post-flow__final-intro-title {
-    font-size: 24px;
+    font-size: min(var(--eop-post-flow-title-size, 24px), 24px);
   }
   .eop-post-flow__final-intro-text {
-    font-size: 14px;
+    font-size: min(var(--eop-post-flow-text-size, 14px), 14px);
   }
   .eop-post-flow__final-block-head strong {
     font-size: 24px;
@@ -2724,6 +2729,9 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
   }
   .eop-post-flow--final-step .eop-post-flow__contract-header {
     padding: 14px 14px 16px;
+  }
+  .eop-post-flow--final-step .eop-post-flow__final-intro {
+    padding: 18px 18px 20px;
   }
   .eop-post-flow--final-step .eop-post-flow__final-step-card {
     padding: 0 6px 6px;
