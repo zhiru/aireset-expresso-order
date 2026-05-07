@@ -2,6 +2,22 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.86 - 2026-05-07
+
+- adicionada a view `Visual da pagina de upload e produtos` no fluxo complementar, com controles para textos da etapa final e preview do upload/personalizacao
+
+## 1.1.85 - 2026-05-07
+
+- o menu Geral ganhou seletor de categorias de produtos considerados servicos, com a mesma logica de busca, persistencia e classificacao usada no seletor de produtos
+
+## 1.1.84 - 2026-05-06
+
+- os textos e botoes configurados no admin para upload e personalizacao passaram a ser usados no fluxo complementar
+
+## 1.1.83 - 2026-05-06
+
+- o fluxo complementar passou a publicar fonte e tamanhos configurados no admin como variaveis CSS consumidas pelo SCSS
+
 ## 1.1.80 - 2026-05-06
 
 - o baseline de performance voltou a abrir e fechar corretamente, a listagem de pedidos ganhou filtros mais confiaveis e o fluxo complementar ficou mais legivel
@@ -9,6 +25,10 @@ Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser regi
 ## 1.1.81 - 2026-05-06
 
 - o accordion do baseline passou a iniciar colapsado de forma consistente
+
+## 1.1.82 - 2026-05-06
+
+- o passo final do fluxo passou a usar um bloco visual proprio, com estilos conectados as configuracoes do cliente
 
 ## 1.1.79 - 2026-05-06
 
