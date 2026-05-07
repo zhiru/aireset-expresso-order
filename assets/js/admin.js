@@ -1987,47 +1987,51 @@
         $('#eop-post-flow-products').empty();
         $('#eop-post-flow-downloads').empty();
 
-        var orderData = flow.order_data || flow.documents || [];
-        var orderDataFilled = (flow.summary && typeof flow.summary.order_data_filled !== 'undefined') ? flow.summary.order_data_filled : (flow.summary ? flow.summary.documents_completed : 0);
-        var orderDataTotal = (flow.summary && typeof flow.summary.order_data_total !== 'undefined') ? flow.summary.order_data_total : (flow.summary ? flow.summary.documents_total : 0);
         var contractAccepted = !!(flow.contract && flow.contract.accepted);
+        var proposalConfirmed = !!(flow.order && flow.order.proposal_confirmed);
         var attachmentRequired = !!(flow.summary && flow.summary.attachment_required);
         var attachmentUploaded = !!(flow.summary && flow.summary.attachment_uploaded);
-        var finalPdfReady = !!(flow.summary && flow.summary.final_pdf_ready);
         var productsEditable = (flow.summary && typeof flow.summary.products_editable !== 'undefined') ? (parseInt(flow.summary.products_editable, 10) || 0) : 0;
         var productsCompleted = (flow.summary && typeof flow.summary.products_completed !== 'undefined') ? (parseInt(flow.summary.products_completed, 10) || 0) : 0;
+        var currentStage = (flow.status && flow.status.current_stage) ? String(flow.status.current_stage) : '';
+        var stageRankMap = {
+            awaiting_confirmation: 1,
+            payment: 2,
+            contract: 3,
+            upload: 4,
+            completed: 5
+        };
+        var currentRank = stageRankMap[currentStage] || 0;
+        var paymentNeeded = currentStage === 'payment';
+        var paymentDone = currentRank > 2 || (proposalConfirmed && !paymentNeeded);
+        var contractDone = contractAccepted || currentRank > 3;
+        var uploadDone = currentStage === 'completed';
         var $downloads = $('#eop-post-flow-downloads');
 
         [
             {
+                label: i18n.post_flow_stat_confirmation || 'Aguardando confirmacao do pedido',
+                value: proposalConfirmed ? (i18n.post_flow_confirmed || 'Confirmado') : (i18n.post_flow_pending || 'Pendente'),
+                detail: proposalConfirmed ? (i18n.post_flow_confirmation_done_detail || 'Pedido confirmado pelo cliente') : (i18n.post_flow_confirmation_pending_detail || 'Cliente ainda nao confirmou'),
+                tone: proposalConfirmed ? 'success' : 'warning'
+            },
+            {
+                label: i18n.post_flow_stat_payment || 'Pagamento',
+                value: paymentDone ? (i18n.post_flow_confirmed || 'Confirmado') : (i18n.post_flow_pending || 'Pendente'),
+                detail: (!paymentNeeded && proposalConfirmed) ? (i18n.post_flow_not_required || 'Nao obrigatorio') : (paymentDone ? (i18n.post_flow_payment_done || 'Pagamento aprovado') : (i18n.post_flow_payment_waiting || 'Aguardando pagamento')),
+                tone: (!paymentNeeded && proposalConfirmed) ? 'neutral' : (paymentDone ? 'success' : 'warning')
+            },
+            {
                 label: i18n.post_flow_stat_contract || 'Contrato',
-                value: contractAccepted ? (i18n.post_flow_confirmed || 'Confirmado') : (i18n.post_flow_pending || 'Pendente'),
-                detail: (flow.contract && flow.contract.accepted_at) ? flow.contract.accepted_at : (i18n.post_flow_contract_pending_short || 'Aceite contratual'),
-                tone: contractAccepted ? 'success' : 'warning'
+                value: contractDone ? (i18n.post_flow_confirmed || 'Confirmado') : (i18n.post_flow_pending || 'Pendente'),
+                detail: (flow.contract && flow.contract.accepted_at) ? flow.contract.accepted_at : (contractDone ? (i18n.post_flow_contract_done_short || 'Aceite registrado') : (i18n.post_flow_contract_pending || 'Aceite contratual pendente.')),
+                tone: contractDone ? 'success' : 'warning'
             },
             {
-                label: i18n.post_flow_stat_documents || 'Campos',
-                value: (orderDataTotal > 0 && orderDataFilled >= orderDataTotal) ? (i18n.post_flow_confirmed || 'Confirmado') : (i18n.post_flow_pending || 'Pendente'),
-                detail: orderDataFilled + '/' + orderDataTotal,
-                tone: (orderDataTotal > 0 && orderDataFilled >= orderDataTotal) ? 'success' : 'info'
-            },
-            {
-                label: i18n.post_flow_stat_attachment || 'Anexo',
-                value: attachmentUploaded ? (i18n.post_flow_confirmed || 'Confirmado') : (attachmentRequired ? (i18n.post_flow_pending || 'Pendente') : (i18n.orders_flow_optional || 'Opcional')),
-                detail: attachmentUploaded ? (i18n.post_flow_attachment_done_short || 'Arquivo registrado') : (attachmentRequired ? (i18n.post_flow_attachment_waiting || 'Aguardando envio') : (i18n.post_flow_not_required || 'Nao obrigatorio')),
-                tone: attachmentUploaded ? 'success' : (attachmentRequired ? 'warning' : 'neutral')
-            },
-            {
-                label: i18n.post_flow_stat_final_pdf || 'PDF final',
-                value: finalPdfReady ? (i18n.post_flow_confirmed || 'Confirmado') : (i18n.post_flow_pending || 'Pendente'),
-                detail: finalPdfReady ? (i18n.post_flow_final_pdf_done_short || 'Gerado e salvo') : (i18n.post_flow_final_pdf_waiting || 'Aguardando consolidacao'),
-                tone: finalPdfReady ? 'success' : 'warning'
-            },
-            {
-                label: i18n.post_flow_stat_products || 'Produtos',
-                value: (productsEditable > 0 && productsCompleted >= productsEditable) ? (i18n.post_flow_confirmed || 'Confirmado') : (productsEditable === 0 ? (i18n.orders_flow_optional || 'Opcional') : (i18n.post_flow_pending || 'Pendente')),
-                detail: productsCompleted + '/' + productsEditable,
-                tone: (productsEditable > 0 && productsCompleted >= productsEditable) ? 'success' : (productsEditable === 0 ? 'neutral' : 'info')
+                label: i18n.post_flow_stat_upload || 'Upload e personalizacao',
+                value: uploadDone ? (i18n.post_flow_confirmed || 'Confirmado') : (i18n.post_flow_pending || 'Pendente'),
+                detail: uploadDone ? (i18n.post_flow_upload_stage_done || 'Arquivo e personalizacao concluidos') : (attachmentRequired && !attachmentUploaded ? (i18n.post_flow_upload_attachment_waiting || 'Aguardando envio do anexo') : ((productsEditable > 0 && productsCompleted < productsEditable) ? ('Personalizacao pendente (' + productsCompleted + '/' + productsEditable + ')') : (attachmentUploaded ? (i18n.post_flow_upload_finishing || 'Aguardando concluir a etapa final') : (i18n.post_flow_upload_stage_waiting || 'Etapa final pendente')))),
+                tone: uploadDone ? 'success' : 'info'
             }
         ].forEach(function (stat) {
             $('#eop-post-flow-stats').append(

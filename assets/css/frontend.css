@@ -1610,11 +1610,11 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
 
 .eop-post-flow {
   --eop-post-flow-accent: #d78a2f;
-  --eop-post-flow-accent-soft: rgba(215, 138, 47, .12);
-  --eop-post-flow-accent-border: rgba(215, 138, 47, .2);
-  --eop-post-flow-accent-shadow: rgba(215, 138, 47, .2);
-  --eop-post-flow-accent-shadow-soft: rgba(215, 138, 47, .08);
-  --eop-post-flow-accent-glow: rgba(215, 138, 47, .28);
+  --eop-post-flow-accent-soft: rgba(215, 138, 47, 0.12);
+  --eop-post-flow-accent-border: rgba(215, 138, 47, 0.2);
+  --eop-post-flow-accent-shadow: rgba(215, 138, 47, 0.2);
+  --eop-post-flow-accent-shadow-soft: rgba(215, 138, 47, 0.08);
+  --eop-post-flow-accent-glow: rgba(215, 138, 47, 0.28);
   --eop-post-flow-text: #172033;
   --eop-post-flow-muted: #5d6b82;
   --eop-post-flow-page-bg: linear-gradient(180deg, #edf2fb 0%, #f7f9fc 100%);
@@ -1676,7 +1676,8 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
   margin-top: 0;
   padding: 0;
   border-radius: 34px;
-  box-shadow: none;
+  background: var(--eop-post-flow-panel-bg, #ffffff);
+  box-shadow: 0 28px 64px rgba(15, 27, 53, 0.12);
 }
 .eop-post-flow--stage-contract > * {
   position: relative;
@@ -1724,8 +1725,6 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
 }
 .eop-post-flow--final-step {
   padding: 0;
-  background: var(--eop-post-flow-panel-bg, #ffffff);
-  box-shadow: 0 28px 64px rgba(15, 27, 53, 0.12);
 }
 .eop-post-flow--final-step .eop-post-flow__layout {
   grid-template-columns: minmax(0, 1fr);
@@ -1807,6 +1806,7 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
   align-items: center;
   gap: 18px;
   min-width: 0;
+  justify-content: space-between;
 }
 .eop-post-flow__breadcrumb {
   display: flex;

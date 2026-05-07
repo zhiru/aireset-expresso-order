@@ -1493,7 +1493,7 @@ class EOP_Post_Confirmation_Flow {
 		$stage_controls      = is_array( $flow['stage_controls'] ?? null ) ? $flow['stage_controls'] : array();
 		$stage_options       = is_array( $stage_controls['options'] ?? null ) ? $stage_controls['options'] : self::get_stage_control_options();
 		$selected_stage      = isset( $stage_controls['selected'] ) ? (string) $stage_controls['selected'] : self::get_stage_control_value( $order );
-		$status_cards        = self::get_admin_flow_status_cards( $summary, $contract );
+		$status_cards        = self::get_admin_flow_status_cards( $order, $flow );
 		$redirect_to         = wp_get_referer();
 
 		if ( '' === $redirect_to ) {
@@ -3940,52 +3940,82 @@ class EOP_Post_Confirmation_Flow {
 		<?php
 	}
 
-	private static function get_admin_flow_status_cards( $summary, $contract ) {
-		$summary                = is_array( $summary ) ? $summary : array();
-		$contract               = is_array( $contract ) ? $contract : array();
-		$order_data_total       = absint( $summary['order_data_total'] ?? 0 );
-		$order_data_filled      = absint( $summary['order_data_filled'] ?? 0 );
-		$attachment_required    = ! empty( $summary['attachment_required'] );
-		$products_editable      = absint( $summary['products_editable'] ?? 0 );
-		$products_completed     = absint( $summary['products_completed'] ?? 0 );
-		$order_data_confirmed   = $order_data_total > 0 && $order_data_filled >= $order_data_total;
-		$attachment_confirmed   = ! empty( $summary['attachment_uploaded'] );
-		$attachment_optional    = ! $attachment_required;
-		$products_confirmed     = $products_editable > 0 && $products_completed >= $products_editable;
-		$products_optional      = 0 === $products_editable;
+	private static function get_admin_flow_status_cards( WC_Order $order, $flow ) {
+		$flow           = is_array( $flow ) ? $flow : array();
+		$status         = is_array( $flow['status'] ?? null ) ? $flow['status'] : array();
+		$contract       = is_array( $flow['contract'] ?? null ) ? $flow['contract'] : array();
+		$summary        = is_array( $flow['summary'] ?? null ) ? $flow['summary'] : array();
+		$current_stage  = isset( $status['current_stage'] ) ? sanitize_key( (string) $status['current_stage'] ) : self::get_current_stage( $order );
+		$stage_rank_map = array(
+			'awaiting_confirmation' => 1,
+			'payment'               => 2,
+			'contract'              => 3,
+			'upload'                => 4,
+			'completed'             => 5,
+		);
+		$current_rank   = $stage_rank_map[ $current_stage ] ?? 0;
+		$proposal_done  = ! empty( $flow['order']['proposal_confirmed'] );
+		$payment_needed = self::order_requires_payment( $order ) || 'payment' === $current_stage;
+		$contract_done  = ! empty( $contract['accepted'] ) || $current_rank > ( $stage_rank_map['contract'] ?? 3 );
+		$upload_done    = 'completed' === $current_stage;
 
 		return array(
 			array(
+				'label'  => __( 'Aguardando confirmacao do pedido', EOP_TEXT_DOMAIN ),
+				'value'  => $proposal_done ? __( 'Confirmado', EOP_TEXT_DOMAIN ) : __( 'Pendente', EOP_TEXT_DOMAIN ),
+				'detail' => $proposal_done ? __( 'Pedido confirmado pelo cliente', EOP_TEXT_DOMAIN ) : __( 'Cliente ainda nao confirmou', EOP_TEXT_DOMAIN ),
+				'tone'   => $proposal_done ? 'success' : 'warning',
+			),
+			array(
+				'label'  => __( 'Pagamento', EOP_TEXT_DOMAIN ),
+				'value'  => $current_rank > ( $stage_rank_map['payment'] ?? 2 ) || ( $proposal_done && ! $payment_needed ) ? __( 'Confirmado', EOP_TEXT_DOMAIN ) : __( 'Pendente', EOP_TEXT_DOMAIN ),
+				'detail' => ! $payment_needed && $proposal_done ? __( 'Nao necessario', EOP_TEXT_DOMAIN ) : ( $current_rank > ( $stage_rank_map['payment'] ?? 2 ) ? __( 'Pagamento aprovado', EOP_TEXT_DOMAIN ) : __( 'Aguardando pagamento', EOP_TEXT_DOMAIN ) ),
+				'tone'   => ! $payment_needed && $proposal_done ? 'neutral' : ( $current_rank > ( $stage_rank_map['payment'] ?? 2 ) ? 'success' : 'warning' ),
+			),
+			array(
 				'label'  => __( 'Contrato', EOP_TEXT_DOMAIN ),
-				'value'  => ! empty( $contract['accepted'] ) ? __( 'Confirmado', EOP_TEXT_DOMAIN ) : __( 'Pendente', EOP_TEXT_DOMAIN ),
-				'detail' => ! empty( $contract['accepted_at'] ) ? (string) $contract['accepted_at'] : __( 'Aceite contratual', EOP_TEXT_DOMAIN ),
-				'tone'   => ! empty( $contract['accepted'] ) ? 'success' : 'warning',
+				'value'  => $contract_done ? __( 'Confirmado', EOP_TEXT_DOMAIN ) : __( 'Pendente', EOP_TEXT_DOMAIN ),
+				'detail' => ! empty( $contract['accepted_at'] ) ? (string) $contract['accepted_at'] : ( $contract_done ? __( 'Aceite registrado', EOP_TEXT_DOMAIN ) : __( 'Aceite contratual pendente', EOP_TEXT_DOMAIN ) ),
+				'tone'   => $contract_done ? 'success' : 'warning',
 			),
 			array(
-				'label'  => __( 'Campos', EOP_TEXT_DOMAIN ),
-				'value'  => $order_data_confirmed ? __( 'Confirmado', EOP_TEXT_DOMAIN ) : __( 'Pendente', EOP_TEXT_DOMAIN ),
-				'detail' => $order_data_filled . '/' . $order_data_total,
-				'tone'   => $order_data_confirmed ? 'success' : 'info',
-			),
-			array(
-				'label'  => __( 'Anexo', EOP_TEXT_DOMAIN ),
-				'value'  => $attachment_confirmed ? __( 'Confirmado', EOP_TEXT_DOMAIN ) : ( $attachment_optional ? __( 'Opcional', EOP_TEXT_DOMAIN ) : __( 'Pendente', EOP_TEXT_DOMAIN ) ),
-				'detail' => $attachment_confirmed ? __( 'Arquivo registrado', EOP_TEXT_DOMAIN ) : ( $attachment_optional ? __( 'Nao obrigatorio', EOP_TEXT_DOMAIN ) : __( 'Aguardando envio', EOP_TEXT_DOMAIN ) ),
-				'tone'   => $attachment_confirmed ? 'success' : ( $attachment_optional ? 'neutral' : 'warning' ),
-			),
-			array(
-				'label'  => __( 'PDF final', EOP_TEXT_DOMAIN ),
-				'value'  => ! empty( $summary['final_pdf_ready'] ) ? __( 'Confirmado', EOP_TEXT_DOMAIN ) : __( 'Pendente', EOP_TEXT_DOMAIN ),
-				'detail' => ! empty( $summary['final_pdf_ready'] ) ? __( 'Gerado e salvo', EOP_TEXT_DOMAIN ) : __( 'Aguardando consolidacao', EOP_TEXT_DOMAIN ),
-				'tone'   => ! empty( $summary['final_pdf_ready'] ) ? 'success' : 'warning',
-			),
-			array(
-				'label'  => __( 'Produtos', EOP_TEXT_DOMAIN ),
-				'value'  => $products_confirmed ? __( 'Confirmado', EOP_TEXT_DOMAIN ) : ( $products_optional ? __( 'Opcional', EOP_TEXT_DOMAIN ) : __( 'Pendente', EOP_TEXT_DOMAIN ) ),
-				'detail' => $products_completed . '/' . $products_editable,
-				'tone'   => $products_confirmed ? 'success' : ( $products_optional ? 'neutral' : 'info' ),
+				'label'  => __( 'Upload e personalizacao', EOP_TEXT_DOMAIN ),
+				'value'  => $upload_done ? __( 'Confirmado', EOP_TEXT_DOMAIN ) : __( 'Pendente', EOP_TEXT_DOMAIN ),
+				'detail' => $upload_done ? __( 'Arquivo e personalizacao concluidos', EOP_TEXT_DOMAIN ) : self::get_admin_upload_stage_detail_label( $summary ),
+				'tone'   => $upload_done ? 'success' : 'info',
 			),
 		);
+	}
+
+	private static function get_admin_upload_stage_detail_label( $summary ) {
+		$summary             = is_array( $summary ) ? $summary : array();
+		$attachment_required = ! empty( $summary['attachment_required'] );
+		$attachment_uploaded = ! empty( $summary['attachment_uploaded'] );
+		$products_editable   = absint( $summary['products_editable'] ?? 0 );
+		$products_completed  = absint( $summary['products_completed'] ?? 0 );
+
+		if ( $attachment_required && ! $attachment_uploaded ) {
+			return __( 'Aguardando envio do anexo', EOP_TEXT_DOMAIN );
+		}
+
+		if ( $products_editable > 0 && $products_completed < $products_editable ) {
+			return sprintf(
+				/* translators: 1: completed products, 2: editable products */
+				__( 'Personalizacao pendente (%1$d/%2$d)', EOP_TEXT_DOMAIN ),
+				$products_completed,
+				$products_editable
+			);
+		}
+
+		if ( $attachment_uploaded && $products_editable > 0 ) {
+			return __( 'Aguardando concluir a etapa final', EOP_TEXT_DOMAIN );
+		}
+
+		if ( $attachment_uploaded ) {
+			return __( 'Anexo enviado', EOP_TEXT_DOMAIN );
+		}
+
+		return __( 'Etapa final pendente', EOP_TEXT_DOMAIN );
 	}
 
 	private static function get_post_flow_custom_style_rules( $settings ) {
