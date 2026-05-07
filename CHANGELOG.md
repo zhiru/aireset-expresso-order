@@ -2,6 +2,10 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.88 - 2026-05-07
+
+- a tela `Visual da pagina contratual` ganhou editor em accordions com textos e estilos separados por parte da pagina: header, breadcrumbs, leitor do documento, cards de apoio/aceite, resumo lateral e botoes
+
 ## 1.1.87 - 2026-05-07
 
 - a tela `Visual da pagina de upload e produtos` ganhou editor em accordions com textos e estilos separados por parte da pagina: header, breadcrumbs, bloco de titulo, upload, produtos e botao principal

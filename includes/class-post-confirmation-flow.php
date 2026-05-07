@@ -3796,11 +3796,14 @@ class EOP_Post_Confirmation_Flow {
 	}
 
 	private static function get_post_flow_custom_style_rules( $settings ) {
-		if ( ! class_exists( 'EOP_Settings' ) || ! method_exists( 'EOP_Settings', 'get_post_confirmation_upload_products_style_sections' ) ) {
+		if ( ! class_exists( 'EOP_Settings' ) || ! method_exists( 'EOP_Settings', 'get_post_confirmation_upload_products_style_sections' ) || ! method_exists( 'EOP_Settings', 'get_post_confirmation_contract_style_sections' ) ) {
 			return '';
 		}
 
-		$sections = EOP_Settings::get_post_confirmation_upload_products_style_sections();
+		$sections = array_merge(
+			EOP_Settings::get_post_confirmation_contract_style_sections(),
+			EOP_Settings::get_post_confirmation_upload_products_style_sections()
+		);
 		$rules    = array();
 
 		foreach ( $sections as $section ) {

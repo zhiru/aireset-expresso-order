@@ -2404,8 +2404,6 @@ body .eop-proposal-wrap .eop-notice.eop-notice-success {
 }
 .eop-post-flow__final-submit {
   width: 100%;
-  min-height: 56px;
-  font-size: 16px;
 }
 .eop-post-flow__panel {
   background: var(--eop-post-flow-side-bg, #f6f8fc);
