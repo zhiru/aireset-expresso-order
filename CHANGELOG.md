@@ -2,6 +2,12 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.93 - 2026-05-13
+
+- unifica a configuracao visual da proposta do cliente, adiciona telas dedicadas para criar pedido e listagem de pedidos e reorganiza a navegacao geral do admin
+- os previews visuais de criar pedido e listagem passam a carregar a tela real do shortcode `[expresso_order]` em iframe com skin configuravel, mantendo o fluxo DRY e fiel ao frontend
+- amplia a customizacao textual e visual da proposta publica, incluindo rotulos, estados, botoes, alertas e resumos do fluxo complementar
+
 ## 1.1.92 - 2026-05-07
 
 - ajustes na renderização pública da proposta e refinamento do resumo administrativo com novo renderer compartilhado
