@@ -2,6 +2,18 @@
 
 Todas as alteracoes relevantes do plugin `Aireset Expresso Order` devem ser registradas aqui.
 
+## 1.1.95 - 2026-05-14
+
+- reorganiza o editor visual da proposta publica em accordions por elemento real da pagina, incluindo hero principal, hero lateral, lista de itens, cards laterais, botoes e alertas
+- separa estilos dedicados no renderer compartilhado para hero lateral, cards internos, secao de itens, cards de item e cards laterais, mantendo o preview admin alinhado com a pagina publica
+- remove a observacao legada "Este bloco simula a jornada publica com a mesma hierarquia visual usada pelo cliente." do card de acoes no preview e na proposta publica
+
+## 1.1.94 - 2026-05-13
+
+- remove os previews duplicados da tela `Visual da proposta do cliente`, mantendo apenas o preview inicial da proposta publica
+- restaura a consistencia da navegacao do SPA do admin ao remover referencias legadas da view `settings-customer-experience` no JavaScript
+- preserva os previews proprios das telas `settings-confirmation-preview` e `settings-confirmation-upload-products-preview`, mantendo a separacao correta das etapas do fluxo complementar
+
 ## 1.1.93 - 2026-05-13
 
 - unifica a configuracao visual da proposta do cliente, adiciona telas dedicadas para criar pedido e listagem de pedidos e reorganiza a navegacao geral do admin

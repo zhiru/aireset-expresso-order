@@ -860,7 +860,6 @@
             'settings-proposal-link-style',
             'settings-new-order-style',
             'settings-orders-list-style',
-            'settings-customer-experience',
             'settings-texts'
         ];
 		var confirmationViews = [
@@ -1301,7 +1300,6 @@
             'settings-proposal-link-style',
             'settings-new-order-style',
             'settings-orders-list-style',
-            'settings-customer-experience',
             'settings-texts',
             'documentation',
             'export-import'

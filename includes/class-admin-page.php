@@ -153,6 +153,7 @@ class EOP_Admin_Page {
         add_action( 'admin_menu', array( __CLASS__, 'register_page' ) );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_menu_flyout_assets' ) );
+        add_action( 'admin_head', array( __CLASS__, 'print_safe_edit_post_store_guard' ), 1 );
         add_action( 'wp_ajax_eop_load_admin_view', array( __CLASS__, 'ajax_load_admin_view' ) );
         add_filter( 'admin_body_class', array( __CLASS__, 'filter_admin_body_class' ) );
     }
@@ -164,7 +165,65 @@ class EOP_Admin_Page {
             return $classes;
         }
 
-        return trim( $classes . ' eop-admin-spa-screen' );
+        $classes .= ' eop-admin-spa-screen';
+
+        if ( 'new-order' === self::normalize_view( isset( $_GET['view'] ) ? wp_unslash( $_GET['view'] ) : '' ) ) {
+            $classes .= ' is-plugin-fullscreen';
+        }
+
+        return trim( $classes );
+    }
+
+    public static function print_safe_edit_post_store_guard() {
+        $page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+
+        if ( 'eop-pedido-expresso' !== $page ) {
+            return;
+        }
+        ?>
+        <script>
+            (function () {
+                function patchCoreEditPostSelect() {
+                    if (!window.wp || !window.wp.data || typeof window.wp.data.select !== 'function') {
+                        return;
+                    }
+
+                    if (window.wp.data.__eopSafeCoreEditPostSelect) {
+                        return;
+                    }
+
+                    var originalSelect = window.wp.data.select.bind(window.wp.data);
+
+                    window.wp.data.select = function (storeName) {
+                        var result = originalSelect.apply(this, arguments);
+
+                        if (storeName === 'core/edit-post' && !result) {
+                            return {
+                                isFeatureActive: function () {
+                                    return false;
+                                },
+                                toggleFeature: function () {
+                                    return false;
+                                }
+                            };
+                        }
+
+                        return result;
+                    };
+
+                    window.wp.data.__eopSafeCoreEditPostSelect = true;
+                }
+
+                patchCoreEditPostSelect();
+
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', patchCoreEditPostSelect, { once: true });
+                }
+
+                window.addEventListener('load', patchCoreEditPostSelect, { once: true });
+            }());
+        </script>
+        <?php
     }
 
     public static function get_default_view() {
@@ -1342,6 +1401,14 @@ class EOP_Admin_Page {
 
         if ( self::is_preview_frame_request() ) {
             self::render_preview_frame_page();
+            return;
+        }
+
+        $view = self::normalize_view( isset( $_GET['view'] ) ? wp_unslash( $_GET['view'] ) : '' );
+
+        if ( 'new-order' === $view ) {
+            echo '<script>document.documentElement.classList.add("eop-admin-spa-fullscreen");</script>';
+            include EOP_PLUGIN_DIR . 'templates/shortcode-page.php';
             return;
         }
 

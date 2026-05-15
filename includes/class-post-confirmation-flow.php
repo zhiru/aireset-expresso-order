@@ -266,6 +266,21 @@ class EOP_Post_Confirmation_Flow {
 	}
 
 	public static function get_stage_label( $stage ) {
+		$custom_key_map = array(
+			'contract'  => 'post_confirmation_stage_contract_label',
+			'upload'    => 'post_confirmation_stage_upload_label',
+			'products'  => 'post_confirmation_stage_upload_label',
+			'completed' => 'post_confirmation_stage_completed_label',
+		);
+
+		if ( isset( $custom_key_map[ $stage ] ) && class_exists( 'EOP_Settings' ) && method_exists( 'EOP_Settings', 'get' ) ) {
+			$custom_label = trim( (string) EOP_Settings::get( $custom_key_map[ $stage ], '' ) );
+
+			if ( '' !== $custom_label ) {
+				return $custom_label;
+			}
+		}
+
 		$labels = array(
 			'payment'               => __( 'Pagamento pendente', EOP_TEXT_DOMAIN ),
 			'contract'              => __( 'Aceite contratual', EOP_TEXT_DOMAIN ),
@@ -1749,15 +1764,15 @@ class EOP_Post_Confirmation_Flow {
 				<?php
 				$step_key = (string) ( $step['key'] ?? '' );
 				$step_status = (string) ( $step['status'] ?? 'upcoming' );
-				$classes = array( 'eop-post-flow__breadcrumb-item', 'is-' . $step_status );
+				$classes = array( 'eop-post-flow__breadcrumb-item', 'is-' . $step_status, 'eop-post-flow__breadcrumb-item--' . sanitize_html_class( $step_key ) );
 
 				if ( $step_key === $current_stage ) {
 					$classes[] = 'is-current';
 				}
 				?>
 				<span class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>"<?php echo $step_key === $current_stage ? ' aria-current="step"' : ''; ?>>
-					<span class="eop-post-flow__breadcrumb-index"><?php echo esc_html( self::get_stage_breadcrumb_number( $step_key, $steps ) ); ?></span>
-					<span class="eop-post-flow__breadcrumb-label"><?php echo esc_html( (string) ( $step['label'] ?? '' ) ); ?></span>
+					<span class="eop-post-flow__breadcrumb-index eop-post-flow__breadcrumb-index--<?php echo esc_attr( sanitize_html_class( $step_key ) ); ?>"><?php echo esc_html( self::get_stage_breadcrumb_number( $step_key, $steps ) ); ?></span>
+					<span class="eop-post-flow__breadcrumb-label eop-post-flow__breadcrumb-label--<?php echo esc_attr( sanitize_html_class( $step_key ) ); ?>"><?php echo esc_html( (string) ( $step['label'] ?? '' ) ); ?></span>
 				</span>
 			<?php endforeach; ?>
 		</nav>
@@ -1792,6 +1807,25 @@ class EOP_Post_Confirmation_Flow {
 			</div>
 		</div>
 		<?php
+	}
+
+	private static function get_contract_summary_row_label( $row_key, $fallback = '', $settings = array() ) {
+		$row_key   = sanitize_key( (string) $row_key );
+		$fallback  = (string) $fallback;
+		$settings  = is_array( $settings ) ? $settings : array();
+		$key_map   = array(
+			'subtotal' => 'customer_experience_subtotal_label',
+			'shipping' => 'post_confirmation_contract_shipping_label',
+			'discount' => 'customer_experience_discount_label',
+		);
+
+		if ( ! isset( $key_map[ $row_key ] ) ) {
+			return $fallback;
+		}
+
+		$custom_label = trim( (string) ( $settings[ $key_map[ $row_key ] ] ?? '' ) );
+
+		return '' !== $custom_label ? $custom_label : $fallback;
 	}
 
 	private static function render_contract_summary_panel( WC_Order $order, $total_rows, $pdf_url ) {
@@ -1953,8 +1987,13 @@ class EOP_Post_Confirmation_Flow {
 	private static function prepare_contract_summary_rows( WC_Order $order, $rows ) {
 		$rows           = is_array( $rows ) ? $rows : array();
 		$subtotal_value = (float) $order->get_subtotal();
+		$settings       = class_exists( 'EOP_Settings' ) && method_exists( 'EOP_Settings', 'get_all' ) ? EOP_Settings::get_all() : array();
 
 		foreach ( $rows as $index => $row ) {
+			if ( is_array( $row ) && ! empty( $row['key'] ) ) {
+				$rows[ $index ]['label'] = self::get_contract_summary_row_label( (string) $row['key'], (string) ( $row['label'] ?? '' ), $settings );
+			}
+
 			if ( ! is_array( $row ) || 'discount' !== ( $row['key'] ?? '' ) ) {
 				continue;
 			}
@@ -1976,11 +2015,29 @@ class EOP_Post_Confirmation_Flow {
 		$products_title = trim( (string) ( $context['products_title'] ?? ( $settings['post_confirmation_products_title'] ?? '' ) ) );
 		$products_text  = trim( (string) ( $context['products_text'] ?? ( $settings['post_confirmation_products_description'] ?? '' ) ) );
 		$field_label    = trim( (string) ( $context['field_label'] ?? ( $settings['post_confirmation_upload_field_label'] ?? '' ) ) );
+		$upload_saved_date_prefix = trim( (string) ( $settings['post_confirmation_upload_saved_date_prefix'] ?? '' ) );
+		$upload_saved_status_text = trim( (string) ( $settings['post_confirmation_upload_saved_status_text'] ?? '' ) );
+		$upload_view_button_label = trim( (string) ( $settings['post_confirmation_upload_view_button_label'] ?? '' ) );
+		$products_heading_sequence = trim( (string) ( $settings['post_confirmation_products_heading_sequence_label'] ?? '' ) );
+		$products_heading_original = trim( (string) ( $settings['post_confirmation_products_heading_original_label'] ?? '' ) );
+		$products_heading_custom = trim( (string) ( $settings['post_confirmation_products_heading_custom_label'] ?? '' ) );
+		$products_sku_prefix = trim( (string) ( $settings['post_confirmation_products_sku_prefix'] ?? '' ) );
+		$products_sku_empty = trim( (string) ( $settings['post_confirmation_products_sku_empty_label'] ?? '' ) );
+		$products_locked_message = trim( (string) ( $settings['post_confirmation_products_locked_message'] ?? '' ) );
 		$upload_title   = '' !== $upload_title ? $upload_title : __( 'Anexo do cliente', EOP_TEXT_DOMAIN );
 		$upload_text    = '' !== $upload_text ? $upload_text : __( 'Selecione um arquivo em PDF ou PNG. Se ja houver um anexo salvo, voce pode visualiza-lo abaixo ou enviar outro para substituir.', EOP_TEXT_DOMAIN );
 		$products_title = '' !== $products_title ? $products_title : __( 'Produtos do pedido', EOP_TEXT_DOMAIN );
 		$products_text  = '' !== $products_text ? $products_text : __( 'Defina como cada produto deve aparecer para os itens liberados.', EOP_TEXT_DOMAIN );
 		$field_label    = '' !== $field_label ? $field_label : __( 'Arquivo', EOP_TEXT_DOMAIN );
+		$upload_saved_date_prefix = '' !== $upload_saved_date_prefix ? $upload_saved_date_prefix : __( 'Enviado em', EOP_TEXT_DOMAIN );
+		$upload_saved_status_text = '' !== $upload_saved_status_text ? $upload_saved_status_text : __( 'Arquivo ja salvo no pedido.', EOP_TEXT_DOMAIN );
+		$upload_view_button_label = '' !== $upload_view_button_label ? $upload_view_button_label : __( 'Ver anexo enviado', EOP_TEXT_DOMAIN );
+		$products_heading_sequence = '' !== $products_heading_sequence ? $products_heading_sequence : __( 'Seq.', EOP_TEXT_DOMAIN );
+		$products_heading_original = '' !== $products_heading_original ? $products_heading_original : __( 'Produto original', EOP_TEXT_DOMAIN );
+		$products_heading_custom = '' !== $products_heading_custom ? $products_heading_custom : __( 'Novo nome', EOP_TEXT_DOMAIN );
+		$products_sku_prefix = '' !== $products_sku_prefix ? $products_sku_prefix : __( 'SKU:', EOP_TEXT_DOMAIN );
+		$products_sku_empty = '' !== $products_sku_empty ? $products_sku_empty : __( 'SKU nao informado', EOP_TEXT_DOMAIN );
+		$products_locked_message = '' !== $products_locked_message ? $products_locked_message : __( 'Este item esta bloqueado para alteracao de nome.', EOP_TEXT_DOMAIN );
 		$attachment_id  = absint( $context['attachment_id'] ?? 0 );
 		$attachment_url = trim( (string) ( $context['attachment_url'] ?? '' ) );
 		$filename       = trim( (string) ( $context['filename'] ?? '' ) );
@@ -2003,8 +2060,8 @@ class EOP_Post_Confirmation_Flow {
 								<?php if ( $show_upload_meta ) : ?>
 									<div class="eop-post-flow__final-upload-meta">
 										<strong><?php echo esc_html( $filename ); ?></strong>
-										<small><?php echo esc_html( $uploaded_at ? sprintf( __( 'Enviado em %s.', EOP_TEXT_DOMAIN ), $uploaded_at ) : __( 'Arquivo ja salvo no pedido.', EOP_TEXT_DOMAIN ) ); ?></small>
-										<a class="eop-proposal-button eop-proposal-button--secondary" target="_blank" rel="noopener" href="<?php echo esc_url( $attachment_url ); ?>"><?php esc_html_e( 'Ver anexo enviado', EOP_TEXT_DOMAIN ); ?></a>
+										<small><?php echo esc_html( $uploaded_at ? sprintf( '%1$s %2$s.', $upload_saved_date_prefix, $uploaded_at ) : $upload_saved_status_text ); ?></small>
+										<a class="eop-proposal-button eop-proposal-button--secondary" target="_blank" rel="noopener" href="<?php echo esc_url( $attachment_url ); ?>"><?php echo esc_html( $upload_view_button_label ); ?></a>
 									</div>
 								<?php endif; ?>
 							</div>
@@ -2015,9 +2072,9 @@ class EOP_Post_Confirmation_Flow {
 								<small><?php echo esc_html( $products_text ); ?></small>
 							</div>
 							<div class="eop-post-flow__final-products-head" aria-hidden="true">
-								<span><?php esc_html_e( 'Seq.', EOP_TEXT_DOMAIN ); ?></span>
-								<span><?php esc_html_e( 'Produto original', EOP_TEXT_DOMAIN ); ?></span>
-								<span><?php esc_html_e( 'Novo nome', EOP_TEXT_DOMAIN ); ?></span>
+								<span><?php echo esc_html( $products_heading_sequence ); ?></span>
+								<span><?php echo esc_html( $products_heading_original ); ?></span>
+								<span><?php echo esc_html( $products_heading_custom ); ?></span>
 							</div>
 							<div class="eop-post-flow__final-products-list">
 								<?php foreach ( $line_items as $index => $line_item ) : ?>
@@ -2095,13 +2152,13 @@ class EOP_Post_Confirmation_Flow {
 											</div>
 											<div class="eop-post-flow__final-product-copy">
 												<strong><?php echo esc_html( $item_name ); ?></strong>
-												<small><?php echo esc_html( '' !== $sku ? sprintf( __( 'SKU: %s', EOP_TEXT_DOMAIN ), $sku ) : __( 'SKU nao informado', EOP_TEXT_DOMAIN ) ); ?></small>
+												<small><?php echo esc_html( '' !== $sku ? sprintf( '%1$s %2$s', $products_sku_prefix, $sku ) : $products_sku_empty ); ?></small>
 											</div>
 										</div>
 										<label class="eop-post-flow__field eop-post-flow__final-name-field">
 											<input type="text" name="eop_product_name[<?php echo esc_attr( $item_id ); ?>]" value="<?php echo esc_attr( $value ); ?>" <?php echo $locked ? 'disabled' : 'required'; ?> />
 											<?php if ( $locked ) : ?>
-												<small><?php esc_html_e( 'Este item esta bloqueado para alteracao de nome.', EOP_TEXT_DOMAIN ); ?></small>
+												<small><?php echo esc_html( $products_locked_message ); ?></small>
 											<?php endif; ?>
 										</label>
 									</div>
@@ -2229,7 +2286,7 @@ class EOP_Post_Confirmation_Flow {
 					<div class="eop-post-flow__final-step-card">
 						<form method="post" enctype="multipart/form-data" class="eop-post-flow__form eop-post-flow__form--final-step">
 							<?php echo $markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-							<button type="submit" class="eop-proposal-button eop-post-flow__final-submit"><?php echo esc_html( $settings['post_confirmation_upload_button_label'] ); ?></button>
+							<button type="submit" class="eop-proposal-button eop-post-flow__final-submit"><?php echo esc_html( $settings['post_confirmation_products_button_label'] ); ?></button>
 						</form>
 					</div>
 				</div>
@@ -3699,15 +3756,15 @@ class EOP_Post_Confirmation_Flow {
 
 		$summary_rows = array(
 			array(
-				'label' => __( 'Subtotal', EOP_TEXT_DOMAIN ),
+				'label' => self::get_contract_summary_row_label( 'subtotal', __( 'Subtotal', EOP_TEXT_DOMAIN ), $settings ),
 				'value' => 'R$ 382,90',
 			),
 			array(
-				'label' => __( 'Frete', EOP_TEXT_DOMAIN ),
+				'label' => self::get_contract_summary_row_label( 'shipping', __( 'Frete', EOP_TEXT_DOMAIN ), $settings ),
 				'value' => 'R$ 0,00',
 			),
 			array(
-				'label'      => __( 'Desconto', EOP_TEXT_DOMAIN ),
+				'label'      => self::get_contract_summary_row_label( 'discount', __( 'Desconto', EOP_TEXT_DOMAIN ), $settings ),
 				'main_value' => '25%',
 				'sub_value'  => '-R$ 95,73',
 			),

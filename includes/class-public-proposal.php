@@ -920,7 +920,7 @@ class EOP_Public_Proposal {
 
         /* Bloco legado do preview mantido apenas para referencia historica.
          * O caminho ativo agora usa render_admin_preview_markup_via_shared_renderer().
-        
+
 
                 <div class="eop-proposal-overview">
                     <div class="eop-proposal-overview__main">
@@ -1019,7 +1019,6 @@ class EOP_Public_Proposal {
                                 <button type="button" class="eop-proposal-button" data-preview-confirm-button><?php echo esc_html( $settings['proposal_button_label'] ); ?></button>
                                 <button type="button" class="eop-proposal-button eop-proposal-button--secondary" data-preview-pay-button><?php echo esc_html( $settings['proposal_pay_button_label'] ); ?></button>
                             </div>
-                            <p class="eop-proposal-note" style="margin-top:16px"><?php esc_html_e( 'Este bloco simula a jornada publica com a mesma hierarquia visual usada pelo cliente.', EOP_TEXT_DOMAIN ); ?></p>
                         </aside>
                     </div>
                 </div>
@@ -1091,16 +1090,18 @@ class EOP_Public_Proposal {
             $summary_rows[] = array( 'label' => __( 'Telefone', EOP_TEXT_DOMAIN ), 'value' => $args['order']->get_billing_phone() );
         }
 
-        $sidebar_cards = array(
-            array(
+        $sidebar_cards = array();
+
+        if ( 'yes' === ( $args['theme']['summary_enabled'] ?? 'yes' ) ) {
+            $sidebar_cards[] = array(
                 'type'    => 'meta',
                 'eyebrow' => '' !== $args['summary_eyebrow'] ? $args['summary_eyebrow'] : __( 'Contexto do pedido', EOP_TEXT_DOMAIN ),
                 'title'   => $args['summary_title'] ?: __( 'Contexto do pedido', EOP_TEXT_DOMAIN ),
                 'rows'    => $summary_rows,
-            ),
-        );
+            );
+        }
 
-        if ( ! empty( $args['total_rows'] ) ) {
+        if ( 'yes' === ( $args['theme']['financial_enabled'] ?? 'yes' ) && ! empty( $args['total_rows'] ) ) {
             $total_rows = array_map(
                 static function ( $row ) use ( $args ) {
                     if ( ! is_array( $row ) ) {
@@ -1142,53 +1143,63 @@ class EOP_Public_Proposal {
         }
 
         if ( ! $args['confirmed'] ) {
-            $actions = array(
-                array(
+            $actions = array();
+
+            if ( ! empty( $args['settings']['proposal_button_enabled'] ) && 'yes' === $args['settings']['proposal_button_enabled'] ) {
+                $actions[] = array(
                     'type'  => 'form_submit',
                     'label' => $args['button_label'],
                     'token' => $args['order']->get_meta( '_eop_public_token', true ),
-                ),
-            );
-
-            if ( $args['pdf_url'] ) {
-                $actions[] = array(
-                    'type'     => 'link',
-                    'label'    => __( 'Baixar PDF', EOP_TEXT_DOMAIN ),
-                    'url'      => $args['pdf_url'],
-                    'download' => $args['order']->get_id() . '.pdf',
                 );
             }
 
-            $sidebar_cards[] = array(
-                'type'    => 'actions',
-                'eyebrow' => '' !== $args['actions_eyebrow'] ? $args['actions_eyebrow'] : __( 'Confirmacao da proposta', EOP_TEXT_DOMAIN ),
-                'title'   => $args['actions_title'] ?: __( 'Confirmacao da proposta', EOP_TEXT_DOMAIN ),
-                'actions' => $actions,
-                'note'    => $args['theme']['alert_note'],
-            );
+            if ( $args['pdf_url'] && ! empty( $args['settings']['proposal_pdf_button_enabled'] ) && 'yes' === $args['settings']['proposal_pdf_button_enabled'] ) {
+                $actions[] = array(
+                    'type'     => 'link',
+                    'label'    => $args['settings']['proposal_pdf_button_label'],
+                    'url'      => $args['pdf_url'],
+                    'download' => $args['order']->get_id() . '.pdf',
+                    'secondary' => true,
+                    'variant'  => 'pdf',
+                );
+            }
+
+            if ( 'yes' === ( $args['theme']['actions_enabled'] ?? 'yes' ) && ! empty( $actions ) ) {
+                $sidebar_cards[] = array(
+                    'type'    => 'actions',
+                    'eyebrow' => '' !== $args['actions_eyebrow'] ? $args['actions_eyebrow'] : __( 'Confirmacao da proposta', EOP_TEXT_DOMAIN ),
+                    'title'   => $args['actions_title'] ?: __( 'Confirmacao da proposta', EOP_TEXT_DOMAIN ),
+                    'actions' => $actions,
+                    'note'    => '',
+                );
+            }
         } elseif ( ! $args['flow_enabled'] && ( $args['payment_url'] || $args['pdf_url'] ) ) {
             $actions = array();
 
-            if ( $args['payment_url'] ) {
-                $actions[] = array( 'type' => 'link', 'label' => $args['pay_label'], 'url' => $args['payment_url'] );
+            if ( $args['payment_url'] && ! empty( $args['settings']['proposal_pay_button_enabled'] ) && 'yes' === $args['settings']['proposal_pay_button_enabled'] ) {
+                $actions[] = array( 'type' => 'link', 'label' => $args['pay_label'], 'url' => $args['payment_url'], 'secondary' => true );
             }
 
-            if ( $args['pdf_url'] ) {
+            if ( $args['pdf_url'] && ! empty( $args['settings']['proposal_pdf_button_enabled'] ) && 'yes' === $args['settings']['proposal_pdf_button_enabled'] ) {
                 $actions[] = array(
-                    'type'     => 'link',
-                    'label'    => __( 'Baixar PDF', EOP_TEXT_DOMAIN ),
-                    'url'      => $args['pdf_url'],
-                    'download' => $args['order']->get_id() . '.pdf',
+                    'type'      => 'link',
+                    'label'     => $args['settings']['proposal_pdf_button_label'],
+                    'url'       => $args['pdf_url'],
+                    'download'  => $args['order']->get_id() . '.pdf',
+                    'secondary' => true,
+                    'variant'   => 'pdf',
                 );
             }
 
-            $sidebar_cards[] = array(
-                'type'    => 'actions',
-                'eyebrow' => '' !== $args['actions_eyebrow'] ? $args['actions_eyebrow'] : __( 'Acoes rapidas', EOP_TEXT_DOMAIN ),
-                'title'   => $args['actions_title'] ?: __( 'Acoes rapidas', EOP_TEXT_DOMAIN ),
-                'actions' => $actions,
-                'note'    => $args['theme']['alert_note'],
-            );
+            if ( 'yes' === ( $args['theme']['actions_enabled'] ?? 'yes' ) && ! empty( $actions ) ) {
+                $sidebar_cards[] = array(
+                    'type'    => 'actions',
+                    'eyebrow' => '' !== $args['actions_eyebrow'] ? $args['actions_eyebrow'] : __( 'Acoes rapidas', EOP_TEXT_DOMAIN ),
+                    'title'   => $args['actions_title'] ?: __( 'Acoes rapidas', EOP_TEXT_DOMAIN ),
+                    'actions' => $actions,
+                    'note'    => '',
+                );
+            }
         }
 
         $main_notices = array();
@@ -1295,36 +1306,56 @@ class EOP_Public_Proposal {
                         'summary_value_html' => '- ' . $args['discount_value'],
                     ),
                 ),
-                'sidebar_cards'   => array(
-                    array(
-                        'type'    => 'meta',
-                        'eyebrow' => $args['summary_eyebrow'],
-                        'title'   => $args['summary_title'],
-                        'rows'    => array(
-                            array( 'label' => $args['theme']['meta_status_label'], 'value' => $args['theme']['meta_status_value_preview'] ),
-                            array( 'label' => $args['theme']['meta_deadline_label'], 'value' => $args['theme']['meta_deadline_value_preview'] ),
-                        ),
-                    ),
-                    array(
-                        'type'    => 'totals',
-                        'eyebrow' => $args['financial_eyebrow'],
-                        'title'   => $args['financial_title'],
-                        'rows'    => array(
-                            array( 'label' => $args['theme']['subtotal_label'], 'main_value' => wp_strip_all_tags( $args['total_value'] ), 'sub_value' => $args['theme']['subtotal_note'], 'class' => '' ),
-                            array( 'label' => $args['theme']['discount_label'], 'main_value' => '- ' . wp_strip_all_tags( $args['discount_value'] ), 'sub_value' => $args['theme']['discount_note'], 'class' => '' ),
-                            array( 'label' => $args['theme']['total_row_label'], 'main_value' => wp_strip_all_tags( $args['total_value'] ), 'sub_value' => $args['theme']['total_row_note'], 'class' => 'is-grand' ),
-                        ),
-                    ),
-                    array(
-                        'type'    => 'actions',
-                        'eyebrow' => $args['actions_eyebrow'],
-                        'title'   => $args['actions_title'],
-                        'actions' => array(
-                            array( 'type' => 'button', 'label' => $args['settings']['proposal_button_label'] ),
-                            array( 'type' => 'button', 'label' => $args['settings']['proposal_pay_button_label'], 'secondary' => true ),
-                        ),
-                        'note'    => $args['theme']['alert_note'],
-                    ),
+                'sidebar_cards'   => array_values(
+                    array_filter(
+                        array(
+                            'yes' === ( $args['theme']['summary_enabled'] ?? 'yes' ) ? array(
+                                'type'    => 'meta',
+                                'eyebrow' => $args['summary_eyebrow'],
+                                'title'   => $args['summary_title'],
+                                'rows'    => array(
+                                    array( 'label' => $args['theme']['meta_status_label'], 'value' => $args['theme']['meta_status_value_preview'] ),
+                                    array( 'label' => $args['theme']['meta_deadline_label'], 'value' => $args['theme']['meta_deadline_value_preview'] ),
+                                ),
+                            ) : null,
+                            'yes' === ( $args['theme']['financial_enabled'] ?? 'yes' ) ? array(
+                                'type'    => 'totals',
+                                'eyebrow' => $args['financial_eyebrow'],
+                                'title'   => $args['financial_title'],
+                                'rows'    => array(
+                                    array( 'label' => $args['theme']['subtotal_label'], 'main_value' => wp_strip_all_tags( $args['total_value'] ), 'sub_value' => $args['theme']['subtotal_note'], 'class' => '' ),
+                                    array( 'label' => $args['theme']['discount_label'], 'main_value' => '- ' . wp_strip_all_tags( $args['discount_value'] ), 'sub_value' => $args['theme']['discount_note'], 'class' => '' ),
+                                    array( 'label' => $args['theme']['total_row_label'], 'main_value' => wp_strip_all_tags( $args['total_value'] ), 'sub_value' => $args['theme']['total_row_note'], 'class' => 'is-grand' ),
+                                ),
+                            ) : null,
+                            (
+                                'yes' === ( $args['theme']['actions_enabled'] ?? 'yes' )
+                                && ! empty(
+                                    array_filter(
+                                        array(
+                                            'yes' === ( $args['settings']['proposal_button_enabled'] ?? 'yes' ) ? array( 'type' => 'button', 'label' => $args['settings']['proposal_button_label'] ) : null,
+                                            'yes' === ( $args['settings']['proposal_pay_button_enabled'] ?? 'yes' ) ? array( 'type' => 'button', 'label' => $args['settings']['proposal_pay_button_label'], 'secondary' => true ) : null,
+                                            'yes' === ( $args['settings']['proposal_pdf_button_enabled'] ?? 'yes' ) ? array( 'type' => 'button', 'label' => $args['settings']['proposal_pdf_button_label'], 'secondary' => true, 'variant' => 'pdf' ) : null,
+                                        )
+                                    )
+                                )
+                            ) ? array(
+                                'type'    => 'actions',
+                                'eyebrow' => $args['actions_eyebrow'],
+                                'title'   => $args['actions_title'],
+                                'actions' => array_values(
+                                    array_filter(
+                                        array(
+                                            'yes' === ( $args['settings']['proposal_button_enabled'] ?? 'yes' ) ? array( 'type' => 'button', 'label' => $args['settings']['proposal_button_label'] ) : null,
+                                            'yes' === ( $args['settings']['proposal_pay_button_enabled'] ?? 'yes' ) ? array( 'type' => 'button', 'label' => $args['settings']['proposal_pay_button_label'], 'secondary' => true ) : null,
+                                            'yes' === ( $args['settings']['proposal_pdf_button_enabled'] ?? 'yes' ) ? array( 'type' => 'button', 'label' => $args['settings']['proposal_pdf_button_label'], 'secondary' => true, 'variant' => 'pdf' ) : null,
+                                        )
+                                    )
+                                ),
+                                'note'    => '',
+                            ) : null,
+                        )
+                    )
                 ),
             )
         );
@@ -1362,7 +1393,7 @@ class EOP_Public_Proposal {
         $hero_muted_color     = ! empty( $theme['hero_muted_color'] ) ? $theme['hero_muted_color'] : self::with_alpha( $hero_text_color, '#ffffff' === strtolower( $hero_text_color ) ? '0.78' : '0.70' );
         $hero_chip_background = '#ffffff' === strtolower( $hero_text_color ) ? 'rgba(255, 255, 255, 0.16)' : 'rgba(15, 27, 53, 0.08)';
         $hero_chip_text       = $hero_text_color;
-        $pill_text_color      = self::get_contrast_text_color( $theme['accent_color'], '#16243a', '#ffffff' );
+        $pill_text_color      = ! empty( $theme['item_pill_text_color'] ) ? $theme['item_pill_text_color'] : '#16243a';
 
         return array(
             'page_bg'                 => $theme['background_css'],
@@ -1380,6 +1411,8 @@ class EOP_Public_Proposal {
             'brand_bg'                => self::with_alpha( $theme['panel_background_css'], '0.12' ),
             'panel_soft'              => self::with_alpha( $theme['panel_background_css'], '0.18' ),
             'border_soft'             => self::with_alpha( $settings['border_color'], '0.18' ),
+            'border_width'            => $theme['shared_border_width'],
+            'border_style'            => $theme['shared_border_style'],
             'accent_soft'             => self::with_alpha( $theme['accent_color'], '0.12' ),
             'accent_border'           => self::with_alpha( $theme['accent_color'], '0.28' ),
             'accent_glow'             => self::with_alpha( $theme['accent_color'], '0.28' ),
@@ -1401,8 +1434,34 @@ class EOP_Public_Proposal {
             'section_title_weight'    => $theme['section_title_weight'],
             'item_title_size'         => $theme['item_title_size'],
             'item_title_weight'       => $theme['item_title_weight'],
+            'hero_aside_bg'           => $theme['hero_aside_background_color'],
+            'hero_aside_border'       => $theme['hero_aside_border_color'],
+            'hero_aside_radius'       => $theme['hero_aside_radius'],
+            'hero_aside_shadow'       => $theme['hero_aside_shadow'],
+            'hero_meta_bg'            => $theme['hero_meta_background_color'],
+            'hero_meta_border'        => $theme['hero_meta_border_color'],
+            'hero_meta_radius'        => $theme['hero_meta_radius'],
+            'items_section_bg'        => $theme['items_section_background_color'],
+            'items_section_border'    => $theme['items_section_border_color'],
+            'items_section_radius'    => $theme['items_section_radius'],
+            'items_section_shadow'    => $theme['items_section_shadow'],
+            'item_card_bg'            => $theme['item_card_background_color'],
+            'item_card_border'        => $theme['item_card_border_color'],
+            'item_card_radius'        => $theme['item_card_radius'],
+            'item_card_shadow'        => $theme['item_card_shadow'],
+            'item_pill_bg'            => $theme['item_pill_background_color'],
+            'sidebar_card_bg'         => $theme['sidebar_card_background_color'],
+            'sidebar_card_border'     => $theme['sidebar_card_border_color'],
+            'sidebar_card_radius'     => $theme['sidebar_card_radius'],
+            'sidebar_card_shadow'     => $theme['sidebar_card_shadow'],
+            'sidebar_meta_bg'         => $theme['sidebar_meta_background_color'],
+            'sidebar_meta_border'     => $theme['sidebar_meta_border_color'],
+            'sidebar_meta_radius'     => $theme['sidebar_meta_radius'],
             'button_bg'               => $theme['button_bg'],
             'button_text'             => $theme['button_text'],
+            'button_border_width'     => $theme['button_border_width'],
+            'button_border_style'     => $theme['button_border_style'],
+            'button_border_color'     => $theme['button_border_color'],
             'button_font_size'        => $theme['button_font_size'],
             'button_line_height'      => $theme['button_line_height'],
             'button_font_weight'      => $theme['button_font_weight'],
@@ -1412,11 +1471,25 @@ class EOP_Public_Proposal {
             'secondary_button_bg'     => $theme['secondary_button_bg'],
             'secondary_button_text'   => $theme['secondary_button_text'],
             'secondary_button_border' => $theme['secondary_button_border'],
+            'secondary_button_border_width' => $theme['secondary_button_border_width'],
+            'secondary_button_border_style' => $theme['secondary_button_border_style'],
             'secondary_button_font_size' => $theme['secondary_button_font_size'],
             'secondary_button_line_height' => $theme['secondary_button_line_height'],
             'secondary_button_font_weight' => $theme['secondary_button_font_weight'],
             'secondary_button_padding' => $theme['secondary_button_padding'],
             'secondary_button_radius' => $theme['secondary_button_radius'],
+            'secondary_button_shadow' => $theme['secondary_button_shadow'],
+            'pdf_button_bg'           => $theme['pdf_button_bg'],
+            'pdf_button_text'         => $theme['pdf_button_text'],
+            'pdf_button_border'       => $theme['pdf_button_border'],
+            'pdf_button_border_width' => $theme['pdf_button_border_width'],
+            'pdf_button_border_style' => $theme['pdf_button_border_style'],
+            'pdf_button_font_size'    => $theme['pdf_button_font_size'],
+            'pdf_button_line_height'  => $theme['pdf_button_line_height'],
+            'pdf_button_font_weight'  => $theme['pdf_button_font_weight'],
+            'pdf_button_padding'      => $theme['pdf_button_padding'],
+            'pdf_button_radius'       => $theme['pdf_button_radius'],
+            'pdf_button_shadow'       => $theme['pdf_button_shadow'],
             'alert_bg'                => $theme['alert_bg'],
             'alert_border'            => $theme['alert_border'],
             'alert_text'              => $theme['alert_text'],
@@ -1428,72 +1501,121 @@ class EOP_Public_Proposal {
     }
 
     private static function build_shared_proposal_inline_style( $style_vars ) {
-        return sprintf(
-            '--eop-preview-page-bg:%1$s;--eop-preview-hero-bg:%2$s;--eop-preview-panel-bg:%3$s;--eop-preview-side-bg:%4$s;--eop-preview-accent:%5$s;--eop-preview-text:%6$s;--eop-preview-muted:%7$s;--eop-preview-radius:%8$dpx;--eop-preview-font-family:%9$s;--eop-preview-max-width:%10$dpx;--eop-preview-title-size:%11$s;--eop-preview-text-size:%12$s;--eop-preview-brand-bg:%13$s;--eop-preview-panel-soft:%14$s;--eop-preview-border-soft:%15$s;--eop-preview-accent-soft:%16$s;--eop-preview-accent-border:%17$s;--eop-preview-accent-glow:%18$s;--eop-preview-accent-shadow:%19$s;--eop-preview-hero-text:%20$s;--eop-preview-hero-muted:%21$s;--eop-preview-hero-chip-bg:%22$s;--eop-preview-hero-chip-text:%23$s;--eop-preview-pill-text:%24$s;--eop-preview-flow-focus-max-width:%25$dpx;--eop-preview-title-size-mobile:%26$s;--eop-preview-hero-eyebrow-size:%27$s;--eop-preview-hero-title-line-height:%28$s;--eop-preview-hero-title-weight:%29$s;--eop-preview-hero-text-line-height:%30$s;--eop-preview-chip-font-size:%31$s;--eop-preview-chip-font-weight:%32$s;--eop-preview-section-title-size:%33$s;--eop-preview-section-title-weight:%34$s;--eop-preview-item-title-size:%35$s;--eop-preview-item-title-weight:%36$s;--eop-preview-button-bg:%37$s;--eop-preview-button-text:%38$s;--eop-preview-button-font-size:%39$s;--eop-preview-button-line-height:%40$s;--eop-preview-button-font-weight:%41$s;--eop-preview-button-padding:%42$s;--eop-preview-button-radius:%43$s;--eop-preview-button-shadow:%44$s;--eop-preview-secondary-button-bg:%45$s;--eop-preview-secondary-button-text:%46$s;--eop-preview-secondary-button-border:%47$s;--eop-preview-secondary-button-font-size:%48$s;--eop-preview-secondary-button-line-height:%49$s;--eop-preview-secondary-button-font-weight:%50$s;--eop-preview-secondary-button-padding:%51$s;--eop-preview-secondary-button-radius:%52$s;--eop-preview-alert-bg:%53$s;--eop-preview-alert-border:%54$s;--eop-preview-alert-text:%55$s;--eop-preview-alert-font-size:%56$s;--eop-preview-alert-line-height:%57$s;--eop-preview-alert-radius:%58$s;--eop-preview-alert-padding:%59$s;',
-            $style_vars['page_bg'],
-            $style_vars['hero_bg'],
-            $style_vars['panel_bg'],
-            $style_vars['side_bg'],
-            $style_vars['accent'],
-            $style_vars['text'],
-            $style_vars['muted'],
-            $style_vars['radius'],
-            $style_vars['font_css'],
-            $style_vars['max_width'],
-            $style_vars['title_font_size'],
-            $style_vars['base_font_size'],
-            $style_vars['brand_bg'],
-            $style_vars['panel_soft'],
-            $style_vars['border_soft'],
-            $style_vars['accent_soft'],
-            $style_vars['accent_border'],
-            $style_vars['accent_glow'],
-            $style_vars['accent_shadow'],
-            $style_vars['hero_text'],
-            $style_vars['hero_muted'],
-            $style_vars['hero_chip_bg'],
-            $style_vars['hero_chip_text'],
-            $style_vars['pill_text'],
-            $style_vars['flow_focus_max_width'],
-            $style_vars['title_font_size_mobile'],
-            $style_vars['hero_eyebrow_size'],
-            $style_vars['hero_title_line_height'],
-            $style_vars['hero_title_weight'],
-            $style_vars['hero_text_line_height'],
-            $style_vars['chip_font_size'],
-            $style_vars['chip_font_weight'],
-            $style_vars['section_title_size'],
-            $style_vars['section_title_weight'],
-            $style_vars['item_title_size'],
-            $style_vars['item_title_weight'],
-            $style_vars['button_bg'],
-            $style_vars['button_text'],
-            $style_vars['button_font_size'],
-            $style_vars['button_line_height'],
-            $style_vars['button_font_weight'],
-            $style_vars['button_padding'],
-            $style_vars['button_radius'],
-            $style_vars['button_shadow'],
-            $style_vars['secondary_button_bg'],
-            $style_vars['secondary_button_text'],
-            $style_vars['secondary_button_border'],
-            $style_vars['secondary_button_font_size'],
-            $style_vars['secondary_button_line_height'],
-            $style_vars['secondary_button_font_weight'],
-            $style_vars['secondary_button_padding'],
-            $style_vars['secondary_button_radius'],
-            $style_vars['alert_bg'],
-            $style_vars['alert_border'],
-            $style_vars['alert_text'],
-            $style_vars['alert_font_size'],
-            $style_vars['alert_line_height'],
-            $style_vars['alert_radius'],
-            $style_vars['alert_padding']
+        $declarations = array(
+            '--eop-preview-page-bg'                  => $style_vars['page_bg'],
+            '--eop-preview-hero-bg'                  => $style_vars['hero_bg'],
+            '--eop-preview-panel-bg'                 => $style_vars['panel_bg'],
+            '--eop-preview-side-bg'                  => $style_vars['side_bg'],
+            '--eop-preview-accent'                   => $style_vars['accent'],
+            '--eop-preview-text'                     => $style_vars['text'],
+            '--eop-preview-muted'                    => $style_vars['muted'],
+            '--eop-preview-radius'                   => absint( $style_vars['radius'] ) . 'px',
+            '--eop-preview-font-family'              => $style_vars['font_css'],
+            '--eop-preview-max-width'                => absint( $style_vars['max_width'] ) . 'px',
+            '--eop-preview-title-size'               => $style_vars['title_font_size'],
+            '--eop-preview-text-size'                => $style_vars['base_font_size'],
+            '--eop-preview-brand-bg'                 => $style_vars['brand_bg'],
+            '--eop-preview-panel-soft'               => $style_vars['panel_soft'],
+            '--eop-preview-border-soft'              => $style_vars['border_soft'],
+            '--eop-preview-border-width'             => $style_vars['border_width'],
+            '--eop-preview-border-style'             => $style_vars['border_style'],
+            '--eop-preview-accent-soft'              => $style_vars['accent_soft'],
+            '--eop-preview-accent-border'            => $style_vars['accent_border'],
+            '--eop-preview-accent-glow'              => $style_vars['accent_glow'],
+            '--eop-preview-accent-shadow'            => $style_vars['accent_shadow'],
+            '--eop-preview-hero-text'                => $style_vars['hero_text'],
+            '--eop-preview-hero-muted'               => $style_vars['hero_muted'],
+            '--eop-preview-hero-chip-bg'             => $style_vars['hero_chip_bg'],
+            '--eop-preview-hero-chip-text'           => $style_vars['hero_chip_text'],
+            '--eop-preview-pill-text'                => $style_vars['pill_text'],
+            '--eop-preview-flow-focus-max-width'     => absint( $style_vars['flow_focus_max_width'] ) . 'px',
+            '--eop-preview-title-size-mobile'        => $style_vars['title_font_size_mobile'],
+            '--eop-preview-hero-eyebrow-size'        => $style_vars['hero_eyebrow_size'],
+            '--eop-preview-hero-title-line-height'   => $style_vars['hero_title_line_height'],
+            '--eop-preview-hero-title-weight'        => $style_vars['hero_title_weight'],
+            '--eop-preview-hero-text-line-height'    => $style_vars['hero_text_line_height'],
+            '--eop-preview-chip-font-size'           => $style_vars['chip_font_size'],
+            '--eop-preview-chip-font-weight'         => $style_vars['chip_font_weight'],
+            '--eop-preview-section-title-size'       => $style_vars['section_title_size'],
+            '--eop-preview-section-title-weight'     => $style_vars['section_title_weight'],
+            '--eop-preview-item-title-size'          => $style_vars['item_title_size'],
+            '--eop-preview-item-title-weight'        => $style_vars['item_title_weight'],
+            '--eop-preview-hero-aside-bg'            => $style_vars['hero_aside_bg'],
+            '--eop-preview-hero-aside-border'        => $style_vars['hero_aside_border'],
+            '--eop-preview-hero-aside-radius'        => $style_vars['hero_aside_radius'],
+            '--eop-preview-hero-aside-shadow'        => $style_vars['hero_aside_shadow'],
+            '--eop-preview-hero-meta-bg'             => $style_vars['hero_meta_bg'],
+            '--eop-preview-hero-meta-border'         => $style_vars['hero_meta_border'],
+            '--eop-preview-hero-meta-radius'         => $style_vars['hero_meta_radius'],
+            '--eop-preview-items-section-bg'         => $style_vars['items_section_bg'],
+            '--eop-preview-items-section-border'     => $style_vars['items_section_border'],
+            '--eop-preview-items-section-radius'     => $style_vars['items_section_radius'],
+            '--eop-preview-items-section-shadow'     => $style_vars['items_section_shadow'],
+            '--eop-preview-item-card-bg'             => $style_vars['item_card_bg'],
+            '--eop-preview-item-card-border'         => $style_vars['item_card_border'],
+            '--eop-preview-item-card-radius'         => $style_vars['item_card_radius'],
+            '--eop-preview-item-card-shadow'         => $style_vars['item_card_shadow'],
+            '--eop-preview-item-pill-bg'             => $style_vars['item_pill_bg'],
+            '--eop-preview-sidebar-card-bg'          => $style_vars['sidebar_card_bg'],
+            '--eop-preview-sidebar-card-border'      => $style_vars['sidebar_card_border'],
+            '--eop-preview-sidebar-card-radius'      => $style_vars['sidebar_card_radius'],
+            '--eop-preview-sidebar-card-shadow'      => $style_vars['sidebar_card_shadow'],
+            '--eop-preview-sidebar-meta-bg'          => $style_vars['sidebar_meta_bg'],
+            '--eop-preview-sidebar-meta-border'      => $style_vars['sidebar_meta_border'],
+            '--eop-preview-sidebar-meta-radius'      => $style_vars['sidebar_meta_radius'],
+            '--eop-preview-button-bg'                => $style_vars['button_bg'],
+            '--eop-preview-button-text'              => $style_vars['button_text'],
+            '--eop-preview-button-border-width'      => $style_vars['button_border_width'],
+            '--eop-preview-button-border-style'      => $style_vars['button_border_style'],
+            '--eop-preview-button-border-color'      => $style_vars['button_border_color'],
+            '--eop-preview-button-font-size'         => $style_vars['button_font_size'],
+            '--eop-preview-button-line-height'       => $style_vars['button_line_height'],
+            '--eop-preview-button-font-weight'       => $style_vars['button_font_weight'],
+            '--eop-preview-button-padding'           => $style_vars['button_padding'],
+            '--eop-preview-button-radius'            => $style_vars['button_radius'],
+            '--eop-preview-button-shadow'            => $style_vars['button_shadow'],
+            '--eop-preview-secondary-button-bg'      => $style_vars['secondary_button_bg'],
+            '--eop-preview-secondary-button-text'    => $style_vars['secondary_button_text'],
+            '--eop-preview-secondary-button-border'  => $style_vars['secondary_button_border'],
+            '--eop-preview-secondary-button-border-width' => $style_vars['secondary_button_border_width'],
+            '--eop-preview-secondary-button-border-style' => $style_vars['secondary_button_border_style'],
+            '--eop-preview-secondary-button-font-size' => $style_vars['secondary_button_font_size'],
+            '--eop-preview-secondary-button-line-height' => $style_vars['secondary_button_line_height'],
+            '--eop-preview-secondary-button-font-weight' => $style_vars['secondary_button_font_weight'],
+            '--eop-preview-secondary-button-padding' => $style_vars['secondary_button_padding'],
+            '--eop-preview-secondary-button-radius'  => $style_vars['secondary_button_radius'],
+            '--eop-preview-secondary-button-shadow'  => $style_vars['secondary_button_shadow'],
+            '--eop-preview-pdf-button-bg'            => $style_vars['pdf_button_bg'],
+            '--eop-preview-pdf-button-text'          => $style_vars['pdf_button_text'],
+            '--eop-preview-pdf-button-border'        => $style_vars['pdf_button_border'],
+            '--eop-preview-pdf-button-border-width'  => $style_vars['pdf_button_border_width'],
+            '--eop-preview-pdf-button-border-style'  => $style_vars['pdf_button_border_style'],
+            '--eop-preview-pdf-button-font-size'     => $style_vars['pdf_button_font_size'],
+            '--eop-preview-pdf-button-line-height'   => $style_vars['pdf_button_line_height'],
+            '--eop-preview-pdf-button-font-weight'   => $style_vars['pdf_button_font_weight'],
+            '--eop-preview-pdf-button-padding'       => $style_vars['pdf_button_padding'],
+            '--eop-preview-pdf-button-radius'        => $style_vars['pdf_button_radius'],
+            '--eop-preview-pdf-button-shadow'        => $style_vars['pdf_button_shadow'],
+            '--eop-preview-alert-bg'                 => $style_vars['alert_bg'],
+            '--eop-preview-alert-border'             => $style_vars['alert_border'],
+            '--eop-preview-alert-text'               => $style_vars['alert_text'],
+            '--eop-preview-alert-font-size'          => $style_vars['alert_font_size'],
+            '--eop-preview-alert-line-height'        => $style_vars['alert_line_height'],
+            '--eop-preview-alert-radius'             => $style_vars['alert_radius'],
+            '--eop-preview-alert-padding'            => $style_vars['alert_padding'],
         );
+
+        $output = '';
+
+        foreach ( $declarations as $name => $value ) {
+            $output .= $name . ':' . $value . ';';
+        }
+
+        return $output;
     }
 
     private static function get_shared_proposal_stylesheet() {
-        return '.eop-proposal-wrap{max-width:var(--eop-preview-max-width,1120px);margin:32px auto;padding:0 16px 46px;font-family:var(--eop-preview-font-family,\'Segoe UI\',sans-serif);font-size:var(--eop-preview-text-size,16px);color:var(--eop-preview-text,#16243a)}.eop-proposal-card{display:grid;gap:24px}.eop-proposal-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:24px;padding:34px;border-radius:calc(var(--eop-preview-radius,18px) + 10px);background:var(--eop-preview-hero-bg,#0f1b35);box-shadow:0 28px 68px rgba(15,27,53,.24)}.eop-proposal-hero::before{content:\"\";position:absolute;inset:auto -10% -30% auto;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,var(--eop-preview-accent-glow,rgba(215,138,47,.28)),transparent 70%)}.eop-proposal-hero > *{position:relative;z-index:1}.eop-proposal-hero__main,.eop-proposal-hero__aside{display:grid;gap:18px;align-content:start}.eop-proposal-brandline{display:flex;align-items:flex-start;gap:18px}.eop-proposal-brand{display:flex;align-items:center;justify-content:center;min-width:110px;min-height:90px;padding:16px 18px;border-radius:26px;background:var(--eop-preview-brand-bg,rgba(255,255,255,.12));border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));backdrop-filter:blur(10px)}.eop-proposal-brand img,.eop-proposal-logo{display:block;max-width:210px;max-height:60px;object-fit:contain}.eop-proposal-brand__fallback{color:var(--eop-preview-hero-text,#fff);font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-align:center}.eop-proposal-hero__copy{display:grid;gap:12px;max-width:640px}.eop-proposal-hero__top{display:flex;flex-wrap:wrap;gap:10px}.eop-proposal-status,.eop-proposal-stage{display:inline-flex;align-items:center;min-height:38px;padding:0 14px;border-radius:999px;font-size:var(--eop-preview-chip-font-size,12px);font-weight:var(--eop-preview-chip-font-weight,800);letter-spacing:.08em;text-transform:uppercase}.eop-proposal-status{background:var(--eop-preview-hero-chip-bg,rgba(255,255,255,.16));color:var(--eop-preview-hero-chip-text,#fff);border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18))}.eop-proposal-stage{background:var(--eop-preview-accent-soft,rgba(215,138,47,.22));color:var(--eop-preview-hero-chip-text,#fff);border:1px solid var(--eop-preview-accent-border,rgba(215,138,47,.28))}.eop-proposal-eyebrow{display:block;color:var(--eop-preview-hero-muted,rgba(255,255,255,.78));font-size:var(--eop-preview-hero-eyebrow-size,11px);font-weight:900;letter-spacing:.18em;text-transform:uppercase}.eop-proposal-title{margin:0;font-size:var(--eop-preview-title-size,46px);line-height:var(--eop-preview-hero-title-line-height,.98);font-weight:var(--eop-preview-hero-title-weight,800);letter-spacing:-.05em;color:var(--eop-preview-hero-text,#fff)}.eop-proposal-text{margin:0;max-width:58ch;color:var(--eop-preview-hero-muted,rgba(255,255,255,.78));font-size:var(--eop-preview-text-size,16px);line-height:var(--eop-preview-hero-text-line-height,1.7)}.eop-proposal-hero__aside{padding:24px;border-radius:28px;background:var(--eop-preview-side-bg,#f6f8fc);border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));backdrop-filter:blur(10px)}.eop-proposal-hero__aside-label{color:var(--eop-preview-muted,#66768d);display:block;font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.eop-proposal-hero__aside strong{font-size:44px;line-height:.95;letter-spacing:-.06em;color:var(--eop-preview-text,#16243a)}.eop-proposal-hero__aside p{margin:0;color:var(--eop-preview-text,#16243a);line-height:1.65}.eop-proposal-hero__meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:4px}.eop-proposal-hero__meta-item{padding:14px 16px;border-radius:20px;background:var(--eop-preview-panel-bg,#fff);border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18))}.eop-proposal-hero__meta-item span{display:block;color:var(--eop-preview-muted,#66768d);font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}.eop-proposal-hero__meta-item strong{display:block;margin-top:7px;font-size:18px;line-height:1.2;color:var(--eop-preview-text,#16243a)}.eop-proposal-overview{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);gap:24px;align-items:start}.eop-proposal-overview__main,.eop-proposal-overview__side{display:grid;gap:18px}.eop-proposal-overview__side{position:sticky;top:18px}.eop-proposal-section,.eop-proposal-summary-card{padding:24px;border-radius:28px;border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));box-shadow:0 18px 38px rgba(15,27,53,.08)}.eop-proposal-section{background:var(--eop-preview-panel-bg,#fff)}.eop-proposal-summary-card{background:var(--eop-preview-side-bg,#f6f8fc)}.eop-proposal-section__head{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:18px}.eop-proposal-section__eyebrow,.eop-proposal-summary-card__eyebrow{display:block;margin-bottom:6px;color:var(--eop-preview-muted,#66768d);font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}.eop-proposal-section__head h2,.eop-proposal-summary-card h2{margin:0;font-size:var(--eop-preview-section-title-size,26px);font-weight:var(--eop-preview-section-title-weight,800);line-height:1.06;letter-spacing:-.04em;color:var(--eop-preview-text,#16243a)}.eop-proposal-meta{display:grid;gap:12px}.eop-proposal-meta p{display:grid;gap:6px;margin:0;padding:14px 16px;border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));border-radius:18px;background:var(--eop-preview-panel-bg,#fff)}.eop-proposal-meta strong{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--eop-preview-muted,#66768d)}.eop-proposal-items{display:grid;gap:14px}.eop-proposal-item{display:grid;grid-template-columns:108px minmax(0,1fr) auto;gap:18px;align-items:center;padding:18px;border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));border-radius:24px;background:var(--eop-preview-panel-bg,#fff)}.eop-proposal-item__media{width:108px;height:108px;border-radius:24px;overflow:hidden;background:var(--eop-preview-side-bg,#f6f8fc);border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:var(--eop-preview-muted,#66768d)}.eop-proposal-item__media img{display:block;width:100%;height:100%;object-fit:cover}.eop-proposal-item__body{min-width:0}.eop-proposal-item__name{margin:0 0 8px;font-size:var(--eop-preview-item-title-size,23px);font-weight:var(--eop-preview-item-title-weight,700);line-height:1.18;color:var(--eop-preview-text,#16243a)}.eop-proposal-item__meta{display:flex;flex-wrap:wrap;gap:8px 12px;color:var(--eop-preview-muted,#66768d);font-size:14px}.eop-proposal-item__pill{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:999px;background:var(--eop-preview-accent-soft,rgba(215,138,47,.12));color:var(--eop-preview-pill-text,#1a2550);font-weight:700;line-height:1.2;white-space:nowrap;max-width:100%}.eop-proposal-item__pill--discount{display:grid;gap:2px;align-items:flex-start;padding:9px 12px;white-space:normal;border-radius:18px}.eop-proposal-item__pill-main{font-size:13px;line-height:1.2}.eop-proposal-item__pill-sub{font-size:12px;line-height:1.25;color:var(--eop-preview-muted,#66768d)}.eop-proposal-item__summary{display:grid;gap:6px;min-width:150px;justify-items:end;text-align:right}.eop-proposal-item__summary span{font-size:13px;color:var(--eop-preview-muted,#66768d);text-transform:uppercase;letter-spacing:.08em;font-weight:700}.eop-proposal-item__summary strong{font-size:30px;line-height:1;color:var(--eop-preview-text,#16243a)}.eop-proposal-notes{padding:18px;border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));border-radius:22px;background:var(--eop-preview-panel-bg,#fff)}.eop-proposal-notes span{display:block;margin-bottom:8px;color:var(--eop-preview-muted,#66768d);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.eop-proposal-notes p{margin:0;color:var(--eop-preview-text,#16243a)}.eop-proposal-totals{display:grid;gap:2px}.eop-proposal-total{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:9px 0;color:var(--eop-preview-text,#16243a)}.eop-proposal-total.is-grand{font-size:20px;font-weight:800;border-top:2px solid var(--eop-preview-accent,#d78a2f);margin-top:8px;padding-top:12px}.eop-proposal-total__value{display:grid;justify-items:end;gap:2px;text-align:right}.eop-proposal-total__value strong{font-size:15px;line-height:1.1;color:var(--eop-preview-text,#16243a)}.eop-proposal-total__value small{font-size:12px;line-height:1.25;color:var(--eop-preview-muted,#66768d)}.eop-proposal-button{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:var(--eop-preview-button-padding,0 22px);border:none;border-radius:var(--eop-preview-button-radius,18px);background:var(--eop-preview-button-bg,var(--eop-preview-accent,#d78a2f));color:var(--eop-preview-button-text,#fff);text-decoration:none;font-size:var(--eop-preview-button-font-size,16px);line-height:var(--eop-preview-button-line-height,1);font-weight:var(--eop-preview-button-font-weight,700);cursor:pointer;box-shadow:var(--eop-preview-button-shadow,0 16px 30px rgba(215,138,47,.2))}.eop-proposal-button--secondary{background:var(--eop-preview-secondary-button-bg,var(--eop-preview-side-bg,#f6f8fc));color:var(--eop-preview-secondary-button-text,var(--eop-preview-text,#16243a));box-shadow:none;border:1px solid var(--eop-preview-secondary-button-border,var(--eop-preview-border-soft,rgba(255,255,255,.18)));font-size:var(--eop-preview-secondary-button-font-size,var(--eop-preview-button-font-size,16px));line-height:var(--eop-preview-secondary-button-line-height,var(--eop-preview-button-line-height,1));font-weight:var(--eop-preview-secondary-button-font-weight,var(--eop-preview-button-font-weight,700));padding:var(--eop-preview-secondary-button-padding,var(--eop-preview-button-padding,0 22px));border-radius:var(--eop-preview-secondary-button-radius,var(--eop-preview-button-radius,18px))}.eop-proposal-actions{display:flex;flex-wrap:wrap;gap:12px}.eop-proposal-actions form{display:flex;width:100%}.eop-proposal-actions .eop-proposal-button{width:100%}.eop-proposal-note{margin:0;padding:var(--eop-preview-alert-padding,14px 16px);border-radius:var(--eop-preview-alert-radius,18px);background:var(--eop-preview-alert-bg,#ecfdf5);border:1px solid var(--eop-preview-alert-border,#bbf7d0);color:var(--eop-preview-alert-text,#166534);font-size:var(--eop-preview-alert-font-size,15px);line-height:var(--eop-preview-alert-line-height,1.6)}.eop-proposal-wrap.is-flow-focus{max-width:var(--eop-preview-flow-focus-max-width,1040px);padding-bottom:34px}.eop-proposal-wrap.is-flow-focus .eop-proposal-card{gap:0}@media (max-width:980px){.eop-proposal-hero,.eop-proposal-overview{grid-template-columns:1fr}.eop-proposal-overview__side{position:static}.eop-proposal-actions .eop-proposal-button{width:auto}}@media (max-width:720px){.eop-proposal-wrap{font-size:15px;padding:0 10px 30px}.eop-proposal-hero,.eop-proposal-section,.eop-proposal-summary-card{padding:20px;border-radius:24px}.eop-proposal-brandline{flex-direction:column}.eop-proposal-hero__meta{grid-template-columns:1fr}.eop-proposal-title{font-size:var(--eop-preview-title-size-mobile,28px)}.eop-proposal-item{grid-template-columns:1fr}.eop-proposal-item__media{width:86px;height:86px}.eop-proposal-item__summary{justify-items:start;text-align:left}.eop-proposal-total{gap:10px}.eop-proposal-total__value strong{font-size:14px}}';
+        return '.eop-proposal-wrap{max-width:var(--eop-preview-max-width,1120px);margin:32px auto;padding:0 16px 46px;font-family:var(--eop-preview-font-family,\'Segoe UI\',sans-serif);font-size:var(--eop-preview-text-size,16px);color:var(--eop-preview-text,#16243a)}.eop-proposal-card{display:grid;gap:24px}.eop-proposal-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:24px;padding:34px;border-radius:calc(var(--eop-preview-radius,18px) + 10px);background:var(--eop-preview-hero-bg,#0f1b35);box-shadow:0 28px 68px rgba(15,27,53,.24)}.eop-proposal-hero::before{content:\"\";position:absolute;inset:auto -10% -30% auto;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,var(--eop-preview-accent-glow,rgba(215,138,47,.28)),transparent 70%)}.eop-proposal-hero > *{position:relative;z-index:1}.eop-proposal-hero__main,.eop-proposal-hero__aside{display:grid;gap:18px;align-content:start}.eop-proposal-brandline{display:flex;align-items:flex-start;gap:18px}.eop-proposal-brand{display:flex;align-items:center;justify-content:center;min-width:110px;min-height:90px;padding:16px 18px;border-radius:26px;background:var(--eop-preview-brand-bg,rgba(255,255,255,.12));border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));backdrop-filter:blur(10px)}.eop-proposal-brand img,.eop-proposal-logo{display:block;max-width:210px;max-height:60px;object-fit:contain}.eop-proposal-brand__fallback{color:var(--eop-preview-hero-text,#fff);font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-align:center}.eop-proposal-hero__copy{display:grid;gap:12px;max-width:640px}.eop-proposal-hero__top{display:flex;flex-wrap:wrap;gap:10px}.eop-proposal-status,.eop-proposal-stage{display:inline-flex;align-items:center;min-height:38px;padding:0 14px;border-radius:999px;font-size:var(--eop-preview-chip-font-size,12px);font-weight:var(--eop-preview-chip-font-weight,800);letter-spacing:.08em;text-transform:uppercase}.eop-proposal-status{background:var(--eop-preview-hero-chip-bg,rgba(255,255,255,.16));color:var(--eop-preview-hero-chip-text,#fff);border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18))}.eop-proposal-stage{background:var(--eop-preview-accent-soft,rgba(215,138,47,.22));color:var(--eop-preview-hero-chip-text,#fff);border:1px solid var(--eop-preview-accent-border,rgba(215,138,47,.28))}.eop-proposal-eyebrow{display:block;color:var(--eop-preview-hero-muted,rgba(255,255,255,.78));font-size:var(--eop-preview-hero-eyebrow-size,11px);font-weight:900;letter-spacing:.18em;text-transform:uppercase}.eop-proposal-title{margin:0;font-size:var(--eop-preview-title-size,46px);line-height:var(--eop-preview-hero-title-line-height,.98);font-weight:var(--eop-preview-hero-title-weight,800);letter-spacing:-.05em;color:var(--eop-preview-hero-text,#fff)}.eop-proposal-text{margin:0;max-width:58ch;color:var(--eop-preview-hero-muted,rgba(255,255,255,.78));font-size:var(--eop-preview-text-size,16px);line-height:var(--eop-preview-hero-text-line-height,1.7)}.eop-proposal-hero__aside{padding:24px;border-radius:28px;background:var(--eop-preview-side-bg,#f6f8fc);border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));backdrop-filter:blur(10px)}.eop-proposal-hero__aside-label{color:var(--eop-preview-muted,#66768d);display:block;font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.eop-proposal-hero__aside strong{font-size:44px;line-height:.95;letter-spacing:-.06em;color:var(--eop-preview-text,#16243a)}.eop-proposal-hero__aside p{margin:0;color:var(--eop-preview-text,#16243a);line-height:1.65}.eop-proposal-hero__meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:4px}.eop-proposal-hero__meta-item{padding:14px 16px;border-radius:20px;background:var(--eop-preview-panel-bg,#fff);border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18))}.eop-proposal-hero__meta-item span{display:block;color:var(--eop-preview-muted,#66768d);font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}.eop-proposal-hero__meta-item strong{display:block;margin-top:7px;font-size:18px;line-height:1.2;color:var(--eop-preview-text,#16243a)}.eop-proposal-overview{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);gap:24px;align-items:start}.eop-proposal-overview.is-single-column{grid-template-columns:minmax(0,1fr)}.eop-proposal-overview__main,.eop-proposal-overview__side{display:grid;gap:18px}.eop-proposal-overview__side{position:sticky;top:18px}.eop-proposal-section,.eop-proposal-summary-card{padding:24px;border-radius:28px;border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));box-shadow:0 18px 38px rgba(15,27,53,.08)}.eop-proposal-section{background:var(--eop-preview-panel-bg,#fff)}.eop-proposal-summary-card{background:var(--eop-preview-side-bg,#f6f8fc)}.eop-proposal-section__head{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:18px}.eop-proposal-section__eyebrow,.eop-proposal-summary-card__eyebrow{display:block;margin-bottom:6px;color:var(--eop-preview-muted,#66768d);font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}.eop-proposal-section__head h2,.eop-proposal-summary-card h2{margin:0;font-size:var(--eop-preview-section-title-size,26px);font-weight:var(--eop-preview-section-title-weight,800);line-height:1.06;letter-spacing:-.04em;color:var(--eop-preview-text,#16243a)}.eop-proposal-meta{display:grid;gap:12px}.eop-proposal-meta p{display:grid;gap:6px;margin:0;padding:14px 16px;border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));border-radius:18px;background:var(--eop-preview-panel-bg,#fff)}.eop-proposal-meta strong{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--eop-preview-muted,#66768d)}.eop-proposal-items{display:grid;gap:14px}.eop-proposal-item{display:grid;grid-template-columns:108px minmax(0,1fr) auto;gap:18px;align-items:center;padding:18px;border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));border-radius:24px;background:var(--eop-preview-panel-bg,#fff)}.eop-proposal-item__media{width:108px;height:108px;border-radius:24px;overflow:hidden;background:var(--eop-preview-side-bg,#f6f8fc);border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:var(--eop-preview-muted,#66768d)}.eop-proposal-item__media img{display:block;width:100%;height:100%;object-fit:cover}.eop-proposal-item__body{min-width:0}.eop-proposal-item__name{margin:0 0 8px;font-size:var(--eop-preview-item-title-size,23px);font-weight:var(--eop-preview-item-title-weight,700);line-height:1.18;color:var(--eop-preview-text,#16243a)}.eop-proposal-item__meta{display:flex;flex-wrap:wrap;gap:8px 12px;color:var(--eop-preview-muted,#66768d);font-size:14px}.eop-proposal-item__pill{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:999px;background:var(--eop-preview-item-pill-bg,var(--eop-preview-accent-soft,rgba(215,138,47,.12)));color:var(--eop-preview-pill-text,#16243a);font-weight:700;line-height:1.2;white-space:nowrap;max-width:100%}.eop-proposal-item__pill--discount{display:grid;gap:2px;align-items:flex-start;padding:9px 12px;white-space:normal;border-radius:18px}.eop-proposal-item__pill-main{font-size:13px;line-height:1.2}.eop-proposal-item__pill-sub{font-size:12px;line-height:1.25;color:var(--eop-preview-muted,#66768d)}.eop-proposal-item__summary{display:grid;gap:6px;min-width:150px;justify-items:end;text-align:right}.eop-proposal-item__summary span{font-size:13px;color:var(--eop-preview-muted,#66768d);text-transform:uppercase;letter-spacing:.08em;font-weight:700}.eop-proposal-item__summary strong{font-size:30px;line-height:1;color:var(--eop-preview-text,#16243a)}.eop-proposal-notes{padding:18px;border:1px solid var(--eop-preview-border-soft,rgba(255,255,255,.18));border-radius:22px;background:var(--eop-preview-panel-bg,#fff)}.eop-proposal-notes span{display:block;margin-bottom:8px;color:var(--eop-preview-muted,#66768d);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.eop-proposal-notes p{margin:0;color:var(--eop-preview-text,#16243a)}.eop-proposal-totals{display:grid;gap:2px}.eop-proposal-total{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:9px 0;color:var(--eop-preview-text,#16243a)}.eop-proposal-total.is-grand{font-size:20px;font-weight:800;border-top:2px solid var(--eop-preview-accent,#d78a2f);margin-top:8px;padding-top:12px}.eop-proposal-total__value{display:grid;justify-items:end;gap:2px;text-align:right}.eop-proposal-total__value strong{font-size:15px;line-height:1.1;color:var(--eop-preview-text,#16243a)}.eop-proposal-total__value small{font-size:12px;line-height:1.25;color:var(--eop-preview-muted,#66768d)}.eop-proposal-button{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:var(--eop-preview-button-padding,0 22px);border:none;border-radius:var(--eop-preview-button-radius,18px);background:var(--eop-preview-button-bg,var(--eop-preview-accent,#d78a2f));color:var(--eop-preview-button-text,#fff);text-decoration:none;font-size:var(--eop-preview-button-font-size,16px);line-height:var(--eop-preview-button-line-height,1);font-weight:var(--eop-preview-button-font-weight,700);cursor:pointer;box-shadow:var(--eop-preview-button-shadow,0 16px 30px rgba(215,138,47,.2))}.eop-proposal-button--secondary{background:var(--eop-preview-secondary-button-bg,var(--eop-preview-side-bg,#f6f8fc));color:var(--eop-preview-secondary-button-text,var(--eop-preview-text,#16243a));box-shadow:none;border:1px solid var(--eop-preview-secondary-button-border,var(--eop-preview-border-soft,rgba(255,255,255,.18)));font-size:var(--eop-preview-secondary-button-font-size,var(--eop-preview-button-font-size,16px));line-height:var(--eop-preview-secondary-button-line-height,var(--eop-preview-button-line-height,1));font-weight:var(--eop-preview-secondary-button-font-weight,var(--eop-preview-button-font-weight,700));padding:var(--eop-preview-secondary-button-padding,var(--eop-preview-button-padding,0 22px));border-radius:var(--eop-preview-secondary-button-radius,var(--eop-preview-button-radius,18px))}.eop-proposal-button--pdf{background:var(--eop-preview-pdf-button-bg,#ffffff);color:var(--eop-preview-pdf-button-text,#16243a);box-shadow:var(--eop-preview-pdf-button-shadow,none);border:1px solid var(--eop-preview-pdf-button-border,var(--eop-preview-border-soft,rgba(255,255,255,.18)));font-size:var(--eop-preview-pdf-button-font-size,var(--eop-preview-button-font-size,16px));line-height:var(--eop-preview-pdf-button-line-height,var(--eop-preview-button-line-height,1));font-weight:var(--eop-preview-pdf-button-font-weight,var(--eop-preview-button-font-weight,700));padding:var(--eop-preview-pdf-button-padding,var(--eop-preview-button-padding,0 22px));border-radius:var(--eop-preview-pdf-button-radius,var(--eop-preview-button-radius,18px))}.eop-proposal-actions{display:flex;flex-wrap:wrap;gap:12px}.eop-proposal-actions form{display:flex;width:100%}.eop-proposal-actions .eop-proposal-button{width:100%}.eop-proposal-note{margin:0;padding:var(--eop-preview-alert-padding,14px 16px);border-radius:var(--eop-preview-alert-radius,18px);background:var(--eop-preview-alert-bg,#ecfdf5);border:1px solid var(--eop-preview-alert-border,#bbf7d0);color:var(--eop-preview-alert-text,#166534);font-size:var(--eop-preview-alert-font-size,15px);line-height:var(--eop-preview-alert-line-height,1.6)}.eop-proposal-wrap.is-flow-focus{max-width:var(--eop-preview-flow-focus-max-width,1040px);padding-bottom:34px}.eop-proposal-wrap.is-flow-focus .eop-proposal-card{gap:0}@media (max-width:980px){.eop-proposal-hero,.eop-proposal-overview{grid-template-columns:1fr}.eop-proposal-overview__side{position:static}.eop-proposal-actions .eop-proposal-button{width:auto}}@media (max-width:720px){.eop-proposal-wrap{font-size:15px;padding:0 10px 30px}.eop-proposal-hero,.eop-proposal-section,.eop-proposal-summary-card{padding:20px;border-radius:24px}.eop-proposal-brandline{flex-direction:column}.eop-proposal-hero__meta{grid-template-columns:1fr}.eop-proposal-title{font-size:var(--eop-preview-title-size-mobile,28px)}.eop-proposal-item{grid-template-columns:1fr}.eop-proposal-item__media{width:86px;height:86px}.eop-proposal-item__summary{justify-items:start;text-align:left}.eop-proposal-total{gap:10px}.eop-proposal-total__value strong{font-size:14px}}';
     }
 
     private static function render_shared_proposal_markup( $context ) {
@@ -1535,7 +1657,8 @@ class EOP_Public_Proposal {
                             <?php if ( ! empty( $context['hero_meta_items'] ) ) : ?><div class="eop-proposal-hero__meta"><?php foreach ( $context['hero_meta_items'] as $meta_item ) : ?><div class="eop-proposal-hero__meta-item"><span><?php echo esc_html( $meta_item['label'] ?? '' ); ?></span><strong><?php echo esc_html( $meta_item['value'] ?? '' ); ?></strong></div><?php endforeach; ?></div><?php endif; ?>
                         </div>
                     </div>
-                    <div class="eop-proposal-overview">
+                    <?php $has_sidebar_cards = ! empty( $context['sidebar_cards'] ?? array() ); ?>
+                    <div class="eop-proposal-overview<?php echo $has_sidebar_cards ? '' : ' is-single-column'; ?>">
                         <div class="eop-proposal-overview__main">
                             <section class="eop-proposal-section">
                                 <div class="eop-proposal-section__head"><div><?php if ( ! empty( $context['items_eyebrow'] ) ) : ?><span class="eop-proposal-section__eyebrow"><?php echo esc_html( $context['items_eyebrow'] ); ?></span><?php endif; ?><h2><?php echo esc_html( $context['items_title'] ?? '' ); ?></h2></div></div>
@@ -1554,9 +1677,11 @@ class EOP_Public_Proposal {
                             </section>
                             <?php foreach ( ( $context['main_notices'] ?? array() ) as $notice ) : ?><?php if ( 'notes' === ( $notice['type'] ?? '' ) ) : ?><section class="eop-proposal-section"><div class="eop-proposal-notes"><span><?php echo esc_html( $notice['label'] ?? '' ); ?></span><p><?php echo esc_html( $notice['text'] ?? '' ); ?></p></div></section><?php elseif ( 'success' === ( $notice['type'] ?? '' ) ) : ?><p class="eop-proposal-note"><?php echo esc_html( $notice['text'] ?? '' ); ?></p><?php endif; ?><?php endforeach; ?>
                         </div>
+                        <?php if ( $has_sidebar_cards ) : ?>
                         <aside class="eop-proposal-overview__side">
-                            <?php foreach ( ( $context['sidebar_cards'] ?? array() ) as $card ) : ?><section class="eop-proposal-summary-card"><?php if ( ! empty( $card['eyebrow'] ) ) : ?><span class="eop-proposal-summary-card__eyebrow"><?php echo esc_html( $card['eyebrow'] ); ?></span><?php endif; ?><h2><?php echo esc_html( $card['title'] ?? '' ); ?></h2><?php if ( 'meta' === ( $card['type'] ?? '' ) ) : ?><div class="eop-proposal-meta" style="margin-top:16px"><?php foreach ( ( $card['rows'] ?? array() ) as $row ) : ?><p><strong><?php echo esc_html( $row['label'] ?? '' ); ?></strong><span><?php echo esc_html( $row['value'] ?? '' ); ?></span></p><?php endforeach; ?></div><?php elseif ( 'totals' === ( $card['type'] ?? '' ) ) : ?><div class="eop-proposal-totals" style="margin-top:16px"><?php foreach ( ( $card['rows'] ?? array() ) as $row ) : ?><div class="eop-proposal-total <?php echo esc_attr( $row['class'] ?? '' ); ?>"><span><?php echo esc_html( $row['label'] ?? '' ); ?></span><?php if ( ! empty( $row['main_value'] ) ) : ?><div class="eop-proposal-total__value"><strong><?php echo esc_html( $row['main_value'] ); ?></strong><?php if ( ! empty( $row['sub_value'] ) ) : ?><small><?php echo esc_html( $row['sub_value'] ); ?></small><?php endif; ?></div><?php else : ?><span><?php echo wp_kses_post( $row['value'] ?? '' ); ?></span><?php endif; ?></div><?php endforeach; ?></div><?php elseif ( 'actions' === ( $card['type'] ?? '' ) ) : ?><div class="eop-proposal-actions" style="margin-top:16px"><?php foreach ( ( $card['actions'] ?? array() ) as $action ) : ?><?php if ( 'form_submit' === ( $action['type'] ?? '' ) ) : ?><form method="post"><?php wp_nonce_field( 'eop_confirm_proposal', 'eop_confirm_proposal_nonce' ); ?><input type="hidden" name="eop_proposal_token" value="<?php echo esc_attr( $action['token'] ?? '' ); ?>" /><button type="submit" class="eop-proposal-button<?php echo ! empty( $action['secondary'] ) ? ' eop-proposal-button--secondary' : ''; ?>"><?php echo esc_html( $action['label'] ?? '' ); ?></button></form><?php elseif ( 'link' === ( $action['type'] ?? '' ) ) : ?><a class="eop-proposal-button<?php echo ! empty( $action['secondary'] ) ? ' eop-proposal-button--secondary' : ''; ?>" href="<?php echo esc_url( $action['url'] ?? '' ); ?>"<?php echo ! empty( $action['download'] ) ? ' download="' . esc_attr( $action['download'] ) . '"' : ''; ?>><?php echo esc_html( $action['label'] ?? '' ); ?></a><?php else : ?><button type="button" class="eop-proposal-button<?php echo ! empty( $action['secondary'] ) ? ' eop-proposal-button--secondary' : ''; ?>"><?php echo esc_html( $action['label'] ?? '' ); ?></button><?php endif; ?><?php endforeach; ?></div><?php if ( ! empty( $card['note'] ) ) : ?><p class="eop-proposal-note" style="margin-top:16px"><?php echo esc_html( $card['note'] ); ?></p><?php endif; ?><?php endif; ?></section><?php endforeach; ?>
+                            <?php foreach ( ( $context['sidebar_cards'] ?? array() ) as $card ) : ?><section class="eop-proposal-summary-card"><?php if ( ! empty( $card['eyebrow'] ) ) : ?><span class="eop-proposal-summary-card__eyebrow"><?php echo esc_html( $card['eyebrow'] ); ?></span><?php endif; ?><h2><?php echo esc_html( $card['title'] ?? '' ); ?></h2><?php if ( 'meta' === ( $card['type'] ?? '' ) ) : ?><div class="eop-proposal-meta" style="margin-top:16px"><?php foreach ( ( $card['rows'] ?? array() ) as $row ) : ?><p><strong><?php echo esc_html( $row['label'] ?? '' ); ?></strong><span><?php echo esc_html( $row['value'] ?? '' ); ?></span></p><?php endforeach; ?></div><?php elseif ( 'totals' === ( $card['type'] ?? '' ) ) : ?><div class="eop-proposal-totals" style="margin-top:16px"><?php foreach ( ( $card['rows'] ?? array() ) as $row ) : ?><div class="eop-proposal-total <?php echo esc_attr( $row['class'] ?? '' ); ?>"><span><?php echo esc_html( $row['label'] ?? '' ); ?></span><?php if ( ! empty( $row['main_value'] ) ) : ?><div class="eop-proposal-total__value"><strong><?php echo esc_html( $row['main_value'] ); ?></strong><?php if ( ! empty( $row['sub_value'] ) ) : ?><small><?php echo esc_html( $row['sub_value'] ); ?></small><?php endif; ?></div><?php else : ?><span><?php echo wp_kses_post( $row['value'] ?? '' ); ?></span><?php endif; ?></div><?php endforeach; ?></div><?php elseif ( 'actions' === ( $card['type'] ?? '' ) ) : ?><div class="eop-proposal-actions" style="margin-top:16px"><?php foreach ( ( $card['actions'] ?? array() ) as $action ) : ?><?php $action_classes = 'eop-proposal-button'; ?><?php if ( ! empty( $action['variant'] ) && 'pdf' === $action['variant'] ) { $action_classes .= ' eop-proposal-button--pdf'; } elseif ( ! empty( $action['secondary'] ) ) { $action_classes .= ' eop-proposal-button--secondary'; } ?><?php if ( 'form_submit' === ( $action['type'] ?? '' ) ) : ?><form method="post"><?php wp_nonce_field( 'eop_confirm_proposal', 'eop_confirm_proposal_nonce' ); ?><input type="hidden" name="eop_proposal_token" value="<?php echo esc_attr( $action['token'] ?? '' ); ?>" /><button type="submit" class="<?php echo esc_attr( $action_classes ); ?>"><?php echo esc_html( $action['label'] ?? '' ); ?></button></form><?php elseif ( 'link' === ( $action['type'] ?? '' ) ) : ?><a class="<?php echo esc_attr( $action_classes ); ?>" href="<?php echo esc_url( $action['url'] ?? '' ); ?>"<?php echo ! empty( $action['download'] ) ? ' download="' . esc_attr( $action['download'] ) . '"' : ''; ?>><?php echo esc_html( $action['label'] ?? '' ); ?></a><?php else : ?><button type="button" class="<?php echo esc_attr( $action_classes ); ?>"><?php echo esc_html( $action['label'] ?? '' ); ?></button><?php endif; ?><?php endforeach; ?></div><?php if ( ! empty( $card['note'] ) ) : ?><p class="eop-proposal-note" style="margin-top:16px"><?php echo esc_html( $card['note'] ); ?></p><?php endif; ?><?php endif; ?></section><?php endforeach; ?>
                         </aside>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
                 <?php if ( ! empty( $context['after_markup'] ) ) : ?><?php echo $context['after_markup']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><?php endif; ?>
@@ -1611,6 +1736,7 @@ class EOP_Public_Proposal {
 
         $base_font_size  = $normalize_size( $resolve( 'customer_experience_text_size', 'proposal_text_size', '16px' ), '16px' );
         $title_font_size = $normalize_size( $resolve( 'customer_experience_title_size', 'proposal_title_size', '40px' ), '40px' );
+        $base_radius     = max( 0, absint( $settings['border_radius'] ?? 18 ) ) . 'px';
 
         return array(
             'font_css'               => $font_css,
@@ -1642,6 +1768,8 @@ class EOP_Public_Proposal {
             'accent_color'           => $resolve( 'customer_experience_accent_color', 'primary_color', '#d78a2f' ),
             'text_color'             => $resolve( 'customer_experience_text_color', 'proposal_text_color', '#16243a' ),
             'muted_color'            => $resolve( 'customer_experience_muted_color', 'proposal_muted_color', '#66768d' ),
+            'shared_border_width'    => $normalize_size( $resolve( 'customer_experience_shared_border_width', '', '1px' ), '1px' ),
+            'shared_border_style'    => in_array( trim( (string) $resolve( 'customer_experience_shared_border_style', '', 'solid' ) ), array( 'solid', 'dashed', 'dotted', 'none' ), true ) ? trim( (string) $resolve( 'customer_experience_shared_border_style', '', 'solid' ) ) : 'solid',
             'eyebrow'                => trim( (string) $resolve( 'customer_experience_eyebrow', '', '' ) ),
             'title'                  => trim( (string) $resolve( 'customer_experience_title', 'proposal_title', 'Sua proposta esta pronta para seguir' ) ),
             'description'            => trim( (string) $resolve( 'customer_experience_description', 'proposal_description', 'Confira os detalhes finais, valide os documentos e conclua a etapa atual em uma unica jornada.' ) ),
@@ -1655,7 +1783,10 @@ class EOP_Public_Proposal {
             'financial_title'        => self::normalize_customer_experience_copy( trim( (string) $resolve( 'customer_experience_financial_title', '', 'Resumo' ) ), 'Resumo financeiro', 'Resumo' ),
             'actions_eyebrow'        => trim( (string) $resolve( 'customer_experience_actions_eyebrow', '', 'Proxima acao' ) ),
             'actions_title'          => trim( (string) $resolve( 'customer_experience_actions_title', '', 'Como seguir agora' ) ),
-            'alert_note'             => trim( (string) $resolve( 'customer_experience_alert_note', '', 'Este bloco simula a jornada publica com a mesma hierarquia visual usada pelo cliente.' ) ),
+            'summary_enabled'        => 'yes' === trim( (string) $resolve( 'customer_experience_summary_enabled', '', 'yes' ) ) ? 'yes' : 'no',
+            'financial_enabled'      => 'yes' === trim( (string) $resolve( 'customer_experience_financial_enabled', '', 'yes' ) ) ? 'yes' : 'no',
+            'actions_enabled'        => 'yes' === trim( (string) $resolve( 'customer_experience_actions_enabled', '', 'yes' ) ) ? 'yes' : 'no',
+            'alert_note'             => self::normalize_customer_experience_copy( trim( (string) $resolve( 'customer_experience_alert_note', '', '' ) ), 'Este bloco simula a jornada publica com a mesma hierarquia visual usada pelo cliente.', '' ),
             'success_message'        => trim( (string) $resolve( 'customer_experience_success_message', '', 'Proposta confirmada com sucesso.' ) ),
             'notes_label'            => trim( (string) $resolve( 'customer_experience_notes_label', '', 'Observacoes' ) ),
             'preview_status_label'   => trim( (string) $resolve( 'customer_experience_preview_status_label', '', 'Preview ao vivo' ) ),
@@ -1687,8 +1818,35 @@ class EOP_Public_Proposal {
             'section_title_weight'   => trim( (string) $resolve( 'customer_experience_section_title_font_weight', '', '800' ) ),
             'item_title_size'        => $normalize_size( $resolve( 'customer_experience_item_title_size', '', '23px' ), '23px' ),
             'item_title_weight'      => trim( (string) $resolve( 'customer_experience_item_title_font_weight', '', '700' ) ),
+            'hero_aside_background_color' => trim( (string) $resolve( 'customer_experience_hero_aside_background_color', 'customer_experience_sidebar_background_color', '#f6f8fc' ) ),
+            'hero_aside_border_color' => trim( (string) $resolve( 'customer_experience_hero_aside_border_color', 'border_color', '#dbe3f0' ) ),
+            'hero_aside_radius'      => $normalize_size( $resolve( 'customer_experience_hero_aside_radius', '', $base_radius ), $base_radius ),
+            'hero_aside_shadow'      => trim( (string) $resolve( 'customer_experience_hero_aside_shadow', '', 'none' ) ),
+            'hero_meta_background_color' => trim( (string) $resolve( 'customer_experience_hero_meta_background_color', 'proposal_card_color', '#ffffff' ) ),
+            'hero_meta_border_color' => trim( (string) $resolve( 'customer_experience_hero_meta_border_color', 'border_color', '#dbe3f0' ) ),
+            'hero_meta_radius'       => $normalize_size( $resolve( 'customer_experience_hero_meta_radius', '', '20px' ), '20px' ),
+            'items_section_background_color' => trim( (string) $resolve( 'customer_experience_items_section_background_color', 'proposal_card_color', '#ffffff' ) ),
+            'items_section_border_color' => trim( (string) $resolve( 'customer_experience_items_section_border_color', 'border_color', '#dbe3f0' ) ),
+            'items_section_radius'   => $normalize_size( $resolve( 'customer_experience_items_section_radius', '', '28px' ), '28px' ),
+            'items_section_shadow'   => trim( (string) $resolve( 'customer_experience_items_section_shadow', '', '0 18px 38px rgba(15, 27, 53, .08)' ) ),
+            'item_card_background_color' => trim( (string) $resolve( 'customer_experience_item_card_background_color', 'proposal_card_color', '#ffffff' ) ),
+            'item_card_border_color' => trim( (string) $resolve( 'customer_experience_item_card_border_color', 'border_color', '#dbe3f0' ) ),
+            'item_card_radius'       => $normalize_size( $resolve( 'customer_experience_item_card_radius', '', '24px' ), '24px' ),
+            'item_card_shadow'       => trim( (string) $resolve( 'customer_experience_item_card_shadow', '', 'none' ) ),
+            'item_pill_background_color' => trim( (string) $resolve( 'customer_experience_item_pill_background_color', '', '#e9e8f4' ) ),
+            'item_pill_text_color'   => trim( (string) $resolve( 'customer_experience_item_pill_text_color', '', '#16243a' ) ),
+            'sidebar_card_background_color' => trim( (string) $resolve( 'customer_experience_sidebar_card_background_color', 'customer_experience_sidebar_background_color', '#f6f8fc' ) ),
+            'sidebar_card_border_color' => trim( (string) $resolve( 'customer_experience_sidebar_card_border_color', 'border_color', '#dbe3f0' ) ),
+            'sidebar_card_radius'    => $normalize_size( $resolve( 'customer_experience_sidebar_card_radius', '', '28px' ), '28px' ),
+            'sidebar_card_shadow'    => trim( (string) $resolve( 'customer_experience_sidebar_card_shadow', '', '0 18px 38px rgba(15, 27, 53, .08)' ) ),
+            'sidebar_meta_background_color' => trim( (string) $resolve( 'customer_experience_sidebar_meta_background_color', 'proposal_card_color', '#ffffff' ) ),
+            'sidebar_meta_border_color' => trim( (string) $resolve( 'customer_experience_sidebar_meta_border_color', 'border_color', '#dbe3f0' ) ),
+            'sidebar_meta_radius'    => $normalize_size( $resolve( 'customer_experience_sidebar_meta_radius', '', '18px' ), '18px' ),
             'button_bg'              => trim( (string) $resolve( 'customer_experience_primary_button_background_color', '', $resolve( 'customer_experience_accent_color', 'primary_color', '#d78a2f' ) ) ),
             'button_text'            => trim( (string) $resolve( 'customer_experience_primary_button_text_color', '', '#ffffff' ) ),
+            'button_border_width'    => $normalize_size( $resolve( 'customer_experience_button_border_width', '', '0px' ), '0px' ),
+            'button_border_style'    => trim( (string) $resolve( 'customer_experience_button_border_style', '', 'solid' ) ),
+            'button_border_color'    => trim( (string) $resolve( 'customer_experience_button_border_color', '', $resolve( 'customer_experience_primary_button_background_color', '', '#d78a2f' ) ) ),
             'button_font_size'       => $normalize_size( $resolve( 'customer_experience_button_font_size', '', '16px' ), '16px' ),
             'button_line_height'     => trim( (string) $resolve( 'customer_experience_button_line_height', '', '1' ) ),
             'button_font_weight'     => trim( (string) $resolve( 'customer_experience_button_font_weight', '', '700' ) ),
@@ -1698,11 +1856,25 @@ class EOP_Public_Proposal {
             'secondary_button_bg'    => trim( (string) $resolve( 'customer_experience_secondary_button_background_color', '', '#f6f8fc' ) ),
             'secondary_button_text'  => trim( (string) $resolve( 'customer_experience_secondary_button_text_color', '', '#16243a' ) ),
             'secondary_button_border'=> trim( (string) $resolve( 'customer_experience_secondary_button_border_color', '', '#dbe3f0' ) ),
+            'secondary_button_border_width' => $normalize_size( $resolve( 'customer_experience_secondary_button_border_width', '', '1px' ), '1px' ),
+            'secondary_button_border_style' => trim( (string) $resolve( 'customer_experience_secondary_button_border_style', '', 'solid' ) ),
             'secondary_button_font_size' => $normalize_size( $resolve( 'customer_experience_secondary_button_font_size', '', '16px' ), '16px' ),
             'secondary_button_line_height' => trim( (string) $resolve( 'customer_experience_secondary_button_line_height', '', '1' ) ),
             'secondary_button_font_weight' => trim( (string) $resolve( 'customer_experience_secondary_button_font_weight', '', '700' ) ),
             'secondary_button_padding' => trim( (string) $resolve( 'customer_experience_secondary_button_padding', '', '0 22px' ) ),
             'secondary_button_radius' => $normalize_size( $resolve( 'customer_experience_secondary_button_radius', '', '18px' ), '18px' ),
+            'secondary_button_shadow' => trim( (string) $resolve( 'customer_experience_secondary_button_shadow', '', 'none' ) ),
+            'pdf_button_bg'          => trim( (string) $resolve( 'customer_experience_pdf_button_background_color', '', '#ffffff' ) ),
+            'pdf_button_text'        => trim( (string) $resolve( 'customer_experience_pdf_button_text_color', '', '#16243a' ) ),
+            'pdf_button_border'      => trim( (string) $resolve( 'customer_experience_pdf_button_border_color', '', '#dbe3f0' ) ),
+            'pdf_button_border_width' => $normalize_size( $resolve( 'customer_experience_pdf_button_border_width', '', '1px' ), '1px' ),
+            'pdf_button_border_style' => trim( (string) $resolve( 'customer_experience_pdf_button_border_style', '', 'solid' ) ),
+            'pdf_button_font_size'   => $normalize_size( $resolve( 'customer_experience_pdf_button_font_size', '', '16px' ), '16px' ),
+            'pdf_button_line_height' => trim( (string) $resolve( 'customer_experience_pdf_button_line_height', '', '1' ) ),
+            'pdf_button_font_weight' => trim( (string) $resolve( 'customer_experience_pdf_button_font_weight', '', '700' ) ),
+            'pdf_button_padding'     => trim( (string) $resolve( 'customer_experience_pdf_button_padding', '', '0 22px' ) ),
+            'pdf_button_radius'      => $normalize_size( $resolve( 'customer_experience_pdf_button_radius', '', '18px' ), '18px' ),
+            'pdf_button_shadow'      => trim( (string) $resolve( 'customer_experience_pdf_button_shadow', '', 'none' ) ),
             'alert_bg'               => trim( (string) $resolve( 'customer_experience_alert_background_color', '', '#ecfdf5' ) ),
             'alert_border'           => trim( (string) $resolve( 'customer_experience_alert_border_color', '', '#bbf7d0' ) ),
             'alert_text'             => trim( (string) $resolve( 'customer_experience_alert_text_color', '', '#166534' ) ),
